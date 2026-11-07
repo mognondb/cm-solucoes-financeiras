@@ -681,15 +681,6 @@ img { max-width: 100%; display: block; }
   font-size: 0.85rem;
 }
 .footer-sub { color: #9aa08c; margin-top: 6px; }
-.footer-admin-link {
-  display: inline-block;
-  margin-top: 14px;
-  font-size: 0.72rem;
-  color: #7c8370;
-  text-decoration: none;
-  opacity: 0.8;
-}
-.footer-admin-link:hover { opacity: 1; text-decoration: underline; }
 
 /* Botão flutuante do WhatsApp */
 .whatsapp-float {

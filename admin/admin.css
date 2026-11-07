@@ -241,7 +241,7 @@
   padding: 1px 6px;
   border-radius: 4px;
 }
-.admin-modal-box .checkbox-label {
+label.checkbox-label {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -249,7 +249,7 @@
   font-weight: 400;
   color: var(--color-text);
 }
-.admin-modal-box .checkbox-label input { width: auto; }
+.checkbox-label input { width: auto; }
 
 .admin-modal-actions {
   display: flex;
