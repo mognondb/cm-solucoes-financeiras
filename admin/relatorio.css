@@ -307,10 +307,28 @@ table.rel-tabela + .rel-bloco {
 .rel-tabela td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .rel-tabela td.num.neg { color: #b3261e; }
 
-/* Dashboard embutido (Power BI / Looker Studio / relatório HTML próprio) */
+/* Link público (Power BI / Looker Studio / relatório HTML próprio): tela cheia,
+   sem o menu lateral de abas — não há o que navegar, e ele só tomaria espaço. */
+.rel-app-embed .rel-nav { display: none; }
+.rel-app-embed .rel-main { max-width: none; padding: 16px 24px 24px; }
+
+.rel-embed-topo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.rel-embed-topo strong { font-family: 'Fraunces', serif; font-size: 1.15rem; color: var(--color-olive-dark); }
+.rel-embed-periodo { margin-left: 10px; color: var(--color-text-light); font-size: 0.88rem; }
+.rel-embed-descricao { margin-left: 10px; color: var(--color-text-light); font-size: 0.84rem; font-style: italic; }
+.rel-embed-voltar-link { font-size: 0.82rem; color: var(--color-olive); text-decoration: none; white-space: nowrap; }
+.rel-embed-voltar-link:hover { text-decoration: underline; }
+
 .rel-embed-wrap {
   width: 100%;
-  height: calc(100vh - 110px);
+  height: calc(100vh - 80px);
   min-height: 560px;
   border-radius: var(--radius);
   overflow: hidden;

@@ -378,14 +378,26 @@
 
   // ---------- Embed (Power BI / Looker Studio) ----------
 
+  // Link público: o conteúdo já é uma página pronta (Power BI, Looker Studio ou um
+  // relatório HTML próprio) — mostra em tela cheia, sem o menu lateral de abas
+  // (não há o que navegar entre seções, e o menu só tomaria espaço à toa).
   function renderizarEmbed(r) {
-    const titulo = TITULOS_TIPO[r.tipo] || 'Dashboard';
-    const cabecalhoHtml = cabecalho(titulo, r.cliente, r.periodo, r.descricao || '');
-    const secoes = [`
+    document.getElementById('relApp').classList.add('rel-app-embed');
+    const voltarHref = (r.clienteId && papelSessao === 'admin')
+      ? `cliente.html?id=${encodeURIComponent(r.clienteId)}` : null;
+
+    document.getElementById('relMain').innerHTML = `
+      <div class="rel-embed-topo">
+        <div>
+          <strong>${escapeHtml(r.cliente)}</strong>
+          <span class="rel-embed-periodo">${escapeHtml(r.periodo)}</span>
+          ${r.descricao ? `<span class="rel-embed-descricao">${escapeHtml(r.descricao)}</span>` : ''}
+        </div>
+        ${voltarHref ? `<a href="${voltarHref}" class="rel-embed-voltar-link">← Painel admin</a>` : ''}
+      </div>
       <div class="rel-embed-wrap">
         <iframe class="rel-embed-frame" src="${escapeHtml(r.embedUrl)}" loading="lazy" allowfullscreen></iframe>
-      </div>`];
-    finalizar(cabecalhoHtml, '', secoes, [['dashboard', 'Dashboard']]);
+      </div>`;
   }
 
   // ---------- Fechamento financeiro ----------
