@@ -510,6 +510,8 @@ img { max-width: 100%; display: block; }
   color: var(--color-text-light);
 }
 .contato-lista li { margin-bottom: 10px; }
+.contato-lista a { color: var(--color-olive); text-decoration: none; }
+.contato-lista a:hover { text-decoration: underline; }
 
 .passos-lista {
   margin: 16px 0 0;
@@ -679,6 +681,39 @@ img { max-width: 100%; display: block; }
   font-size: 0.85rem;
 }
 .footer-sub { color: #9aa08c; margin-top: 6px; }
+.footer-admin-link {
+  display: inline-block;
+  margin-top: 14px;
+  font-size: 0.72rem;
+  color: #7c8370;
+  text-decoration: none;
+  opacity: 0.8;
+}
+.footer-admin-link:hover { opacity: 1; text-decoration: underline; }
+
+/* Botão flutuante do WhatsApp */
+.whatsapp-float {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #25d366;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,.25);
+  z-index: 250;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.whatsapp-float:hover { transform: scale(1.07); box-shadow: 0 6px 20px rgba(0,0,0,.3); }
+.whatsapp-float svg { width: 30px; height: 30px; fill: #fff; }
+
+@media (max-width: 720px) {
+  .whatsapp-float { right: 16px; bottom: 16px; width: 52px; height: 52px; }
+  .whatsapp-float svg { width: 27px; height: 27px; }
+}
 
 /* Responsive */
 @media (max-width: 900px) {

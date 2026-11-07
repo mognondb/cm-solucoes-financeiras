@@ -4,8 +4,15 @@
   // Mesmo endereço de servidor usado pelo painel admin.
   const API_URL = 'https://bold-forest-84c8fff.mognon-db.workers.dev';
 
-  let authHeader = sessionStorage.getItem('cm_admin_auth') || '';
-  let papelSessao = sessionStorage.getItem('cm_admin_papel') || 'admin';
+  let authHeader = localStorage.getItem('cm_admin_auth') || sessionStorage.getItem('cm_admin_auth') || '';
+  let papelSessao = localStorage.getItem('cm_admin_papel') || sessionStorage.getItem('cm_admin_papel') || 'admin';
+
+  function limparSessaoSalva() {
+    localStorage.removeItem('cm_admin_auth');
+    localStorage.removeItem('cm_admin_papel');
+    sessionStorage.removeItem('cm_admin_auth');
+    sessionStorage.removeItem('cm_admin_papel');
+  }
 
   function escapeHtml(str) {
     const div = document.createElement('div');
@@ -48,8 +55,9 @@
 
       authHeader = tentativaAuth;
       papelSessao = dadosSessao.papel || 'admin';
-      sessionStorage.setItem('cm_admin_auth', authHeader);
-      sessionStorage.setItem('cm_admin_papel', papelSessao);
+      const armazenamento = document.getElementById('manterConectado')?.checked ? localStorage : sessionStorage;
+      armazenamento.setItem('cm_admin_auth', authHeader);
+      armazenamento.setItem('cm_admin_papel', papelSessao);
       loginScreen.hidden = true;
       iniciar();
     } catch (err) {
@@ -78,8 +86,7 @@
   async function apiGet(path) {
     const res = await fetch(`${API_URL}${path}`, { headers: { Authorization: authHeader } });
     if (res.status === 401) {
-      sessionStorage.removeItem('cm_admin_auth');
-      sessionStorage.removeItem('cm_admin_papel');
+      limparSessaoSalva();
       loginScreen.hidden = false;
       throw new Error('Sessão expirada, faça login de novo.');
     }

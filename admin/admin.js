@@ -9,10 +9,18 @@
 
   let config = { apiUrl: API_URL };
 
-  // Credenciais ficam só na memória da aba (sessionStorage): somem ao fechar a
-  // aba/navegador. O servidor (Cloudflare Worker) é quem de fato valida usuário
-  // e senha — nada disso fica no código deste site.
-  let authHeader = sessionStorage.getItem('cm_admin_auth') || '';
+  // Credenciais ficam só no navegador: em sessionStorage (somem ao fechar a aba)
+  // por padrão, ou em localStorage (persistem entre sessões) se "Manter-me
+  // conectado" for marcado no login. O servidor (Cloudflare Worker) é quem de
+  // fato valida usuário e senha — nada disso fica no código deste site.
+  let authHeader = localStorage.getItem('cm_admin_auth') || sessionStorage.getItem('cm_admin_auth') || '';
+
+  function limparSessaoSalva() {
+    localStorage.removeItem('cm_admin_auth');
+    localStorage.removeItem('cm_admin_papel');
+    sessionStorage.removeItem('cm_admin_auth');
+    sessionStorage.removeItem('cm_admin_papel');
+  }
 
   const state = {
     infoprodutos: { items: [], dirty: false, editId: null },
@@ -132,7 +140,8 @@
       }
 
       authHeader = tentativaAuth;
-      sessionStorage.setItem('cm_admin_auth', authHeader);
+      const armazenamento = document.getElementById('manterConectado')?.checked ? localStorage : sessionStorage;
+      armazenamento.setItem('cm_admin_auth', authHeader);
 
       tentativasFalhas = 0;
       loginScreen.hidden = true;
@@ -156,27 +165,25 @@
 
   document.getElementById('btnSair').addEventListener('click', () => {
     authHeader = '';
-    sessionStorage.removeItem('cm_admin_auth');
-    sessionStorage.removeItem('cm_admin_papel');
+    limparSessaoSalva();
     painel.hidden = true;
     loginScreen.hidden = false;
     passInput.value = '';
     userInput.focus();
   });
 
-  // Se já existe uma sessão ativa nesta aba (ex: recarregou a página), reentra direto
+  // Se já existe uma sessão salva (reentrou na aba, ou marcou "Manter-me
+  // conectado" numa visita anterior), reentra direto
   if (authHeader && config.apiUrl) {
     fetch(`${config.apiUrl}/api/login`, { headers: { Authorization: authHeader } })
       .then(async (res) => {
         if (!res.ok) {
-          sessionStorage.removeItem('cm_admin_auth');
-          sessionStorage.removeItem('cm_admin_papel');
+          limparSessaoSalva();
           return;
         }
         const dadosSessao = await res.json().catch(() => ({}));
         if (dadosSessao.papel && dadosSessao.papel !== 'admin') {
-          sessionStorage.removeItem('cm_admin_auth');
-          sessionStorage.removeItem('cm_admin_papel');
+          limparSessaoSalva();
           return;
         }
         loginScreen.hidden = true;

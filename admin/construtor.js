@@ -3,8 +3,15 @@
 
   const API_URL = 'https://bold-forest-84c8fff.mognon-db.workers.dev';
 
-  let authHeader = sessionStorage.getItem('cm_admin_auth') || '';
-  let papelSessao = sessionStorage.getItem('cm_admin_papel') || 'admin';
+  let authHeader = localStorage.getItem('cm_admin_auth') || sessionStorage.getItem('cm_admin_auth') || '';
+  let papelSessao = localStorage.getItem('cm_admin_papel') || sessionStorage.getItem('cm_admin_papel') || 'admin';
+
+  function limparSessaoSalva() {
+    localStorage.removeItem('cm_admin_auth');
+    localStorage.removeItem('cm_admin_papel');
+    sessionStorage.removeItem('cm_admin_auth');
+    sessionStorage.removeItem('cm_admin_papel');
+  }
 
   let relatorio = null;
   let abaAtivaId = null;
@@ -42,8 +49,9 @@
 
       authHeader = tentativaAuth;
       papelSessao = dadosSessao.papel || 'admin';
-      sessionStorage.setItem('cm_admin_auth', authHeader);
-      sessionStorage.setItem('cm_admin_papel', papelSessao);
+      const armazenamento = document.getElementById('manterConectado')?.checked ? localStorage : sessionStorage;
+      armazenamento.setItem('cm_admin_auth', authHeader);
+      armazenamento.setItem('cm_admin_papel', papelSessao);
       loginScreen.hidden = true;
       await iniciar();
     } catch (err) {
@@ -59,8 +67,7 @@
 
   document.getElementById('btnSair').addEventListener('click', () => {
     authHeader = '';
-    sessionStorage.removeItem('cm_admin_auth');
-    sessionStorage.removeItem('cm_admin_papel');
+    limparSessaoSalva();
     app.hidden = true;
     loginScreen.hidden = false;
   });
