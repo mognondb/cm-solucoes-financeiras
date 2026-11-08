@@ -1,7 +1,8 @@
 (function () {
   'use strict';
 
-  const API_URL = 'https://bold-forest-84c8fff.mognon-db.workers.dev';
+  // API própria do site (PHP + MySQL na Hostinger, mesma origem).
+  const API_URL = '';
 
   let authHeader = localStorage.getItem('cm_admin_auth') || sessionStorage.getItem('cm_admin_auth') || '';
   let papelSessao = localStorage.getItem('cm_admin_papel') || sessionStorage.getItem('cm_admin_papel') || 'admin';

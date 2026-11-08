@@ -50,21 +50,18 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-// Endereço do servidor (Cloudflare Worker) do painel /admin/ — não é segredo,
-// só a senha de login é. O site busca os dados mais recentes ali (infoprodutos
-// e o formulário de Diagnóstico Financeiro); se a chamada de infoprodutos
-// falhar, cai de volta para o arquivo estático em assets/data/. Veja
-// admin/README-servidor.md.
-const ADMIN_API_URL = 'https://bold-forest-84c8fff.mognon-db.workers.dev';
+// API própria do site (PHP + MySQL na Hostinger, mesma origem). O site busca
+// os dados mais recentes ali (infoprodutos e o formulário de Diagnóstico
+// Financeiro); se a chamada de infoprodutos falhar, cai de volta para o
+// arquivo estático em assets/data/. Veja admin/README-servidor.md.
+const ADMIN_API_URL = '';
 
 async function buscarDados(tipo, caminhoLocal) {
-  if (ADMIN_API_URL) {
-    try {
-      const res = await fetch(`${ADMIN_API_URL}/api/file?path=${tipo}`, { cache: 'no-store' });
-      if (res.ok) return res.json();
-    } catch {
-      // segue para o fallback local
-    }
+  try {
+    const res = await fetch(`${ADMIN_API_URL}/api/file?path=${tipo}`, { cache: 'no-store' });
+    if (res.ok) return res.json();
+  } catch {
+    // segue para o fallback local
   }
   const res = await fetch(caminhoLocal, { cache: 'no-store' });
   if (!res.ok) throw new Error(`Falha ao buscar ${caminhoLocal}`);

@@ -3,9 +3,8 @@
 
   const TIPOS = ['infoprodutos'];
 
-  // Endereço do servidor (Cloudflare Worker). Não é segredo — só a senha é —
-  // por isso fica fixo aqui em vez de pedir pra digitar a cada login.
-  const API_URL = 'https://bold-forest-84c8fff.mognon-db.workers.dev';
+  // API própria do site (PHP + MySQL na Hostinger, mesma origem).
+  const API_URL = '';
 
   let config = { apiUrl: API_URL };
 
