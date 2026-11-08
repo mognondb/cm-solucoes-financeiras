@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS relatorios (
   periodo VARCHAR(120) NOT NULL,
   descricao VARCHAR(255) NULL,
   embed_url TEXT NULL,
-  abas_json LONGTEXT NULL,
+  extra_json LONGTEXT NULL,
   dados_token CHAR(48) NULL,
   ativo TINYINT(1) NOT NULL DEFAULT 1,
   atualizado_em VARCHAR(32) NOT NULL,

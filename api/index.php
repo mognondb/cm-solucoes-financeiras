@@ -367,13 +367,19 @@ if (in_array($path, $rotasProtegidas, true)) {
     $existente = $stmt->fetch();
     $dadosToken = $relatorio['dadosToken'] ?? ($existente['dados_token'] ?? null);
 
-    $stmt = $db->prepare('INSERT INTO relatorios (id, cliente_id, cliente, tipo, modo, periodo, descricao, embed_url, abas_json, dados_token, ativo, atualizado_em)
+    // Campos fora da lista fixa (ex.: "abas" do construtor, ou os campos próprios
+    // dos relatórios "fechamento" antigos, como kpis/resumoExecutivo/etc.) são
+    // guardados tal como vieram, sem precisar listar cada um.
+    $camposFixos = ['id', 'clienteId', 'cliente', 'tipo', 'modo', 'periodo', 'descricao', 'embedUrl', 'dadosToken', 'ativo', 'atualizadoEm'];
+    $extra = array_diff_key($relatorio, array_flip($camposFixos));
+
+    $stmt = $db->prepare('INSERT INTO relatorios (id, cliente_id, cliente, tipo, modo, periodo, descricao, embed_url, extra_json, dados_token, ativo, atualizado_em)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
-      ON DUPLICATE KEY UPDATE cliente_id=VALUES(cliente_id), cliente=VALUES(cliente), tipo=VALUES(tipo), modo=VALUES(modo), periodo=VALUES(periodo), descricao=VALUES(descricao), embed_url=VALUES(embed_url), abas_json=VALUES(abas_json), dados_token=VALUES(dados_token), ativo=VALUES(ativo), atualizado_em=VALUES(atualizado_em)');
+      ON DUPLICATE KEY UPDATE cliente_id=VALUES(cliente_id), cliente=VALUES(cliente), tipo=VALUES(tipo), modo=VALUES(modo), periodo=VALUES(periodo), descricao=VALUES(descricao), embed_url=VALUES(embed_url), extra_json=VALUES(extra_json), dados_token=VALUES(dados_token), ativo=VALUES(ativo), atualizado_em=VALUES(atualizado_em)');
     $stmt->execute([
       $idFinal, $relatorio['clienteId'], $relatorio['cliente'] ?? '', $relatorio['tipo'], $modo, $relatorio['periodo'],
       $relatorio['descricao'] ?? null, $relatorio['embedUrl'] ?? null,
-      isset($relatorio['abas']) ? json_encode($relatorio['abas'], JSON_UNESCAPED_UNICODE) : null,
+      $extra ? json_encode($extra, JSON_UNESCAPED_UNICODE) : null,
       $dadosToken, $ativo, $atualizadoEm,
     ]);
 
@@ -439,12 +445,13 @@ function relatorioResumoToJson(array $r): array {
   return ['id' => $r['id'], 'clienteId' => $r['cliente_id'], 'cliente' => $r['cliente'], 'tipo' => $r['tipo'], 'modo' => $r['modo'], 'periodo' => $r['periodo'], 'ativo' => (bool)$r['ativo'], 'atualizadoEm' => $r['atualizado_em']];
 }
 function relatorioToJson(array $r): array {
-  return [
+  $base = [
     'id' => $r['id'], 'clienteId' => $r['cliente_id'], 'cliente' => $r['cliente'], 'tipo' => $r['tipo'], 'modo' => $r['modo'],
     'periodo' => $r['periodo'], 'descricao' => $r['descricao'], 'embedUrl' => $r['embed_url'],
-    'abas' => $r['abas_json'] ? json_decode($r['abas_json'], true) : null,
     'dadosToken' => $r['dados_token'], 'ativo' => (bool)$r['ativo'], 'atualizadoEm' => $r['atualizado_em'],
   ];
+  if (!empty($r['extra_json'])) $base = array_merge($base, json_decode($r['extra_json'], true) ?: []);
+  return $base;
 }
 function infoprodutoToJson(array $r): array {
   return ['id' => $r['id'], 'nome' => $r['nome'], 'descricao' => $r['descricao'], 'icone' => $r['icone'], 'tipo' => $r['tipo'], 'precoLabel' => $r['preco_label'], 'link' => $r['link'], 'ativo' => (bool)$r['ativo']];
