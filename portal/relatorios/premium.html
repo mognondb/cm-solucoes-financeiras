@@ -30,6 +30,7 @@ h1{font-size:22px;margin:0}h2{font-size:15px;margin:22px 0 10px;color:var(--bran
 code{background:var(--line2);padding:1px 4px;border-radius:4px}
 /* layout */
 .shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+.shell>div{min-width:0}
 aside{background:linear-gradient(160deg,var(--side1),var(--side2));color:#fff;position:sticky;top:0;height:100vh;overflow:auto;padding:14px 10px}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) aside{border-right:1px solid var(--line)}}
 .logo-row{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:6px 8px 18px;border-bottom:1px solid rgba(232,180,76,.25);margin-bottom:10px}.logo-row img{width:96px;height:96px;border-radius:50%;box-shadow:0 0 0 2px rgba(232,180,76,.55)}
@@ -1862,6 +1863,8 @@ VIEWS.despesas = function (main) {
   const open = R.filter(r => r.open);
   const cols = COLS.pagar();
   const val = r => r.st === 'realizado' ? r.valor : 0; // parcial: o valor pago está na própria linha realizada
+  const curM = U.month(S.ui.base);
+  const monthAdd = (ym, n) => { const [y, m] = ym.split('-').map(Number); const d = new Date(y, m - 1 + n, 1); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); };
   // evolução mensal: realizado (data efetiva) x previsto (valor original pela data de vencimento)
   const months = [...new Set(R.flatMap(r => [U.month(r.effDate), U.month(r.dtVenc || r.dueDate)]).filter(Boolean))].sort();
   const evo = months.map(m => {
@@ -1873,7 +1876,6 @@ VIEWS.despesas = function (main) {
   // categorias que mais pressionam o caixa (próximos 30 dias) e aumentos relevantes
   const d30 = U.addDays(S.ui.base, 30);
   const next30 = open.filter(r => r.dueDate && r.dueDate <= d30);
-  const curM = U.month(S.ui.base);
   const hist = real.filter(r => U.month(r.effDate) < curM);
   const histMonths = new Set(hist.map(r => U.month(r.effDate))).size || 1;
   const catNow = U.groupBy(R.filter(r => U.month(r.dueDate || r.effDate) === curM), r => r.categoria || '(sem categoria)');
@@ -1888,10 +1890,12 @@ VIEWS.despesas = function (main) {
   let html = head('Análise de despesas e custos', scopeNote() + ' · realizado = pela data efetiva; previsto = valor original pela data de vencimento');
   html += `<div class="kpis">${kpi('Despesas realizadas (base)', U.sum(real, val), 'todas as datas do relatório', real, { cols })}${kpi('Despesas em aberto', U.sum(open, r => r.openAmt), 'todas as datas', open, { cols })}${kpi('A pagar nos próximos 30 dias', U.sum(next30, r => r.openAmt), U.brShort(S.ui.base) + ' a ' + U.brShort(d30) + ' (inclui vencidos)', next30, { cols })}${kpi('Aguardando identificação dos sócios', U.sum(aIdent, r => r.open ? r.openAmt : r.valor), aIdent.length + ' lanç. · categoria a identificar, Obras a identificar ou VERIFICAR', aIdent, { cols })}${kpi('Sem classificação', semClass.length, 'sem categoria ou sem centro de custo (fora os a identificar)', semClass, { cls: semClass.length ? 'warn' : '', cols })}</div>`;
   const evoExp = !!S.ui.despesasEvoExpandido;
-  const evoShow = evoExp ? evo : evo.slice(-6);
+  const evoWin = [-3, -2, -1, 1, 2, 3].map(n => monthAdd(curM, n)).map(k => evo.find(e => e.k === k) || { k, real: 0, prev: 0, open: 0 });
+  const evoShow = evoExp ? evo : evoWin;
+  const evoMais = evo.some(e => !evoWin.some(w => w.k === e.k));
   html += `<div class="card"><h3>Evolução mensal: previsto x realizado</h3>${flowChart([{ name: 'Previsto (valor original)', points: evoShow.map(e => ({ l: U.monthLabel(e.k), v: e.prev })) }, { name: 'Realizado', points: evoShow.map(e => ({ l: U.monthLabel(e.k), v: e.real })) }], { h: 220 })}
     ${stable([{ l: 'Mês', f: r => U.monthLabel(r.k) }, { l: 'Previsto', n: true, f: r => U.money(r.prev) }, { l: 'Realizado', n: true, f: r => U.money(r.real) }, { l: 'Em aberto', n: true, f: r => U.money(r.open) }, { l: 'Realizado − previsto', n: true, f: r => U.money(r.real - r.prev, { sign: 1 }) }], evoShow, { cls: 'click' })}
-    ${evo.length > 6 ? `<p class="small"><button class="btn sm" id="evo-toggle">${evoExp ? 'Ver só os últimos 6 meses' : `Ver todos os ${evo.length} meses`}</button></p>` : ''}</div>`;
+    <p class="small">Mostra 3 meses antes e 3 meses depois do mês base (${U.monthLabel(curM)}, em andamento, fica de fora para não distorcer a comparação).${evoMais ? ` <button class="btn sm" id="evo-toggle">${evoExp ? 'Ver só em torno do mês base' : `Ver todos os ${evo.length} meses`}</button>` : ''}</p></div>`;
   html += `<div class="card"><h3>Categorias que mais pressionam o caixa (próximos 30 dias)</h3>${groupTable(next30, r => r.categoria, 'Categoria', r => r.openAmt, { cols, limit: 10 })}</div>`;
   html += `<div class="card"><h3>Aumentos relevantes no mês atual (${U.monthLabel(curM)}) frente à média realizada dos meses anteriores</h3>${incr.length ? stable([{ l: 'Categoria', k: 'k' }, { l: 'Mês atual', n: true, f: r => U.money(r.now) }, { l: 'Média histórica', n: true, f: r => U.money(r.avg) }, { l: 'Aumento', n: true, f: r => `<span class="neg">${U.money(r.d)} (${U.pct(r.p)})</span>` }], incr.map(x => ({ ...x, _drill: drillId(x.k, x.l, cols) })), { cls: 'click' }) : '<p class="small">Nenhum aumento acima de 25% ou sem histórico suficiente (o Conta Azul da Premium começa em 01/10/2026).</p>'}</div>`;
   const tabs = [['categoria', 'Categoria', r => r.categoria], ['pessoa', 'Fornecedor', r => r.pessoa], ['centro', 'Obra / centro de custo', r => r.centroCusto], ['cnpj', 'CNPJ', r => r.cnpj ? 'CNPJ ' + r.cnpj : '']];
