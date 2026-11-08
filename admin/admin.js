@@ -128,12 +128,14 @@
 
       const dadosSessao = await res.json().catch(() => ({}));
       if (dadosSessao.papel && dadosSessao.papel !== 'admin') {
-        loginFeedback.textContent = 'Este usuário não tem acesso ao painel administrativo completo.';
-        loginFeedback.className = 'admin-feedback error';
+        loginFeedback.textContent = 'Este login é para clientes — redirecionando para o portal...';
+        loginFeedback.className = 'admin-feedback';
         if (dadosSessao.papel === 'cliente' && dadosSessao.clienteId) {
-          location.href = `cliente.html?id=${encodeURIComponent(dadosSessao.clienteId)}`;
+          location.href = `../portal/cliente.html?id=${encodeURIComponent(dadosSessao.clienteId)}`;
         } else if (dadosSessao.papel === 'dashboard' && dadosSessao.relatorioId) {
-          location.href = `relatorio.html?id=${encodeURIComponent(dadosSessao.relatorioId)}`;
+          location.href = `../portal/relatorio.html?id=${encodeURIComponent(dadosSessao.relatorioId)}`;
+        } else {
+          location.href = '../portal/index.html';
         }
         return;
       }
@@ -425,7 +427,7 @@
             <span class="admin-item-meta">${c.atualizadoEm ? new Date(c.atualizadoEm).toLocaleString('pt-BR') : ''}</span>
           </div>
           <div class="admin-item-actions">
-            <a class="btn btn-ghost btn-sm" href="cliente.html?id=${encodeURIComponent(c.id)}">Abrir</a>
+            <a class="btn btn-ghost btn-sm" href="../portal/cliente.html?id=${encodeURIComponent(c.id)}">Abrir</a>
             <button class="btn btn-outline btn-sm" data-acao="remover">Remover</button>
           </div>
         </div>`).join('');

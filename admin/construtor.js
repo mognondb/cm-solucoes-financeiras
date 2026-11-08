@@ -126,7 +126,7 @@
       }
       document.getElementById('nomeCliente').textContent = cliente.nome;
       document.title = `${cliente.nome} · Construtor | CM Soluções Financeiras`;
-      document.getElementById('linkVoltar').href = `cliente.html?id=${encodeURIComponent(clienteIdParam)}`;
+      document.getElementById('linkVoltar').href = `../portal/cliente.html?id=${encodeURIComponent(clienteIdParam)}`;
       document.getElementById('periodoInput').value = relatorio.periodo || '';
       abaAtivaId = relatorio.abas[0].id;
       app.hidden = false;

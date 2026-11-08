@@ -170,7 +170,7 @@
   }
 
   function linkEditar(r) {
-    if (r.tipo === 'personalizado' && r.modo !== 'embed') return `construtor.html?id=${encodeURIComponent(r.id)}`;
+    if (r.tipo === 'personalizado' && r.modo !== 'embed') return `../admin/construtor.html?id=${encodeURIComponent(r.id)}`;
     return null;
   }
 
@@ -250,7 +250,7 @@
   document.getElementById('btnNovoDashboard').addEventListener('click', () => { modalNovo.hidden = false; });
   document.getElementById('btnCancelarNovo').addEventListener('click', () => { modalNovo.hidden = true; });
   document.getElementById('btnNovoConstrutor').addEventListener('click', () => {
-    location.href = `construtor.html?clienteId=${encodeURIComponent(clienteId)}`;
+    location.href = `../admin/construtor.html?clienteId=${encodeURIComponent(clienteId)}`;
   });
   document.getElementById('btnNovoEmbed').addEventListener('click', () => {
     modalNovo.hidden = true;

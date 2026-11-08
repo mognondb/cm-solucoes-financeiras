@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Portal do Cliente | CM Soluções Financeiras</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css?v=2">
+<link rel="stylesheet" href="../admin/admin.css?v=2">
+</head>
+<body class="admin-body">
+
+<!-- LOGIN -->
+<div class="admin-login" id="loginScreen">
+  <div class="admin-login-box">
+    <img src="../assets/img/logo-cm.png" alt="CM Soluções Financeiras" class="admin-logo">
+    <h1>Portal do Cliente</h1>
+    <p class="admin-sub">Acesse para ver os relatórios da sua empresa.</p>
+
+    <form id="loginForm">
+      <label for="userInput">Usuário</label>
+      <input type="text" id="userInput" autocomplete="username" required>
+      <label for="passInput">Senha</label>
+      <input type="password" id="passInput" autocomplete="current-password" required>
+      <label class="checkbox-label">
+        <input type="checkbox" id="manterConectado">
+        Manter-me conectado
+      </label>
+      <button type="submit" class="btn btn-primary btn-block" id="btnEntrar">Entrar</button>
+      <p class="admin-feedback" id="loginFeedback" role="status"></p>
+    </form>
+  </div>
+</div>
+
+<!-- LISTA DE CLIENTES -->
+<div class="admin-painel" id="painel" hidden>
+  <header class="admin-header">
+    <div class="admin-header-inner">
+      <img src="../assets/img/logo-cm.png" alt="CM" class="admin-logo-sm">
+      <h1>Clientes</h1>
+      <a href="../admin/index.html" class="btn btn-ghost btn-sm" id="linkAdmin" hidden>Painel administrativo</a>
+      <button class="btn btn-outline btn-sm" id="btnSair">Sair</button>
+    </div>
+  </header>
+
+  <main class="admin-main">
+    <div class="admin-toolbar">
+      <p class="admin-sub" style="margin:0;">Escolha um cliente para ver os relatórios.</p>
+      <div class="admin-toolbar-actions">
+        <button class="btn btn-ghost btn-sm" id="btnRecarregar">Recarregar</button>
+      </div>
+    </div>
+    <p class="admin-feedback" id="feedbackLista" role="status"></p>
+    <div class="admin-lista" id="listaClientes">
+      <p class="loading-placeholder">Carregando...</p>
+    </div>
+  </main>
+</div>
+
+<script src="portal.js?v=1"></script>
+</body>
+</html>
