@@ -287,6 +287,41 @@ export default {
       return jsonResponse(indice, 200, env);
     }
 
+    // Dados importados dentro dos relatórios HTML autônomos (ex: Premium e
+    // Luanda, que têm abas de importação de bases como Conta Azul). Essas
+    // páginas são abertas direto por URL (num iframe do painel), sem o
+    // login do administrador — por isso usam um token próprio, gerado e
+    // guardado no campo "dadosToken" do relatório, em vez do usuário/senha.
+    if (url.pathname === '/api/relatorio-dados') {
+      const id = url.searchParams.get('id');
+      const token = url.searchParams.get('token') || request.headers.get('X-Dados-Token');
+      if (!id || !token) return jsonResponse({ message: 'Parâmetros "id" e "token" obrigatórios' }, 400, env);
+
+      const relatorio = await env.CM_DATA.get(`relatorio_${id}`, 'json');
+      if (!relatorio || !relatorio.dadosToken || relatorio.dadosToken !== token) {
+        return jsonResponse({ message: 'Acesso negado' }, 403, env);
+      }
+
+      if (request.method === 'GET') {
+        const salvo = await env.CM_DATA.get(`relatorio_dados_${id}`, 'json');
+        return jsonResponse(salvo || { dados: null, atualizadoEm: null }, 200, env);
+      }
+
+      if (request.method === 'PUT') {
+        let dados;
+        try {
+          dados = await request.json();
+        } catch {
+          return jsonResponse({ message: 'JSON inválido' }, 400, env);
+        }
+        const registro = { dados, atualizadoEm: new Date().toISOString() };
+        await env.CM_DATA.put(`relatorio_dados_${id}`, JSON.stringify(registro));
+        return jsonResponse(registro, 200, env);
+      }
+
+      return jsonResponse({ message: 'Método não suportado' }, 405, env);
+    }
+
     // Clientes, relatórios de apresentação e usuários do painel: sempre exigem
     // login, tanto pra ler quanto pra gravar — são dados financeiros sensíveis
     // de clientes, diferente dos infoprodutos (que são públicos).
