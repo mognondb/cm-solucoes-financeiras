@@ -75,7 +75,13 @@ input.num{text-align:right;width:100px}.legend-conf{margin:-6px 0 12px}
 @media (max-width:900px){.chk li{grid-template-columns:24px 1fr}}
 .conf{font-size:11px;font-weight:600;border-radius:4px;padding:1px 6px;white-space:nowrap}.conf.confirmado{background:var(--okbg);color:var(--pos)}.conf.estimado{background:var(--warnbg);color:var(--warn)}.conf.pendente{background:var(--badbg);color:var(--neg)}
 /* tabelas */
-.twrap{overflow:auto;max-width:100%}
+.twrap{overflow:auto;max-width:100%;
+  background: linear-gradient(to right, var(--panel) 30%, rgba(0,0,0,0)), linear-gradient(to right, rgba(0,0,0,0), var(--panel) 70%) 100% 0, radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.18), rgba(0,0,0,0)), radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.18), rgba(0,0,0,0)) 100% 0;
+  background-repeat: no-repeat; background-color: var(--panel);
+  background-size: 28px 100%, 28px 100%, 10px 100%, 10px 100%;
+  background-position: 0 0, 100% 0, 0 0, 100% 0;
+  background-attachment: local, local, scroll, scroll;
+}
 table.t{border-collapse:collapse;width:100%;font-size:12.5px}
 .t th{position:sticky;top:0;background:var(--line2);text-align:left;font-weight:600;color:var(--ink2);padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap;cursor:pointer;user-select:none}
 .t th.asc:after{content:" ▲";font-size:9px}.t th.desc:after{content:" ▼";font-size:9px}
@@ -86,7 +92,7 @@ table.t{border-collapse:collapse;width:100%;font-size:12.5px}
 .t tr.rowbad td{background:var(--badbg)}
 .tbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}.tbar input{min-width:220px}.tinfo{font-size:12px;color:var(--ink2);flex:1}
 .pager{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px}
-.bar{width:90px;height:7px;background:var(--line2);border-radius:4px;overflow:hidden}.bar i{display:block;height:100%;background:var(--brand2)}
+.bar{width:90px;height:7px;background:var(--line2);border-radius:4px;overflow:hidden}.bar i{display:block;height:100%;background:var(--brand2)}.bar i.pos{background:var(--pos)}.bar i.neg{background:var(--neg)}
 .kvt{border-collapse:collapse;width:100%;font-size:13px}.kvt th{text-align:left;color:var(--ink2);font-weight:500;padding:4px 10px 4px 0;width:240px;vertical-align:top}.kvt td{padding:4px 0;border-bottom:1px solid var(--line2)}.kvt.raw{font-size:12px}
 /* gráfico */
 .chart svg{width:100%;height:auto;display:block}
@@ -140,7 +146,7 @@ ul.alerts li.bad{border-left-color:var(--neg);background:var(--badbg)}ul.alerts 
     <div class="top">
       <button class="btn" id="menu">☰</button>
       <div class="seg" id="cnpj-switch"><button data-c="52">CNPJ 52</button><button data-c="20">CNPJ 20</button><button data-c="C">Consolidado</button></div>
-      <label class="small">Data-base <input type="date" id="base-date"></label><button class="btn sm" id="base-today">Hoje</button>
+      <label class="small">Data-base <input type="month" id="base-date"></label><button class="btn sm" id="base-today">Hoje</button>
       <div class="grow"></div><div id="ver-info"></div>
     </div>
     <main id="main"></main>
@@ -1072,6 +1078,19 @@ function obraStats(recs, settings) {
   }
   return { obras, naoAloc, naoAlocDesp };
 }
+function obrasResumoCard() {
+  const O = obraStats(recs(), S.settings); const L = O.obras;
+  if (!L.length) return '';
+  const top = [...L].sort((a, b) => Math.abs(b.resultado) - Math.abs(a.resultado)).slice(0, 5);
+  const maxAbs = Math.max(1, ...top.map(o => Math.abs(o.resultado)));
+  return `<div class="card"><div class="ch"><h3>Rentabilidade das obras</h3><a href="#obras">Ver todas (${L.length}) ›</a></div>${stable([
+    { l: 'Obra', f: o => U.esc(o.centro) },
+    { l: 'Lançado', n: true, f: o => U.money(o.lancado) },
+    { l: 'Resultado', n: true, f: o => `<b class="${o.resultado < 0 ? 'neg' : 'pos'}">${U.money(o.resultado)}</b>` },
+    { l: 'Margem', n: true, f: o => o.margem == null ? '—' : U.pct(o.margem) + (o.provisorio.length ? ' <span class="conf estimado">provisória</span>' : '') },
+    { l: '', f: o => `<div class="bar"><i class="${o.resultado < 0 ? 'neg' : 'pos'}" style="width:${Math.min(100, Math.abs(o.resultado) / maxAbs * 100)}%"></i></div>` },
+  ], top)}<p class="small">Top ${top.length} por maior impacto (lucro ou prejuízo). Lançado = recebido + a receber; a margem é provisória enquanto houver dados pendentes da obra.</p></div>`;
+}
 
 /* ---------- rotina semanal e fechamento mensal ---------- */
 const ROTINA_STEPS = [
@@ -1225,8 +1244,6 @@ const NAV = [
   ['obras', 'Obras e contratos', 'M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6'],
   ['empreitas', 'Empreitas', 'M14 7l3-3 3 3-3 3zM4 20l9-9M3 21l2-2'],
   ['folha', 'Folha e pessoal', 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0'],
-  ['cenarios', 'Cenários', 'M3 12h4l3-8 4 16 3-8h4'],
-  ['comparativo', 'Comparativo e revisão', 'M8 3v18M16 3v18M3 8h5M16 16h5'],
   ['rotina', 'Rotina semanal', 'M9 11l3 3 8-8M4 6h4M4 12h2M4 18h12'],
   ['fechamento', 'Fechamento mensal', 'M7 3v3M17 3v3M4 8h16M5 5h14v15H5zM9 14l2 2 4-4'],
   ['alertas', 'Alertas', 'M12 3l10 18H2zM12 10v4M12 17v.5'],
@@ -1247,7 +1264,7 @@ function render() {
   const v = activeVersion();
   $('#ver-info').innerHTML = v ? `Base: <b>${U.esc(v.label)}</b> · importada em ${U.dt(v.at)}` : 'Nenhuma base importada';
   $$('#cnpj-switch button').forEach(b => b.classList.toggle('on', b.dataset.c === S.ui.cnpj));
-  $('#base-date').value = S.ui.base;
+  $('#base-date').value = S.ui.base.slice(0, 7);
   const main = $('#main');
   if (!v && !['importacao', 'backup', 'config'].includes(S.ui.view)) { main.innerHTML = emptyState(); return; }
   try {
@@ -1519,6 +1536,7 @@ VIEWS.painel = function (main) {
     ${kpi('Obrigações vencidas', U.sum(apVenc, r => r.openAmt), 'previstas antes de ' + U.br(base) + ' e não pagas', apVenc, { cls: apVenc.length ? 'bad' : '', cols: COLS.pagar() })}
     ${kpi('Diferenças previsto x pago', U.sum(conc, o => o.var), conc.length + ' quitado(s) com valor diferente do original', conc.map(o => o.r), { cls: conc.length ? 'warn' : '', cols: COLS.pagar() })}
   </div>`;
+  html += obrasResumoCard();
   const W = [7, 15, 30].map(n => ({ n, ...windowSums(pj, base, n) }));
   html += `<div class="grid2"><div class="card"><h3>Entradas e saídas previstas</h3>${stable([{ l: 'Janela', f: w => w.n + ' dias (até ' + U.brShort(w.to) + ')' }, { l: 'Entradas', n: true, f: w => `<a data-drill="${drillId('Entradas ' + w.n + ' dias', movesToRows(w.ms.filter(m => m.amt > 0)), COLS.move())}" class="pos">${U.money(w.ent)}</a>` }, { l: 'Saídas', n: true, f: w => `<a data-drill="${drillId('Saídas ' + w.n + ' dias', movesToRows(w.ms.filter(m => m.amt < 0)), COLS.move())}" class="neg">${U.money(-w.sai)}</a>` }, { l: 'Saldo no fim', n: true, f: w => `<b class="${w.fim < (S.settings.riskMin || 0) ? 'neg' : ''}">${U.money(w.fim)}</b>` }], W)}
     <p class="small">Inclui vencidos em aberto (na data-base). ${pj.internal.length ? pj.internal.length / 2 + ' transferência(s) entre contas próprias do escopo foram anuladas (não inflam entradas e saídas).' : ''} ${pj.excluded.length ? `<a data-drill="${drillId('Fora da projeção (com motivo)', pj.excluded.map(x => Object.assign({}, x.r, { _amt: x.amt, _date: x.r.dueDate, _conf: 'pendente', _nota: x.motivo })), COLS.move())}">${pj.excluded.length} lançamento(s) fora da projeção, com motivo</a>.` : ''}</p></div>
@@ -1529,7 +1547,6 @@ VIEWS.painel = function (main) {
       { l: 'Quitados com data futura', n: R.filter(r => r.futReal).length, v: U.sum(R.filter(r => r.futReal), r => r.sign * r.valor), _drill: drillId('Quitados com data futura', R.filter(r => r.futReal), COLS.base()) },
       { l: 'Em aberto sem data (fora da projeção)', n: pj.undated.length, v: U.sum(pj.undated, m => m.amt), _drill: drillId('Em aberto sem data', movesToRows(pj.undated), COLS.move()) },
     ], { cls: 'click' })}<p class="small"><a href="#importacao">Ver pendências</a> · <a href="#rotina">Rotina da semana</a></p></div></div>`;
-  html += changesCard();
   // gráfico 30 dias
   const d30 = pj.days.slice(0, 31);
   html += `<div class="card"><div class="ch"><h3>Saldo projetado: próximos 30 dias</h3><a href="#fluxo">Ver fluxo completo</a></div>${flowChart([{ name: 'Saldo projetado', points: d30.map(d => ({ l: U.brShort(d.d), v: d.fim })) }], { bars: d30.map(d => ({ l: U.brShort(d.d), ent: d.ent, sai: d.sai })), riskMin: S.settings.riskMin })}</div>`;
@@ -1870,8 +1887,11 @@ VIEWS.despesas = function (main) {
   const rec = recurring(R);
   let html = head('Análise de despesas e custos', scopeNote() + ' · realizado = pela data efetiva; previsto = valor original pela data de vencimento');
   html += `<div class="kpis">${kpi('Despesas realizadas (base)', U.sum(real, val), 'todas as datas do relatório', real, { cols })}${kpi('Despesas em aberto', U.sum(open, r => r.openAmt), 'todas as datas', open, { cols })}${kpi('A pagar nos próximos 30 dias', U.sum(next30, r => r.openAmt), U.brShort(S.ui.base) + ' a ' + U.brShort(d30) + ' (inclui vencidos)', next30, { cols })}${kpi('Aguardando identificação dos sócios', U.sum(aIdent, r => r.open ? r.openAmt : r.valor), aIdent.length + ' lanç. · categoria a identificar, Obras a identificar ou VERIFICAR', aIdent, { cols })}${kpi('Sem classificação', semClass.length, 'sem categoria ou sem centro de custo (fora os a identificar)', semClass, { cls: semClass.length ? 'warn' : '', cols })}</div>`;
-  html += `<div class="card"><h3>Evolução mensal: previsto x realizado</h3>${flowChart([{ name: 'Previsto (valor original)', points: evo.map(e => ({ l: U.monthLabel(e.k), v: e.prev })) }, { name: 'Realizado', points: evo.map(e => ({ l: U.monthLabel(e.k), v: e.real })) }], { h: 220 })}
-    ${stable([{ l: 'Mês', f: r => U.monthLabel(r.k) }, { l: 'Previsto', n: true, f: r => U.money(r.prev) }, { l: 'Realizado', n: true, f: r => U.money(r.real) }, { l: 'Em aberto', n: true, f: r => U.money(r.open) }, { l: 'Realizado − previsto', n: true, f: r => U.money(r.real - r.prev, { sign: 1 }) }], evo, { cls: 'click' })}</div>`;
+  const evoExp = !!S.ui.despesasEvoExpandido;
+  const evoShow = evoExp ? evo : evo.slice(-6);
+  html += `<div class="card"><h3>Evolução mensal: previsto x realizado</h3>${flowChart([{ name: 'Previsto (valor original)', points: evoShow.map(e => ({ l: U.monthLabel(e.k), v: e.prev })) }, { name: 'Realizado', points: evoShow.map(e => ({ l: U.monthLabel(e.k), v: e.real })) }], { h: 220 })}
+    ${stable([{ l: 'Mês', f: r => U.monthLabel(r.k) }, { l: 'Previsto', n: true, f: r => U.money(r.prev) }, { l: 'Realizado', n: true, f: r => U.money(r.real) }, { l: 'Em aberto', n: true, f: r => U.money(r.open) }, { l: 'Realizado − previsto', n: true, f: r => U.money(r.real - r.prev, { sign: 1 }) }], evoShow, { cls: 'click' })}
+    ${evo.length > 6 ? `<p class="small"><button class="btn sm" id="evo-toggle">${evoExp ? 'Ver só os últimos 6 meses' : `Ver todos os ${evo.length} meses`}</button></p>` : ''}</div>`;
   html += `<div class="card"><h3>Categorias que mais pressionam o caixa (próximos 30 dias)</h3>${groupTable(next30, r => r.categoria, 'Categoria', r => r.openAmt, { cols, limit: 10 })}</div>`;
   html += `<div class="card"><h3>Aumentos relevantes no mês atual (${U.monthLabel(curM)}) frente à média realizada dos meses anteriores</h3>${incr.length ? stable([{ l: 'Categoria', k: 'k' }, { l: 'Mês atual', n: true, f: r => U.money(r.now) }, { l: 'Média histórica', n: true, f: r => U.money(r.avg) }, { l: 'Aumento', n: true, f: r => `<span class="neg">${U.money(r.d)} (${U.pct(r.p)})</span>` }], incr.map(x => ({ ...x, _drill: drillId(x.k, x.l, cols) })), { cls: 'click' }) : '<p class="small">Nenhum aumento acima de 25% ou sem histórico suficiente (o Conta Azul da Premium começa em 01/10/2026).</p>'}</div>`;
   const tabs = [['categoria', 'Categoria', r => r.categoria], ['pessoa', 'Fornecedor', r => r.pessoa], ['centro', 'Obra / centro de custo', r => r.centroCusto], ['cnpj', 'CNPJ', r => r.cnpj ? 'CNPJ ' + r.cnpj : '']];
@@ -1881,6 +1901,7 @@ VIEWS.despesas = function (main) {
   html += `<p class="small">Resultado por obra: esta tela mostra entradas e saídas de caixa por centro de custo. Não é lucro ou prejuízo da obra: faltam custos sem centro de custo, compromissos ainda não lançados e a competência.</p>`;
   main.innerHTML = html;
   mountTable($('#tex'), { id: 'extra', rows: extra, cols, pageSize: 20 });
+  const evoToggle = $('#evo-toggle'); if (evoToggle) evoToggle.onclick = () => { S.ui.despesasEvoExpandido = !evoExp; render(); };
 };
 
 /* ---------- folha e pessoal ---------- */
@@ -2274,7 +2295,7 @@ async function confirmImport() {
   S.versions.push(v); S.activeId = v.id; S.imp = null;
   await saveSettings(); await saveVersions();
   toast('Versão salva: ' + v.records.length + ' lançamentos');
-  go(S.versions.length > 1 ? 'comparativo' : 'painel');
+  go('painel');
 }
 function versionsHtml() {
   if (!S.versions.length) return '<p class="small">Nenhuma versão importada.</p>';
@@ -2525,7 +2546,12 @@ async function init() {
   try { await loadState(); } catch (e) { console.error(e); Store.remoteErr = 'Erro ao ler a base da CM: ' + (e.message || e.code || e); S.settings = S.settings || defaultSettings(); S.versions = S.versions || []; }
   Store.onRemoteChange = async () => { try { await loadState(); render(); toast('Dados atualizados na base da CM'); } catch (e) { console.error(e); } };
   $$('#cnpj-switch button').forEach(b => b.onclick = () => { S.ui.cnpj = b.dataset.c; render(); });
-  $('#base-date').onchange = e => { if (e.target.value) { S.ui.base = e.target.value; S.cache = null; render(); } };
+  $('#base-date').onchange = e => {
+    if (!e.target.value) return;
+    const hoje = U.today();
+    S.ui.base = e.target.value === hoje.slice(0, 7) ? hoje : U.endOfMonth(e.target.value + '-01');
+    S.cache = null; render();
+  };
   $('#base-today').onclick = () => { S.ui.base = U.today(); S.cache = null; render(); };
   $('#menu').onclick = () => document.body.classList.toggle('navopen');
   $('#nav').addEventListener('click', () => document.body.classList.remove('navopen'));
@@ -2539,29 +2565,52 @@ document.addEventListener('DOMContentLoaded', init);
    ========================================================================== */
 
 /* ---------- obras e contratos ---------- */
+function openObraDetalhes(o, grp) {
+  const inp = k => `<input class="num" data-obra="${U.esc(o.centro)}" data-k="${k}" inputmode="decimal" value="${o[k] != null ? String(o[k]).replace('.', ',') : ''}" placeholder="informar" size="9">`;
+  const rowsGrp = grp.filter(g => o.grupos[g]).map(g => ({ g, v: o.grupos[g] }));
+  const totGrp = U.sum(rowsGrp, r => r.v) || o.custo;
+  const html = `<table class="kvt">
+    <tr><th>Contratado</th><td>${inp('contratado')}</td></tr>
+    <tr><th>Faturado (NF)</th><td>${inp('faturado')}</td></tr>
+    <tr><th>Contrato não lançado</th><td>${o.naoLancado == null ? '—' : `<span class="${Math.abs(o.naoLancado) > 0.01 ? 'warn-t' : ''}">${U.money(o.naoLancado)}</span>`}</td></tr>
+    <tr><th>Lançado (recebido + a receber)</th><td><a data-drill="${drillId('Receitas: ' + o.centro, o.rec, COLS.receber())}">${U.money(o.lancado)}</a> <span class="small">recebido ${U.money(o.recebido)} · a receber ${U.money(o.aReceber)}</span></td></tr>
+    <tr><th>Custo identificado</th><td><a data-drill="${drillId('Despesas: ' + o.centro, o.dsp, COLS.pagar())}">${U.money(o.custo)}</a> <span class="small">pago ${U.money(o.pago)} · aberto ${U.money(o.aPagar)}</span></td></tr>
+    <tr><th>Resultado</th><td><b class="${o.resultado < 0 ? 'neg' : 'pos'}">${U.money(o.resultado)}</b></td></tr>
+    <tr><th>Margem</th><td>${o.margem == null ? '—' : U.pct(o.margem)}${o.provisorio.length ? ' <span class="conf estimado">provisória</span>' : ''}</td></tr>
+    <tr><th>Orçamento de custo</th><td>${inp('orcamento')}</td></tr>
+    <tr><th>Orçado − custo</th><td>${o.difOrc == null ? '—' : `<span class="${o.difOrc < 0 ? 'neg' : ''}">${U.money(o.difOrc)}</span>`}</td></tr>
+  </table>
+  <h4>Custo por grupo</h4>${stable([
+    { l: 'Grupo de custo', f: r => r.g },
+    { l: 'Valor', n: true, f: r => `<a data-drill="${drillId(r.g + ': ' + o.centro, o.dsp.filter(x => costGroup(x) === r.g), COLS.pagar())}">${U.money(r.v)}</a>` },
+    { l: '%', n: true, f: r => U.pct(totGrp ? r.v / totGrp : 0) },
+    { l: '', f: r => `<div class="bar"><i style="width:${totGrp ? Math.min(100, Math.abs(r.v / totGrp) * 100) : 0}%"></i></div>` },
+  ], rowsGrp, { foot: ['Total', U.money(totGrp), '', ''] })}
+  ${o.provisorio.length ? `<p class="small warn-t">Por que a margem é provisória: ${o.provisorio.map(U.esc).join('; ')}</p>` : ''}
+  <p class="small">Contratado, faturado e orçamento ficam salvos nas configurações e no backup. Grupos de custo pela categoria: Materiais (materiais, tintas, EPI, ferramentas), Mão de obra (lançamentos classificados como folha, exceto pró-labore), Terceiros (serviços, locação, entulho, ART), Tributos (ISS, INSS, PIS, COFINS, CSLL, DAS, retenções).</p>`;
+  const m = modal('Obra: ' + U.esc(o.centro), html, true);
+  $$('[data-obra]', m).forEach(el => el.onchange = async () => {
+    const ob = S.settings.obras[el.dataset.obra] = S.settings.obras[el.dataset.obra] || {};
+    const v = P.number(el.value); if (v == null) delete ob[el.dataset.k]; else ob[el.dataset.k] = v;
+    ob.at = Date.now(); await saveSettings(); closeModal(); render();
+  });
+}
 VIEWS.obras = function (main) {
   const O = obraStats(recs(), S.settings); const L = O.obras;
-  const cols = COLS.base();
   const grp = ['Materiais', 'Mão de obra e pessoal', 'Terceiros e serviços', 'Tributos e retenções', 'Outras despesas'];
   let html = head('Obras e contratos', scopeNote() + ' · obra = centro de custo do Conta Azul');
-  html += `<div class="banner small"><b>Como ler:</b> receita <b>lançada</b> = recebido + a receber no Conta Azul (parcelas provisionadas); <b>faturado</b> (NF emitida) e <b>contratado</b> não vêm no extrato e são informados aqui pela CM. Custo <b>identificado</b> = despesas pagas e em aberto com o centro de custo da obra, agrupadas pela <b>categoria</b> do Conta Azul (o sistema nunca atribui despesa a uma obra pelo nome do fornecedor). Resultado = lançado − custo identificado. A margem é <b>provisória</b> enquanto houver despesas sem obra, contrato não informado ou mão de obra não alocada.</div>`;
+  html += `<div class="banner small"><b>Como ler:</b> receita <b>lançada</b> = recebido + a receber no Conta Azul (parcelas provisionadas); <b>faturado</b> (NF emitida) e <b>contratado</b> não vêm no extrato e são informados em "Detalhes" pela CM. Custo <b>identificado</b> = despesas pagas e em aberto com o centro de custo da obra, agrupadas pela <b>categoria</b> do Conta Azul (o sistema nunca atribui despesa a uma obra pelo nome do fornecedor). Resultado = lançado − custo identificado. A margem é <b>provisória</b> enquanto houver despesas sem obra, contrato não informado ou mão de obra não alocada.</div>`;
   const tot = k => U.sum(L, o => o[k]);
-  html += `<div class="kpis">${kpi('Obras com lançamentos', String(L.length), 'centros de custo de natureza obra')}${kpi('Receita lançada', tot('lancado'), 'recebido + a receber', L.flatMap(o => o.rec), { cols })}${kpi('Recebido', tot('recebido'), 'dinheiro que entrou', L.flatMap(o => o.rec.filter(r => r.st === 'realizado')), { cols, cls: 'confirmado' })}${kpi('A receber', tot('aReceber'), 'em aberto', L.flatMap(o => o.rec.filter(r => r.open)), { cols })}${kpi('Custo identificado', tot('custo'), 'pago + em aberto com centro de obra', L.flatMap(o => o.dsp), { cols })}${kpi('Despesas sem obra', O.naoAlocDesp, 'Obras a identificar, sem centro ou a identificar', O.naoAloc.desp, { cls: O.naoAlocDesp ? 'warn' : '', cols })}</div>`;
-  const inp = (o, k) => `<input class="num" data-obra="${U.esc(o.centro)}" data-k="${k}" inputmode="decimal" value="${o[k] != null ? String(o[k]).replace('.', ',') : ''}" placeholder="informar" size="9">`;
+  html += `<div class="kpis">${kpi('Obras com lançamentos', String(L.length), 'centros de custo de natureza obra')}${kpi('Receita lançada', tot('lancado'), 'recebido + a receber', L.flatMap(o => o.rec), { cols: COLS.receber() })}${kpi('Recebido', tot('recebido'), 'dinheiro que entrou', L.flatMap(o => o.rec.filter(r => r.st === 'realizado')), { cols: COLS.receber(), cls: 'confirmado' })}${kpi('A receber', tot('aReceber'), 'em aberto', L.flatMap(o => o.rec.filter(r => r.open)), { cols: COLS.receber() })}${kpi('Custo identificado', tot('custo'), 'pago + em aberto com centro de obra', L.flatMap(o => o.dsp), { cols: COLS.pagar() })}${kpi('Despesas sem obra', O.naoAlocDesp, 'Obras a identificar, sem centro ou a identificar', O.naoAloc.desp, { cls: O.naoAlocDesp ? 'warn' : '', cols: COLS.pagar() })}</div>`;
   html += `<div class="card"><h3>Rentabilidade por obra</h3>${stable([
     { l: 'Obra', f: o => `<b>${U.esc(o.centro)}</b> ${o.cnpjs.map(cnpjTag).join('')}` },
-    { l: 'Contratado', n: true, f: o => inp(o, 'contratado') }, { l: 'Faturado (NF)', n: true, f: o => inp(o, 'faturado') },
     { l: 'Lançado', n: true, f: o => `<a data-drill="${drillId('Receitas: ' + o.centro, o.rec, COLS.receber())}">${U.money(o.lancado)}</a>` },
-    { l: 'Recebido', n: true, f: o => U.money(o.recebido) }, { l: 'A receber', n: true, f: o => U.money(o.aReceber) },
-    { l: 'Contrato não lançado', n: true, f: o => o.naoLancado == null ? '—' : `<span class="${Math.abs(o.naoLancado) > 0.01 ? 'warn-t' : ''}">${U.money(o.naoLancado)}</span>` },
-  ].concat(grp.map(g => ({ l: g, n: true, f: o => o.grupos[g] ? `<a data-drill="${drillId(g + ': ' + o.centro, o.dsp.filter(r => costGroup(r) === g), COLS.pagar())}">${U.money(o.grupos[g])}</a>` : '—' }))).concat([
-    { l: 'Custo identificado', n: true, f: o => `<a data-drill="${drillId('Despesas: ' + o.centro, o.dsp, COLS.pagar())}"><b>${U.money(o.custo)}</b></a><br><span class="small">pago ${U.money(o.pago)} · aberto ${U.money(o.aPagar)}</span>` },
+    { l: 'Custo identificado', n: true, f: o => `<a data-drill="${drillId('Despesas: ' + o.centro, o.dsp, COLS.pagar())}">${U.money(o.custo)}</a>` },
     { l: 'Resultado', n: true, f: o => `<b class="${o.resultado < 0 ? 'neg' : 'pos'}">${U.money(o.resultado)}</b>` },
     { l: 'Margem', n: true, f: o => o.margem == null ? '—' : U.pct(o.margem) + (o.provisorio.length ? '<br><span class="conf estimado">provisória</span>' : '') },
-    { l: 'Orçamento de custo', n: true, f: o => inp(o, 'orcamento') }, { l: 'Orçado − custo', n: true, f: o => o.difOrc == null ? '—' : `<span class="${o.difOrc < 0 ? 'neg' : ''}">${U.money(o.difOrc)}</span>` },
-    { l: 'Por que é provisória', f: o => `<span class="small">${o.provisorio.map(U.esc).join('; ')}</span>` },
-  ]), L, { foot: ['Total', '', '', U.money(tot('lancado')), U.money(tot('recebido')), U.money(tot('aReceber')), ''].concat(grp.map(g => U.money(U.sum(L, o => o.grupos[g] || 0)))).concat([U.money(tot('custo')), U.money(tot('resultado')), '', '', '', '']) })}
-    <p class="small">Valores digitados (contratado, faturado, orçamento) ficam salvos nas configurações e no backup. Grupos de custo pela categoria: Materiais (materiais, tintas, EPI, ferramentas), Mão de obra (lançamentos classificados como folha, exceto pró-labore), Terceiros (serviços, locação, entulho, ART), Tributos (ISS, INSS, PIS, COFINS, CSLL, DAS, retenções). O grupo de cada lançamento aparece no detalhe dele.</p></div>`;
+    { l: '', f: o => `<button class="btn sm" data-obradet="${U.esc(o.centro)}">Detalhes</button>` },
+  ], L, { foot: ['Total', U.money(tot('lancado')), U.money(tot('custo')), U.money(tot('resultado')), '', ''] })}
+    <p class="small">Contratado, faturado, orçamento de custo e o detalhamento por grupo de custo de cada obra estão em "Detalhes".</p></div>`;
   const byC = [...U.groupBy(O.naoAloc.desp, r => (r.centroCusto || '(sem centro)') + ' · ' + (r.categoria || '(sem categoria)')).entries()].map(([k, l]) => ({ k, n: l.length, v: U.sum(l, r => r.st === 'realizado' ? r.valor : r.openAmt), _drill: drillId(k, l, COLS.pagar()) })).sort((a, b) => b.v - a.v);
   html += `<div class="grid2"><div class="card"><h3>Despesas sem obra identificada</h3><p class="small">Podem pertencer a qualquer obra. Para entrar na rentabilidade, a obra precisa ser informada no Conta Azul (centro de custo); o sistema não distribui por suposição.</p>${stable([{ l: 'Centro · categoria', k: 'k' }, { l: 'Lanç.', n: true, f: x => x.n }, { l: 'Valor', n: true, f: x => U.money(x.v) }], byC, { cls: 'click' })}</div>
     <div class="card"><h3>Dados que faltam para a rentabilidade completa</h3><ul class="small">
@@ -2572,7 +2621,7 @@ VIEWS.obras = function (main) {
       <li>Orçamento de custo por obra, se a Premium tiver, para comparar orçado x realizado.</li></ul>
       <p class="small">Natureza de cada centro de custo (obra, administrativo, a identificar) pode ser corrigida em <a href="#config">Configurações</a>.</p></div></div>`;
   main.innerHTML = html;
-  $$('[data-obra]').forEach(el => el.onchange = async () => { const o = S.settings.obras[el.dataset.obra] = S.settings.obras[el.dataset.obra] || {}; const v = P.number(el.value); if (v == null) delete o[el.dataset.k]; else o[el.dataset.k] = v; o.at = Date.now(); await saveSettings(); render(); });
+  $$('[data-obradet]').forEach(b => b.onclick = () => openObraDetalhes(L.find(o => o.centro === b.dataset.obradet), grp));
 };
 
 /* ---------- rotina semanal ---------- */
@@ -2589,7 +2638,7 @@ function rotinaHints() {
     importar: `Versão ativa: ${U.esc(v.label)}, importada em ${U.dt(v.at)}.`,
     integridade: `${v.records.length} lançamentos, ${v.ignored || 0} linha(s) ignorada(s); coluna Saldo conta ${D.saldoCheck ? (D.saldoCheck.bad.length ? D.saldoCheck.bad.length + ' divergência(s)' : 'confere') : 'ausente'}; duplicidades ${cnt(/duplicidade/)}; datas inválidas ${cnt(/Data inválida/)}; situações desconhecidas ${cnt(/Situação/)}.`,
     cobertura: `Período ${dts.length ? U.br(dts[0]) + ' a ' + U.br(dts[dts.length - 1]) : '—'}; ${inFile.size} conta(s) no arquivo${accs.filter(a => !inFile.has(a)).length ? '; <span class="warn-t">sem lançamentos de: ' + accs.filter(a => !inFile.has(a)).map(U.esc).join(', ') + '</span>' : ''}.`,
-    comparar: pv ? `Comparado com ${U.esc(pv.label)}: ${C.res.novos.length} novos, ${C.res.quitados.length} quitados, ${C.res.sumiram.length} sumiram. <a href="#comparativo">abrir</a>` : 'Primeira versão: nada a comparar.',
+    comparar: pv ? `Comparado com ${U.esc(pv.label)}: ${C.res.novos.length} novos, ${C.res.quitados.length} quitados, ${C.res.sumiram.length} sumiram.` : 'Primeira versão: nada a comparar.',
     revisar: pv ? `${nRv} alteração(ões) marcada(s) como revisada(s)${RV._concluida ? '; revisão concluída em ' + U.dt(RV._concluida.at) : ''}.` : '—',
     saldos: `${sb.nBank} de ${sb.nAcc} conta(s) com saldo do extrato; ${Object.values(S.settings.accounts).filter(a => a.validated).length} de ${accs.length} vínculo(s) conta→CNPJ validado(s). <a href="#config">Configurações</a>`,
     realizados: C ? `${C.res.recebidos.length} recebimento(s) e ${C.res.pagos.length} pagamento(s) quitados desde a versão anterior; ${D.all.filter(r => r.futReal).length} quitado(s) com data futura.` : `${D.all.filter(r => r.st === 'realizado').length} realizados.`,

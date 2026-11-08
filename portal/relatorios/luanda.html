@@ -102,7 +102,13 @@ a{color:var(--brand-2)}
 .empty b{display:block;color:var(--ink);font-size:15px;margin-bottom:6px}
 
 /* tabelas */
-.tblwrap{overflow:auto;border:1px solid var(--line);border-radius:8px;max-height:560px}
+.tblwrap{overflow:auto;border:1px solid var(--line);border-radius:8px;max-height:560px;
+  background: linear-gradient(to right, var(--surface) 30%, rgba(0,0,0,0)), linear-gradient(to right, rgba(0,0,0,0), var(--surface) 70%) 100% 0, radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.18), rgba(0,0,0,0)), radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.18), rgba(0,0,0,0)) 100% 0;
+  background-repeat: no-repeat; background-color: var(--surface);
+  background-size: 28px 100%, 28px 100%, 10px 100%, 10px 100%;
+  background-position: 0 0, 100% 0, 0 0, 100% 0;
+  background-attachment: local, local, scroll, scroll;
+}
 table.t{border-collapse:collapse;width:100%;font-size:13px}
 table.t th{position:sticky;top:0;background:#f6f2ea;text-align:left;font-weight:600;color:var(--ink-2);font-size:12px;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap;cursor:pointer;user-select:none;z-index:1}
 table.t th.r,table.t td.r{text-align:right}
