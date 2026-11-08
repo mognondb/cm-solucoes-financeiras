@@ -1505,9 +1505,6 @@ VIEWS.painel = function (main) {
   const stale = bals.filter(b => b.type === 'banco' && b.stale);
   const projConf = sb.status === 'pendente' ? 'pendente' : 'estimado';
   let html = head('Painel financeiro', scopeNote(), `<span class="small">Saldo de partida: </span>${confTag(sb.status)}`);
-  html += `<p class="small legend-conf">${confTag('confirmado')} conferido com extrato ou documento · ${confTag('calculado')} soma dos movimentos do relatório, sem conferência · ${confTag('estimado')} depende de premissa ou de data prevista · ${confTag('pendente')} falta validação (CNPJ, data, conta)</p>`;
-  if (imp.n) html += `<div class="banner warn">O vínculo conta/obra → CNPJ ainda não foi validado para <b>${imp.n}</b> lançamento(s)${Object.entries(imp.by).map(([k, o]) => ` · ${k ? 'CNPJ ' + k : 'sem CNPJ'}: ${o.n} lanç., em aberto ${U.money(o.aberto)}, realizado ${U.money(o.realizado)}`).join('')}. Os números por CNPJ usam a sugestão pelo nome da conta. <a href="#config">Validar em Configurações</a>.</div>`;
-  if (sb.issues.length) html += `<div class="banner">${sb.issues.map(U.esc).join('<br>')}</div>`;
   html += `<h2>Saldos</h2><div class="kpis">
     ${kpi('Saldo bancário conferido', sb.bankTotal != null ? sb.bankTotal : 'não informado', sb.nBank + ' de ' + sb.nAcc + ' conta(s) com saldo do extrato', null, { cls: sb.bankTotal != null && sb.nBank === sb.nAcc ? 'confirmado' : 'pendente', note: sb.bankTotal != null ? confTag(sb.nBank === sb.nAcc ? 'confirmado' : 'pendente') + (sb.nBank < sb.nAcc ? ' <span class="small">parcial</span>' : '') : '<a href="#config">informar o saldo do extrato</a>' })}
     ${kpi('Aplicações e capital (fora do disponível)', sb.aplic, sb.aplicParts.map(p => U.esc(p.conta.replace(/ - Oliveira.*/i, '')) + ' ' + cnpjTag(p.cnpj)).join(' ') || 'nenhuma conta', null, { cls: 'calculado', note: confTag('calculado') })}
