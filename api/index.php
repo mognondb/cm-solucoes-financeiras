@@ -168,39 +168,8 @@ function diagnosticoToJson(array $r): array {
   ];
 }
 
-// ---------- dados importados dentro dos relatórios HTML (token próprio, sem login) ----------
-if ($path === '/api/relatorio-dados') {
-  $id = $_GET['id'] ?? null;
-  $token = $_GET['token'] ?? ($_SERVER['HTTP_X_DADOS_TOKEN'] ?? null);
-  if (!$id || !$token) jsonResponse(['message' => 'Parâmetros "id" e "token" obrigatórios'], 400);
-
-  $stmt = $db->prepare('SELECT dados_token FROM relatorios WHERE id = ?');
-  $stmt->execute([$id]);
-  $relatorio = $stmt->fetch();
-  if (!$relatorio || !$relatorio['dados_token'] || $relatorio['dados_token'] !== $token) {
-    jsonResponse(['message' => 'Acesso negado'], 403);
-  }
-
-  if ($method === 'GET') {
-    $stmt = $db->prepare('SELECT dados_json, atualizado_em FROM relatorio_dados WHERE relatorio_id = ?');
-    $stmt->execute([$id]);
-    $row = $stmt->fetch();
-    jsonResponse(['dados' => $row ? json_decode($row['dados_json'], true) : null, 'atualizadoEm' => $row['atualizado_em'] ?? null]);
-  }
-
-  if ($method === 'PUT') {
-    $dados = json_decode(file_get_contents('php://input') ?: 'null', true);
-    $atualizadoEm = nowIso();
-    $stmt = $db->prepare('INSERT INTO relatorio_dados (relatorio_id, dados_json, atualizado_em) VALUES (?,?,?) ON DUPLICATE KEY UPDATE dados_json = VALUES(dados_json), atualizado_em = VALUES(atualizado_em)');
-    $stmt->execute([$id, json_encode($dados, JSON_UNESCAPED_UNICODE), $atualizadoEm]);
-    jsonResponse(['dados' => $dados, 'atualizadoEm' => $atualizadoEm]);
-  }
-
-  jsonResponse(['message' => 'Método não suportado'], 405);
-}
-
 // ---------- rotas protegidas por login ----------
-$rotasProtegidas = ['/api/clientes', '/api/cliente', '/api/relatorios', '/api/relatorio', '/api/usuarios', '/api/usuario'];
+$rotasProtegidas = ['/api/clientes', '/api/cliente', '/api/relatorios', '/api/relatorio', '/api/relatorio-dados', '/api/usuarios', '/api/usuario'];
 if (in_array($path, $rotasProtegidas, true)) {
   $sessao = autenticarSessao();
   if (!$sessao) jsonResponse(['message' => 'Usuário ou senha inválidos'], 401);
@@ -329,6 +298,37 @@ if (in_array($path, $rotasProtegidas, true)) {
     $stmt = $db->prepare($sql);
     $stmt->execute($params);
     jsonResponse(array_map('relatorioResumoToJson', $stmt->fetchAll()));
+  }
+
+  // Dados importados dentro dos relatórios HTML (Premium, Luanda): mesmo login do
+  // portal, mesma regra de acesso por papel que o relatório em si já tem — nada de
+  // token separado, é o mesmo relatório, só que a parte "dados importados" dele.
+  if ($path === '/api/relatorio-dados') {
+    $id = $_GET['id'] ?? null;
+    if (!$id) jsonResponse(['message' => 'Parâmetro "id" obrigatório'], 400);
+    $stmt = $db->prepare('SELECT cliente_id, ativo FROM relatorios WHERE id = ?');
+    $stmt->execute([$id]);
+    $relatorio = $stmt->fetch();
+    if (!$relatorio) jsonResponse(['message' => 'Relatório não encontrado'], 404);
+    if ($sessao['papel'] === 'dashboard' && $id !== $sessao['relatorioId']) jsonResponse(['message' => 'Acesso negado'], 403);
+    if ($sessao['papel'] === 'cliente' && ($relatorio['cliente_id'] !== $sessao['clienteId'] || !$relatorio['ativo'])) jsonResponse(['message' => 'Acesso negado'], 403);
+
+    if ($method === 'GET') {
+      $stmt = $db->prepare('SELECT dados_json, atualizado_em FROM relatorio_dados WHERE relatorio_id = ?');
+      $stmt->execute([$id]);
+      $row = $stmt->fetch();
+      jsonResponse(['dados' => $row ? json_decode($row['dados_json'], true) : null, 'atualizadoEm' => $row['atualizado_em'] ?? null]);
+    }
+
+    if ($method === 'PUT') {
+      $dados = json_decode(file_get_contents('php://input') ?: 'null', true);
+      $atualizadoEm = nowIso();
+      $stmt = $db->prepare('INSERT INTO relatorio_dados (relatorio_id, dados_json, atualizado_em) VALUES (?,?,?) ON DUPLICATE KEY UPDATE dados_json = VALUES(dados_json), atualizado_em = VALUES(atualizado_em)');
+      $stmt->execute([$id, json_encode($dados, JSON_UNESCAPED_UNICODE), $atualizadoEm]);
+      jsonResponse(['dados' => $dados, 'atualizadoEm' => $atualizadoEm]);
+    }
+
+    jsonResponse(['message' => 'Método não suportado'], 405);
   }
 
   $id = $_GET['id'] ?? null;
