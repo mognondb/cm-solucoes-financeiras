@@ -205,6 +205,14 @@
     });
   });
 
+  // "Clientes" não fica nas abas (cadastro de cliente é uma tarefa à parte, não um
+  // conteúdo do site) — abre a mesma seção por um botão separado no cabeçalho.
+  document.getElementById('btnClientes').addEventListener('click', () => {
+    document.querySelectorAll('.admin-tab').forEach((b) => b.classList.remove('active'));
+    document.querySelectorAll('.admin-tab-panel').forEach((p) => { p.hidden = true; });
+    document.getElementById('tab-clientes').hidden = false;
+  });
+
   function carregarTudo() {
     TIPOS.forEach(carregarLista);
     carregarClientes();
