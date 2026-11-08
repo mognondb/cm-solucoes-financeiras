@@ -2464,16 +2464,15 @@ function reportXlsx(X) {
 
 /* ---------- backup ---------- */
 VIEWS.backup = async function (main) {
-  let html = head('Backup e restauração', 'Os dados ficam só neste navegador, neste computador.');
-  html += `<div class="banner ${S.settings.lastBackupAt ? '' : 'warn'}">${S.settings.lastBackupAt ? 'Último backup feito neste navegador: <b>' + U.dt(S.settings.lastBackupAt) + '</b>.' : '<b>Nenhum backup feito neste navegador.</b>'} O backup é a etapa 12 da rotina semanal.</div>`;
+  let html = head('Backup e restauração', 'Os dados ficam salvos na base da CM; o backup aqui é uma cópia de segurança extra.');
+  html += `<div class="banner ${S.settings.lastBackupAt ? '' : 'warn'}">${S.settings.lastBackupAt ? 'Último backup feito: <b>' + U.dt(S.settings.lastBackupAt) + '</b>.' : '<b>Nenhum backup feito ainda.</b>'} O backup é a etapa 12 da rotina semanal.</div>`;
   html += `<div class="grid2"><div class="card"><h3>Fazer backup</h3><p>Gera um arquivo .json com todas as versões importadas, configurações, saldos validados, ajustes manuais, cenários, rotinas, revisões e fechamentos.</p><button class="btn primary" id="bk-out">Baixar backup completo</button>
     <p class="small">Recomendação: baixar o backup depois de cada importação semanal e guardar na pasta da Premium no Drive. Esse arquivo tem dados financeiros da cliente: trate como confidencial.</p></div>
-    <div class="card"><h3>Restaurar backup</h3><p>Substitui todos os dados deste navegador pelo conteúdo do arquivo. O arquivo é conferido antes; nada muda até você confirmar.</p><label class="drop sm"><input type="file" id="bk-in" accept=".json"><span>Escolher arquivo de backup (.json)</span></label><div id="bk-msg"></div></div></div>
-    <div class="card"><h3>Armazenamento e limitações</h3><div id="bk-info"><p class="small">Verificando…</p></div>
-    <ul class="small"><li>Os dados ficam no armazenamento local do navegador (IndexedDB). Não há sincronização entre computadores ou navegadores: para trabalhar em outro computador, leve o backup e restaure lá.</li>
-    <li>Limpar os dados de navegação, usar janela anônima ou trocar de navegador apaga ou esconde a base. Por isso o backup semanal é obrigatório.</li>
-    <li>Nenhum dado é enviado para a internet. A leitura dos arquivos XLS/XLSX usa a biblioteca SheetJS embutida no próprio arquivo HTML.</li>
-    <li>Abra sempre o mesmo arquivo HTML, do mesmo lugar: o navegador guarda os dados por endereço do arquivo.</li></ul></div>`;
+    <div class="card"><h3>Restaurar backup</h3><p>Substitui os dados atuais (salvos na base da CM) pelo conteúdo do arquivo. O arquivo é conferido antes; nada muda até você confirmar.</p><label class="drop sm"><input type="file" id="bk-in" accept=".json"><span>Escolher arquivo de backup (.json)</span></label><div id="bk-msg"></div></div></div>
+    <div class="card"><h3>Armazenamento</h3><div id="bk-info"><p class="small">Verificando…</p></div>
+    <ul class="small"><li>Os dados ficam salvos no servidor da CM e aparecem pra qualquer administrador que abrir este relatório — não é preciso levar backup de um computador para outro.</li>
+    <li>O backup .json é uma cópia de segurança extra: útil se o servidor ficar indisponível ou pra guardar um retrato de um fechamento específico.</li>
+    <li>Nenhum dado é enviado para fora do site da CM. A leitura dos arquivos XLS/XLSX usa a biblioteca SheetJS (carregada de um CDN público).</li></ul></div>`;
   main.innerHTML = html;
   $('#bk-out').onclick = async () => { await doBackup(); render(); };
   $('#bk-in').onchange = async e => {
