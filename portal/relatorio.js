@@ -346,6 +346,9 @@
       }
     }
 
+    // "nativo": página própria do site (ex.: relatórios Premium/Luanda), não um
+    // iframe de link externo — navega direto, usando a mesma sessão já autenticada.
+    if (r.modo === 'nativo') { location.href = r.embedUrl; return; }
     if (r.modo === 'embed') return renderizarEmbed(r);
     if (r.tipo === 'orcamento') return renderizarOrcamento(r);
     if (r.tipo === 'comissoes') return renderizarComissoes(r);
