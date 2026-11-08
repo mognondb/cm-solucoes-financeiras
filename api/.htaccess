@@ -1,0 +1,16 @@
+# Repassa o cabeçalho Authorization pro PHP (necessário em alguns ambientes Apache+PHP-FPM).
+CGIPassAuth On
+
+RewriteEngine On
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# Qualquer caminho dentro de /api/ (exceto arquivo ou pasta real) cai no roteador único.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+# Nunca serve o config.php por engano, mesmo que alguém peça a URL direta.
+<Files "config.php">
+  Require all denied
+</Files>
