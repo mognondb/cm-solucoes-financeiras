@@ -1795,7 +1795,7 @@ VIEWS.calendario = function (main) {
       ${fim != null ? `<div class="cdb">saldo ${U.money(fim)}</div>` : ''}</div>`;
   }
   html += `<div class="card"><div class="cal">${['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom'].map(x => `<div class="cdh">${x}</div>`).join('')}${cells}</div>
-  <p class="small">Realizados aparecem na data efetiva; em aberto, na data prevista. "Saldo" é o saldo projetado (dias futuros) ou o saldo realizado (dias passados), ambos em caixa/banco disponível.</p></div>`;
+  <p class="small">Realizados aparecem na data efetiva; em aberto (inclusive vencidos), na data prevista original. "Saldo" é o saldo projetado (dias futuros) ou o realizado (dias passados), ambos em caixa/banco disponível. Um vencido em aberto só entra no saldo a partir de hoje (data-base) — por isso o saldo pode mudar bastante no dia de hoje mesmo sem lançamento novo nele.</p></div>`;
   main.innerHTML = html;
 };
 
