@@ -46,6 +46,8 @@ aside{background:linear-gradient(160deg,var(--side1),var(--side2));color:#fff;po
 #nav a:hover{background:rgba(255,255,255,.08);text-decoration:none}#nav a.on{background:rgba(232,180,76,.18);color:#fff;font-weight:600;box-shadow:inset 3px 0 0 #e8b44c}
 #nav svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
 #nav b{margin-left:auto;background:#e8b44c;color:#3b1716!important;color:#fff;border-radius:9px;font-size:11px;padding:0 6px;min-width:18px;text-align:center}#nav b:empty{display:none}
+.navsec{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:rgba(220,233,241,.55);padding:14px 10px 4px;font-weight:600}
+.navsec:first-child{padding-top:2px}
 .cm-by{font-size:10.5px;color:rgba(255,255,255,.55);text-align:center;margin:22px 0 4px;line-height:1.4}.cm-by b{color:rgba(255,255,255,.75);font-weight:600}
 .top{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:2px solid var(--accent);padding:10px 22px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
 .top .grow{flex:1}#ver-info{font-size:12px;color:var(--ink2)}
@@ -69,7 +71,7 @@ textarea{width:100%;font-family:ui-monospace,Menlo,monospace;font-size:12px}
 .kl{font-size:12px;color:var(--ink2);font-weight:600}.kv{font-size:20px;font-weight:700;margin:2px 0;font-variant-numeric:tabular-nums}.kp{font-size:11.5px;color:var(--ink3)}.kn{margin-top:4px}
 .banner{background:var(--infobg);border-radius:8px;padding:10px 12px;margin:0 0 12px;font-size:13px}.banner.warn{background:var(--warnbg)}.banner.bad{background:var(--badbg)}.banner.ok{background:var(--okbg)}.banner .btns{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap}
 .formula{font-size:14px}
-.tag{display:inline-block;font-size:11px;font-weight:700;border-radius:5px;padding:0 6px;background:var(--line2);color:var(--ink2)}
+.tag{display:inline-block;font-size:11px;font-weight:700;border-radius:9px;padding:1px 7px;background:var(--line2);color:var(--ink2)}
 .tag.warn{background:var(--warnbg);color:var(--warn)}.tag.bad{background:var(--badbg);color:var(--neg)}.tag.ok{background:var(--okbg);color:var(--pos)}
 .st{font-size:11.5px;font-weight:600;border-radius:10px;padding:1px 8px;white-space:nowrap}
 .st.ok{background:var(--okbg);color:var(--pos)}.st.open{background:var(--infobg);color:var(--ink2)}.st.bad{background:var(--badbg);color:var(--neg)}.st.part,.st.warn{background:var(--warnbg);color:var(--warn)}.st.muted{background:var(--line2);color:var(--ink3)}
@@ -81,7 +83,7 @@ input.num{text-align:right;width:100px}.legend-conf{margin:-6px 0 12px}
 .chk{list-style:none;margin:0;padding:0}.chk li{display:grid;grid-template-columns:28px 1fr 170px 130px 1fr 110px;gap:8px;align-items:center;padding:7px 4px;border-bottom:1px solid var(--line2);font-size:13px}.chk li .hint{font-size:11.5px;color:var(--ink3)}.chk li .n{font-weight:700;color:var(--ink3)}
 .chk li.feito .n{color:var(--pos)}.chk li.pend .n{color:var(--warn)}
 @media (max-width:900px){.chk li{grid-template-columns:24px 1fr}}
-.conf{font-size:11px;font-weight:600;border-radius:4px;padding:1px 6px;white-space:nowrap}.conf.confirmado{background:var(--okbg);color:var(--pos)}.conf.estimado{background:var(--warnbg);color:var(--warn)}.conf.pendente{background:var(--badbg);color:var(--neg)}
+.conf{font-size:11px;font-weight:600;border-radius:9px;padding:1px 7px;white-space:nowrap}.conf.confirmado{background:var(--okbg);color:var(--pos)}.conf.estimado{background:var(--warnbg);color:var(--warn)}.conf.pendente{background:var(--badbg);color:var(--neg)}
 /* tabelas */
 .twrap{overflow:auto;max-width:100%;
   background: linear-gradient(to right, var(--panel) 30%, rgba(0,0,0,0)), linear-gradient(to right, rgba(0,0,0,0), var(--panel) 70%) 100% 0, radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.18), rgba(0,0,0,0)), radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.18), rgba(0,0,0,0)) 100% 0;
@@ -108,7 +110,11 @@ table.t{border-collapse:collapse;width:100%;font-size:12.5px}
 .chart .ax{font-size:11px;fill:var(--ink3)}.chart .line{fill:none;stroke-width:2.2}.chart .s0{stroke:var(--brand2);fill:var(--brand2)}.chart .s1{stroke:var(--accent);fill:var(--accent)}.chart .s2{stroke:var(--ink3);fill:var(--ink3)}
 .chart path.line{fill:none}.chart .bin{fill:var(--pos);opacity:.45}.chart .bout{fill:var(--neg);opacity:.45}.chart .negpt{fill:var(--neg)}
 .chart .a1{fill:var(--a1)}.chart .a2{fill:var(--a2)}.chart .a3{fill:var(--a3)}.chart .a4{fill:var(--a4)}.chart .a5{fill:var(--a5)}.chart .aOther{fill:var(--ink3)}
+.chart .wfpos{fill:var(--pos)}.chart .wfneg{fill:var(--neg)}.chart .wftot{fill:var(--brand2)}.chart .wfconn{stroke:var(--ink3);stroke-dasharray:3 3}
+.chart .val{font-size:11px;font-weight:700;fill:var(--ink)}.chart .lbl{font-size:11px;fill:var(--ink2)}
 .legend{display:flex;gap:16px;font-size:12px;color:var(--ink2);margin-top:6px;flex-wrap:wrap}.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+#tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--panel);padding:7px 10px;border-radius:7px;font-size:12px;line-height:1.4;z-index:9999;max-width:280px;box-shadow:var(--shadow);display:none}
+#tip b{font-weight:700}
 .lg.s0{background:var(--brand2)}.lg.s1{background:var(--accent)}.lg.s2{background:var(--ink3)}.lg.bin{background:var(--pos);opacity:.5}.lg.bout{background:var(--neg);opacity:.5}
 .lg.a1{background:var(--a1)}.lg.a2{background:var(--a2)}.lg.a3{background:var(--a3)}.lg.a4{background:var(--a4)}.lg.a5{background:var(--a5)}.lg.aOther{background:var(--ink3)}
 /* calendário */
@@ -163,6 +169,7 @@ ul.alerts li.bad{border-left-color:var(--neg);background:var(--badbg)}ul.alerts 
 </div>
 <div id="modal" onclick="if(event.target===this)closeModal()"></div>
 <div id="toast"></div>
+<div id="tip"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>const LOGO = '../../assets/img/clientes/instituto-luanda.png';</script>
 <script>/* ==========================================================================
@@ -1173,8 +1180,19 @@ const NAV = [
   ['config', 'Configurações', 'M12 15a3 3 0 100-6 3 3 0 000 6zM19 12l2-1-2-4-2 1-2-1V5h-4v2l-2 1-2-1-2 4 2 1v0l-2 1 2 4 2-1 2 1v2h4v-2l2-1 2 1 2-4z'],
   ['backup', 'Backup', 'M5 4h11l3 3v13H5zM8 4v5h7V4M8 20v-6h8v6'],
 ];
+/* agrupamento visual do menu (NAV continua a lista "achatada", usada pra validar views) */
+const NAV_SECTIONS = [
+  ['Fechamento', ['painel', 'rotina', 'fechamento']],
+  ['Fluxo de caixa', ['fluxo', 'calendario', 'receber', 'pagar', 'conciliacao']],
+  ['Despesas e pessoal', ['despesas', 'folha']],
+  ['Gestão', ['alertas', 'lancamentos', 'importacao']],
+  ['Entrega', ['relatorio']],
+  ['Sistema', ['config', 'backup']],
+];
 function renderNav() {
-  $('#nav').innerHTML = NAV.map(([id, label, d]) => `<a href="#${id}" data-v="${id}" class="${S.ui.view === id ? 'on' : ''}"><svg viewBox="0 0 24 24"><path d="${d}"/></svg><span>${label}</span>${id === 'alertas' ? '<b id="nav-alerts"></b>' : ''}${id === 'importacao' ? '<b id="nav-pend"></b>' : ''}</a>`).join('');
+  const byId = Object.fromEntries(NAV.map(n => [n[0], n]));
+  const link = ([id, label, d]) => `<a href="#${id}" data-v="${id}" class="${S.ui.view === id ? 'on' : ''}"><svg viewBox="0 0 24 24"><path d="${d}"/></svg><span>${label}</span>${id === 'alertas' ? '<b id="nav-alerts"></b>' : ''}${id === 'importacao' ? '<b id="nav-pend"></b>' : ''}</a>`;
+  $('#nav').innerHTML = NAV_SECTIONS.map(([sec, ids]) => `<div class="navsec">${U.esc(sec)}</div>${ids.map(id => byId[id] ? link(byId[id]) : '').join('')}`).join('');
 }
 function go(view) { S.ui.view = view; render(); window.scrollTo(0, 0); }
 window.addEventListener('hashchange', () => { const v = location.hash.slice(1); if (NAV.some(n => n[0] === v)) go(v); });
@@ -1380,6 +1398,14 @@ function groupTable(list, keyFn, label, valFn, opt) {
   const rows = g.slice(0, opt.limit || 1e9).map(x => ({ ...x, _drill: drillId(label + ': ' + x.k, x.l, opt.cols) }));
   return stable([{ l: label, k: 'k' }, { l: 'Lanç.', n: true, f: r => r.n }, { l: 'Valor', n: true, f: r => U.money(r.v) }, { l: '%', n: true, f: r => U.pct(tot ? r.v / tot : 0) }, { l: '', f: r => `<div class="bar"><i style="width:${tot ? Math.min(100, Math.abs(r.v / tot) * 100) : 0}%"></i></div>` }], rows, { cls: 'click', foot: ['Total', g.reduce((s, x) => s + x.n, 0), U.money(tot), '', ''] });
 }
+/* mesma agregação de groupTable, em gráfico de barras horizontais com tooltip */
+function groupChart(list, keyFn, label, valFn, opt) {
+  opt = opt || {};
+  const g = [...U.groupBy(list, keyFn).entries()].map(([k, l]) => ({ k: k || '(sem ' + label.toLowerCase() + ')', n: l.length, v: U.sum(l, valFn) }));
+  g.sort((a, b) => Math.abs(b.v) - Math.abs(a.v));
+  const top = g.slice(0, opt.limit || 10);
+  return hbar2(top.map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: opt.cls })), opt);
+}
 
 /* ---------- gráfico de fluxo (SVG) ---------- */
 function flowChart(series, opt) {
@@ -1454,6 +1480,99 @@ function stackChart(labels, series, opt) {
   const legend = `<div class="legend">${series.map(s => `<span><i class="lg ${s.cls}"></i>${s.name}</span>`).join('')}</div>`;
   return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img">${g}</svg>${legend}</div>`;
 }
+/* escala de eixo com "números redondos" (1, 2, 5 × 10^n) */
+function niceTicks(min, max, n) {
+  if (min === max) max = min + 1;
+  const span = max - min; let step = Math.pow(10, Math.floor(Math.log10(span / n)));
+  const err = n / span * step;
+  if (err <= 0.15) step *= 10; else if (err <= 0.35) step *= 5; else if (err <= 0.75) step *= 2;
+  const lo = Math.floor(min / step) * step, hi = Math.ceil(max / step) * step, ticks = [];
+  for (let v = lo; v <= hi + step / 2; v += step) ticks.push(Math.round(v * 100) / 100);
+  return { lo, hi, ticks };
+}
+function shortNum(v) {
+  const a = Math.abs(v); let s;
+  if (a >= 1e6) s = (a / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mi';
+  else if (a >= 1e3) s = (a / 1e3).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mil';
+  else s = a.toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+  return (v < 0 ? '-' : '') + s;
+}
+/* gráfico de cascata (SVG): mostra como um resultado se forma passo a passo.
+   steps: [{label, value, total?}] — total:true fecha a barra em 0 (resultado final). */
+function waterfall(steps, opt) {
+  opt = opt || {};
+  const W = opt.w || 680, H = opt.h || 260, pl = 58, pr = 10, pt = 22, pb = 34;
+  let run = 0; const bars = [];
+  steps.forEach(st => {
+    if (st.total) { bars.push({ label: st.label, a: 0, b: st.value, v: st.value, total: true }); run = st.value; }
+    else { bars.push({ label: st.label, a: run, b: run + st.value, v: st.value }); run += st.value; }
+  });
+  if (!bars.length) return '<p class="small muted-t">Sem dados.</p>';
+  let vmin = 0, vmax = 0; bars.forEach(b => { vmin = Math.min(vmin, b.a, b.b); vmax = Math.max(vmax, b.a, b.b); });
+  if (vmax - vmin < 10) { vmin -= 5; vmax += 5; } // evita "nice ticks" fracionários quando os valores são quase todos zero
+  const sc = niceTicks(vmin, vmax, 5);
+  const iw = W - pl - pr, ih = H - pt - pb;
+  const y = v => pt + ih * (sc.hi - v) / (sc.hi - sc.lo);
+  let g = '';
+  sc.ticks.forEach(t => { g += `<line x1="${pl}" x2="${W - pr}" y1="${y(t)}" y2="${y(t)}" class="grid"/><text x="${pl - 6}" y="${y(t) + 4}" class="ax" text-anchor="end">${shortNum(t)}</text>`; });
+  g += `<line x1="${pl}" x2="${W - pr}" y1="${y(0)}" y2="${y(0)}" class="zero"/>`;
+  const band = iw / bars.length, bw = Math.min(64, band * 0.62);
+  bars.forEach((b, i) => {
+    const x = pl + i * band + (band - bw) / 2, top = y(Math.max(b.a, b.b)), h = Math.max(1, Math.abs(y(b.a) - y(b.b)));
+    const cls = b.total ? 'wftot' : (b.v >= 0 ? 'wfpos' : 'wfneg');
+    g += `<rect x="${x}" y="${top}" width="${bw}" height="${h}" rx="3" class="${cls}"/>`;
+    if (i < bars.length - 1) g += `<line x1="${x + bw}" x2="${pl + (i + 1) * band + (band - bw) / 2}" y1="${y(b.b)}" y2="${y(b.b)}" class="wfconn"/>`;
+    g += `<text class="val" x="${x + bw / 2}" y="${top - 6}" text-anchor="middle">${shortNum(b.v)}</text>`;
+    g += `<text class="lbl" x="${x + bw / 2}" y="${H - 12}" text-anchor="middle">${U.esc(b.label)}</text>`;
+    g += `<rect x="${pl + i * band}" y="${pt}" width="${band}" height="${ih}" fill="transparent" data-tip="<b>${U.esc(b.label)}</b><br>${U.money(b.v)}${b.total ? '' : '<br>Acumulado: ' + U.money(b.b)}"/>`;
+  });
+  return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img">${g}</svg></div>`;
+}
+/* barras horizontais (SVG) com tooltip flutuante. items: [{label, value, color?, extra?, tip?}] */
+function hbar2(items, opt) {
+  opt = opt || {};
+  if (!items.length) return '<p class="small muted-t">Sem dados.</p>';
+  const W = opt.w || 640, lw = opt.labelWidth || 190, rowH = opt.rowH || 26, H = items.length * rowH + 8, vw = 96;
+  const max = Math.max(...items.map(i => Math.abs(i.value))) || 1;
+  let s = `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img">`;
+  items.forEach((it, i) => {
+    const y = i * rowH + 4, bw = Math.max(2, (W - lw - vw) * Math.abs(it.value) / max), h = rowH - 10, r = Math.min(4, h / 2, bw / 2);
+    const x0 = lw, y0 = y + 5;
+    const lbl = it.label.length > 32 ? it.label.slice(0, 31) + '…' : it.label;
+    s += `<text class="lbl" x="${lw - 8}" y="${y + rowH / 2 + 4}" text-anchor="end">${U.esc(lbl)}</text>`;
+    s += `<path d="M${x0},${y0}H${x0 + bw - r}Q${x0 + bw},${y0} ${x0 + bw},${y0 + r}V${y0 + h - r}Q${x0 + bw},${y0 + h} ${x0 + bw - r},${y0 + h}H${x0}z" class="${it.cls || 'wfneg'}"/>`;
+    s += `<text class="val" x="${lw + bw + 6}" y="${y + rowH / 2 + 4}">${U.money(it.value)}${it.extra ? ` <tspan class="lbl">${U.esc(it.extra)}</tspan>` : ''}</text>`;
+    s += `<rect x="0" y="${y}" width="${W}" height="${rowH}" fill="transparent" data-tip="<b>${U.esc(it.label)}</b><br>${U.money(it.value)}${it.tip ? '<br>' + U.esc(it.tip) : ''}"/>`;
+  });
+  return s + '</svg></div>';
+}
+/* tooltip flutuante dos gráficos novos (waterfall/hbar2): segue o mouse sobre [data-tip] */
+function bindChartTips() {
+  const tip = $('#tip');
+  document.addEventListener('mousemove', e => {
+    const t = e.target.closest && e.target.closest('[data-tip]');
+    if (!t) { tip.style.display = 'none'; return; }
+    tip.innerHTML = t.getAttribute('data-tip'); tip.style.display = 'block';
+    let x = e.clientX + 14, y = e.clientY + 14; const r = tip.getBoundingClientRect();
+    if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 14;
+    if (y + r.height > innerHeight - 8) y = e.clientY - r.height - 14;
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  });
+  document.addEventListener('mouseleave', () => { tip.style.display = 'none'; }, true);
+}
+/* passos da cascata "formação do resultado de caixa" a partir de um monthStats().
+   Só usa o que já é classificado em outro lugar do sistema (folha x não-folha). */
+function wfStepsCaixa(st) {
+  if (!st.nReal) return []; // nada realizado ainda no mês: deixa o gráfico mostrar "sem dados" em vez de barras quase zeradas
+  const desps = (st.real || []).filter(r => r.k === 'despesa');
+  const despFolha = U.r2(U.sum(desps.filter(r => r.folha && r.folha !== 'Não é folha'), r => r.valor));
+  const despOutras = U.r2(st.desp - despFolha);
+  const steps = [{ label: 'Recebido', value: st.rec }];
+  if (despFolha) steps.push({ label: 'Folha e pessoal', value: -despFolha });
+  if (despOutras) steps.push({ label: 'Outras despesas', value: -despOutras });
+  steps.push({ label: 'Resultado de caixa', value: st.res, total: true });
+  return steps;
+}
 
 /* ==========================================================================
    Telas: painel, fluxo, calendário, a receber, a pagar
@@ -1490,7 +1609,8 @@ VIEWS.painel = function (main) {
     ${kpi('Recebíveis vencidos', U.sum(arVenc, r => r.openAmt), 'previstos antes de ' + U.br(base) + ' e não recebidos', arVenc, { cls: arVenc.length ? 'warn' : 'receita', cols: COLS.receber() })}
     ${kpi('Obrigações vencidas', U.sum(apVenc, r => r.openAmt), 'previstas antes de ' + U.br(base) + ' e não pagas', apVenc, { cls: apVenc.length ? 'bad' : '', cols: COLS.pagar() })}
     ${kpi('Diferenças previsto x pago', U.sum(conc, o => o.var), conc.length + ' quitado(s) com valor diferente do original', conc.map(o => o.r), { cls: conc.length ? 'warn' : '', cols: COLS.pagar() })}
-  </div>`;
+  </div>
+  <div class="card"><h3>Formação do resultado de caixa · ${U.monthLabel(U.month(base))}</h3><p class="small">Verde soma, vermelho subtrai, dourado é o resultado. Pela data efetiva até ${U.br(base)}. <a href="#fechamento">Ver fechamento do mês</a></p>${waterfall(wfStepsCaixa(monthStats(D.all, S.settings, U.month(base), 'C')), { h: 220 })}</div>`;
   const W = [7, 15, 30].map(n => ({ n, ...windowSums(pj, base, n) }));
   html += `<div class="grid2"><div class="card"><h3>Entradas e saídas previstas</h3>${stable([{ l: 'Janela', f: w => w.n + ' dias (até ' + U.brShort(w.to) + ')' }, { l: 'Entradas', n: true, f: w => `<a data-drill="${drillId('Entradas ' + w.n + ' dias', movesToRows(w.ms.filter(m => m.amt > 0)), COLS.move())}" class="pos">${U.money(w.ent)}</a>` }, { l: 'Saídas', n: true, f: w => `<a data-drill="${drillId('Saídas ' + w.n + ' dias', movesToRows(w.ms.filter(m => m.amt < 0)), COLS.move())}" class="neg">${U.money(-w.sai)}</a>` }, { l: 'Saldo no fim', n: true, f: w => `<b class="${w.fim < (S.settings.riskMin || 0) ? 'neg' : ''}">${U.money(w.fim)}</b>` }], W)}
     <p class="small">Inclui vencidos em aberto (na data-base). ${pj.internal.length ? pj.internal.length / 2 + ' transferência(s) entre contas próprias do escopo foram anuladas (não inflam entradas e saídas).' : ''} ${pj.excluded.length ? `<a data-drill="${drillId('Fora da projeção (com motivo)', pj.excluded.map(x => Object.assign({}, x.r, { _amt: x.amt, _date: x.r.dueDate, _conf: 'pendente', _nota: x.motivo })), COLS.move())}">${pj.excluded.length} lançamento(s) fora da projeção, com motivo</a>.` : ''}</p></div>
@@ -1869,9 +1989,10 @@ VIEWS.despesas = function (main) {
   html += `<div class="card"><h3>Evolução mensal: previsto x realizado</h3>${flowChart([{ name: 'Previsto (valor original)', points: evoShow.map(e => ({ l: U.monthLabel(e.k), v: e.prev })) }, { name: 'Realizado', points: evoShow.map(e => ({ l: U.monthLabel(e.k), v: e.real })) }], { h: 220 })}
     ${stable([{ l: 'Mês', f: r => U.monthLabel(r.k) }, { l: 'Previsto', n: true, f: r => U.money(r.prev) }, { l: 'Realizado', n: true, f: r => U.money(r.real) }, { l: 'Em aberto', n: true, f: r => U.money(r.open) }, { l: 'Realizado − previsto', n: true, f: r => U.money(r.real - r.prev, { sign: 1 }) }], evoShow, { cls: 'click' })}
     <p class="small">Mostra 3 meses antes e 3 meses depois do mês base (${U.monthLabel(curM)}, em andamento, fica de fora para não distorcer a comparação).${evoMais ? ` <button class="btn sm" id="evo-toggle">${evoExp ? 'Ver só em torno do mês base' : `Ver todos os ${evo.length} meses`}</button>` : ''}</p></div>`;
-  html += `<div class="card"><h3>Categorias que mais pressionam o caixa (próximos 30 dias)</h3>${groupTable(next30, r => r.categoria, 'Categoria', r => r.openAmt, { cols, limit: 10 })}</div>`;
+  html += `<div class="card"><h3>Categorias que mais pressionam o caixa (próximos 30 dias)</h3>${next30.length ? groupChart(next30, r => r.categoria, 'Categoria', r => r.openAmt, { limit: 10 }) : '<p class="small muted-t">Nenhuma despesa em aberto nos próximos 30 dias.</p>'}</div>`;
   html += `<div class="card"><h3>Aumentos relevantes no mês atual (${U.monthLabel(curM)}) frente à média realizada dos meses anteriores</h3>${incr.length ? stable([{ l: 'Categoria', k: 'k' }, { l: 'Mês atual', n: true, f: r => U.money(r.now) }, { l: 'Média histórica', n: true, f: r => U.money(r.avg) }, { l: 'Aumento', n: true, f: r => `<span class="neg">${U.money(r.d)} (${U.pct(r.p)})</span>` }], incr.map(x => ({ ...x, _drill: drillId(x.k, x.l, cols) })), { cls: 'click' }) : '<p class="small">Nenhum aumento acima de 25% ou sem histórico suficiente nos primeiros meses do Conta Azul.</p>'}</div>`;
-  const tabs = [['categoria', 'Categoria', r => r.categoria], ['pessoa', 'Fornecedor', r => r.pessoa], ['centro', 'Centro de custo', r => r.centroCusto]];
+  html += `<div class="card"><h3>Realizado por categoria</h3>${real.length ? groupChart(real, r => r.categoria, 'Categoria', val, { limit: 12 }) : '<p class="small muted-t">Nenhuma despesa realizada no período.</p>'}</div>`;
+  const tabs = [['pessoa', 'Fornecedor', r => r.pessoa], ['centro', 'Centro de custo', r => r.centroCusto]];
   html += `<div class="grid2">${tabs.map(([k, l, fn]) => `<div class="card"><h3>Realizado por ${l.toLowerCase()}</h3>${groupTable(real, fn, l, val, { cols, limit: 15 })}</div>`).join('')}</div>`;
   html += `<div class="grid2"><div class="card"><h3>Despesas recorrentes (mesmo fornecedor e categoria em 3+ meses)</h3>${stable([{ l: 'Fornecedor', f: x => U.esc(x[0].pessoa) }, { l: 'Categoria', f: x => U.esc(x[0].categoria) }, { l: 'Meses', n: true, f: x => new Set(x.map(r => U.month(r.dueDate || r.effDate))).size }, { l: 'Valor médio', n: true, f: x => U.money(U.sum(x, r => r.orig) / x.length) }], rec.map(l => Object.assign(l, { _drill: drillId(l[0].pessoa + ' · ' + l[0].categoria, l, cols) })), { cls: 'click' })}</div>
     <div class="card"><h3>Despesas extraordinárias (possíveis)</h3><p class="small">Valor acima de 2x a mediana da categoria, ou lançamento único na categoria acima de R$ 2.000.</p><div id="tex"></div></div></div>`;
@@ -2501,6 +2622,7 @@ async function init() {
   $('#base-today').onclick = () => { S.ui.base = U.today(); S.cache = null; render(); };
   $('#menu').onclick = () => document.body.classList.toggle('navopen');
   $('#nav').addEventListener('click', () => document.body.classList.remove('navopen'));
+  bindChartTips();
   const h = location.hash.slice(1); if (NAV.some(n => n[0] === h)) S.ui.view = h; else if (!S.versions.length) S.ui.view = 'importacao';
   render();
 }
@@ -2593,6 +2715,7 @@ VIEWS.fechamento = function (main) {
   const snap = fechSnapshot(ym, draft);
   const months = [...new Set(data().all.map(r => U.month(r.effDate)).filter(Boolean))].sort();
   const C = snap.stats, Pm = snap.prev;
+  const statsFull = monthStats(data().all, S.settings, ym, 'C'); // versão não "stripada": precisa de .real para a cascata
   const hints = {
     cobertura: `Arquivo da versão ativa cobre ${U.br(snap.cover.de)} a ${U.br(snap.cover.ate)} ${snap.cover.completo ? '(mês completo)' : '<span class="warn-t">(não cobre o mês inteiro)</span>'}; ${snap.cover.contas.length} conta(s).`,
     saldos: snap.saldos.filter(b => b.cash).map(b => `${U.esc(b.conta)}: calculado ${U.money(b.calc)}${b.banco != null ? ', extrato ' + U.money(b.banco) : ' <span class="warn-t">sem saldo do extrato em ' + U.br(U.endOfMonth(ym + '-01')) + '</span>'}`).join('<br>'),
@@ -2609,7 +2732,8 @@ VIEWS.fechamento = function (main) {
   let html = head('Fechamento mensal', 'Mês de ' + U.monthLabel(ym) + ' · data-base ' + U.br(S.ui.base), `<select onchange="S.ui.fechMes=this.value;render()">${[...new Set(months.concat([ym]))].sort().reverse().map(m => `<option value="${m}" ${m === ym ? 'selected' : ''}>${U.monthLabel(m)}</option>`).join('')}</select>`);
   html += `<div class="banner small">Prazos no Notion da CM: documentos da cliente até o 2º dia útil, fechamento até o 7º dia útil, relatório e reunião entre o 8º e o 10º dia útil.</div>`;
   if (U.endOfMonth(ym + '-01') > S.ui.base) html += `<div class="banner warn small"><b>Mês em andamento:</b> a data-base (${U.br(S.ui.base)}) é anterior ao fim de ${U.monthLabel(ym)}. Os realizados vão só até a data-base; registre o fechamento depois que o mês terminar e as contas estiverem conciliadas.</div>`;
-  html += `<div class="card"><h3>Números do mês (caixa realizado)</h3>${stable([{ l: 'Recebido', n: true, f: () => U.money(C.rec) }, { l: 'Pago', n: true, f: () => U.money(C.desp) }, { l: 'Resultado de caixa', n: true, f: () => `<b class="${C.res < 0 ? 'neg' : 'pos'}">${U.money(C.res)}</b>` }, { l: 'Transferências (líquido)', n: true, f: () => U.money(C.transf) }, { l: 'Previsto receber', n: true, f: () => U.money(C.prevRec) }, { l: 'Previsto pagar', n: true, f: () => U.money(C.prevDesp) }, { l: 'Mês anterior (resultado)', n: true, f: () => U.money(Pm.res) }], [{}])}<p class="small">Realizado pela data efetiva; previsto pelo vencimento original (valor original). Resultado de caixa não é resultado contábil (não considera competência).</p></div>`;
+  html += `<div class="grid2"><div class="card"><h3>Números do mês (caixa realizado)</h3>${stable([{ l: 'Recebido', n: true, f: () => U.money(C.rec) }, { l: 'Pago', n: true, f: () => U.money(C.desp) }, { l: 'Resultado de caixa', n: true, f: () => `<b class="${C.res < 0 ? 'neg' : 'pos'}">${U.money(C.res)}</b>` }, { l: 'Transferências (líquido)', n: true, f: () => U.money(C.transf) }, { l: 'Previsto receber', n: true, f: () => U.money(C.prevRec) }, { l: 'Previsto pagar', n: true, f: () => U.money(C.prevDesp) }, { l: 'Mês anterior (resultado)', n: true, f: () => U.money(Pm.res) }], [{}])}<p class="small">Realizado pela data efetiva; previsto pelo vencimento original (valor original). Resultado de caixa não é resultado contábil (não considera competência).</p></div>
+    <div class="card"><h3>Formação do resultado de caixa</h3><p class="small">${U.monthLabel(ym)}. Verde soma, vermelho subtrai, dourado é o resultado final.</p>${waterfall(wfStepsCaixa(statsFull))}</div></div>`;
   html += `<div class="card"><h3>Checklist do fechamento</h3>${checklistHtml(FECH_STEPS, draft.steps, hints, 'fch')}
     <label class="col">Observações do fechamento<textarea id="fch-notas" rows="3">${U.esc(draft.notas || '')}</textarea></label>
     <div class="form-row"><button class="btn primary" id="fch-save">Registrar fechamento de ${U.monthLabel(ym)}</button><span class="small">Grava uma fotografia que não é alterada depois. Um novo registro do mesmo mês vira uma nova revisão; as anteriores continuam no histórico.</span></div></div>`;
