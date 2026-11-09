@@ -84,6 +84,54 @@
     loginScreen.hidden = false;
   });
 
+  // ---------- Esqueci minha senha ----------
+  // O link de redefinição vai pro e-mail cadastrado do próprio usuário e abre em
+  // portal/index.html (tela única de "definir nova senha" pra todo o portal).
+  const btnEsqueciSenha = document.getElementById('btnEsqueciSenha');
+  const formEsqueciSenha = document.getElementById('formEsqueciSenha');
+  const esqueciFeedback = document.getElementById('esqueciFeedback');
+
+  btnEsqueciSenha.addEventListener('click', () => {
+    loginForm.hidden = true;
+    btnEsqueciSenha.hidden = true;
+    formEsqueciSenha.hidden = false;
+    document.getElementById('esqUsuario').value = userInput.value.trim();
+    document.getElementById('esqUsuario').focus();
+  });
+
+  document.getElementById('btnCancelarEsqueciSenha').addEventListener('click', () => {
+    formEsqueciSenha.hidden = true;
+    loginForm.hidden = false;
+    btnEsqueciSenha.hidden = false;
+    esqueciFeedback.textContent = '';
+    esqueciFeedback.className = 'admin-feedback';
+  });
+
+  formEsqueciSenha.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('esqUsuario').value.trim();
+    const website = document.getElementById('esqWebsite').value; // campo-armadilha anti-bot
+    const btn = formEsqueciSenha.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    esqueciFeedback.textContent = 'Enviando...';
+    esqueciFeedback.className = 'admin-feedback';
+    try {
+      const res = await fetch(`${API_URL}/api/esqueci-senha`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, website }),
+      });
+      const body = await res.json().catch(() => ({}));
+      esqueciFeedback.textContent = body.message || 'Se o usuário existir, um e-mail de redefinição foi enviado.';
+      esqueciFeedback.className = 'admin-feedback success';
+    } catch (err) {
+      esqueciFeedback.textContent = 'Não foi possível falar com o servidor. Tente de novo em instantes.';
+      esqueciFeedback.className = 'admin-feedback error';
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
   async function apiGet(path) {
     const res = await fetch(`${API_URL}${path}`, { headers: { Authorization: authHeader } });
     const body = await res.json().catch(() => ({}));

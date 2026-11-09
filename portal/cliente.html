@@ -17,8 +17,8 @@
 <div class="admin-login" id="loginScreen">
   <div class="admin-login-box">
     <img src="../assets/img/logo-cm.png" alt="CM Soluções Financeiras" class="admin-logo">
-    <h1>Painel Administrativo</h1>
-    <p class="admin-sub">Área restrita — acesso só para a equipe CM.</p>
+    <h1>Portal do Cliente</h1>
+    <p class="admin-sub">Acesse para ver os relatórios da sua empresa.</p>
 
     <form id="loginForm">
       <label for="userInput">Usuário</label>
@@ -31,6 +31,19 @@
       </label>
       <button type="submit" class="btn btn-primary btn-block" id="btnEntrar">Entrar</button>
       <p class="admin-feedback" id="loginFeedback" role="status"></p>
+    </form>
+
+    <button type="button" class="admin-login-link" id="btnEsqueciSenha">Esqueci minha senha</button>
+
+    <form id="formEsqueciSenha" class="admin-login-aux" hidden>
+      <p class="admin-sub">Informe seu usuário. Um link de redefinição será enviado para o e-mail cadastrado desse usuário.</p>
+      <label for="esqUsuario">Usuário</label>
+      <input type="text" id="esqUsuario" autocomplete="username" required>
+      <input type="text" id="esqWebsite" name="website" autocomplete="off" tabindex="-1" class="admin-honeypot">
+
+      <button type="submit" class="btn btn-primary btn-block">Enviar link de redefinição</button>
+      <button type="button" class="admin-login-link" id="btnCancelarEsqueciSenha">Voltar para o login</button>
+      <p class="admin-feedback" id="esqueciFeedback" role="status"></p>
     </form>
   </div>
 </div>

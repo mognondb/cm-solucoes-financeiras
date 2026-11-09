@@ -661,6 +661,7 @@
             <div class="admin-item-info">
               <h4>${escapeHtml(u.nome)} <small>(${escapeHtml(u.username)})</small></h4>
               <p>${PAPEL_LABEL[u.papel] || u.papel}${escopo}</p>
+              <p class="admin-item-meta">${u.email ? escapeHtml(u.email) : '<span class="admin-text-warn">sem e-mail cadastrado</span>'}</p>
               <span class="admin-item-meta">${u.ativo === false ? 'Inativo' : 'Ativo'}</span>
             </div>
             <div class="admin-item-actions">
@@ -696,7 +697,9 @@
   const formUsuario = document.getElementById('formUsuario');
   const uPapel = document.getElementById('uPapel');
   const uSenha = document.getElementById('uSenha');
+  const uSenhaObrigatoria = document.getElementById('uSenhaObrigatoria');
   const uUsername = document.getElementById('uUsername');
+  const uEmail = document.getElementById('uEmail');
   const campoUsuarioCliente = document.getElementById('campoUsuarioCliente');
   const campoUsuarioRelatorio = document.getElementById('campoUsuarioRelatorio');
   const uCliente = document.getElementById('uCliente');
@@ -745,8 +748,11 @@
     uUsername.value = item?.username || '';
     uUsername.disabled = !!item;
     document.getElementById('uNome').value = item?.nome || '';
+    uEmail.value = item?.email || '';
     uSenha.value = '';
-    uSenha.placeholder = item ? 'Deixe em branco para manter a senha atual' : 'Senha de acesso';
+    uSenha.required = !item;
+    uSenhaObrigatoria.hidden = !!item;
+    uSenha.placeholder = item ? 'Deixe em branco para manter a senha atual' : 'Senha inicial — a pessoa vai trocar no primeiro acesso';
     uPapel.value = item?.papel || 'cliente';
     document.getElementById('uAtivo').checked = item ? item.ativo !== false : true;
 
@@ -780,6 +786,7 @@
     const dados = {
       username: uUsername.value.trim(),
       nome: document.getElementById('uNome').value.trim(),
+      email: uEmail.value.trim(),
       senha: uSenha.value,
       papel: uPapel.value,
       clienteId: uPapel.value === 'cliente' ? uCliente.value : null,

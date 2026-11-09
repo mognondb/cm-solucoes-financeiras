@@ -77,6 +77,9 @@
 .admin-login-aux { margin-top: 10px; }
 .admin-honeypot { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
 
+.admin-field-hint { margin: -10px 0 0; font-size: 0.78rem; color: var(--color-text-light); }
+.admin-text-warn { color: #b3261e; }
+
 
 /* Painel */
 .admin-header {

@@ -91,6 +91,8 @@ $method = $_SERVER['REQUEST_METHOD'];
 if ($method === 'OPTIONS') jsonResponse(null, 200);
 
 $db = cmDb();
+migrarColunaEmailUsuarios($db);
+migrarTabelaResetSenha($db);
 
 // ---------- login ----------
 if ($path === '/api/login') {
@@ -99,10 +101,11 @@ if ($path === '/api/login') {
   jsonResponse(['ok' => true, 'papel' => $sessao['papel'], 'nome' => $sessao['nome'], 'clienteId' => $sessao['clienteId'], 'relatorioId' => $sessao['relatorioId']]);
 }
 
-// ---------- esqueci minha senha (painel administrativo) ----------
-// O e-mail de redefinição sempre vai pra uma caixa fixa (combinada com a CM), não pro
-// e-mail do usuário (a tabela "usuarios" nem guarda e-mail) — é o ponto único de controle
-// de quem consegue resetar uma senha do painel.
+// ---------- contas de usuário: e-mail próprio, boas-vindas e redefinição de senha ----------
+// Cada usuário tem seu e-mail cadastrado (coluna "email" em usuarios) e usa esse e-mail
+// pra receber o aviso de conta criada e pra "esqueci minha senha" — são contas
+// independentes, não passam pelo e-mail de ninguém mais. Se por algum motivo um usuário
+// antigo não tiver e-mail cadastrado ainda, cai nesta caixa fixa como rede de segurança.
 const EMAIL_RESET_SENHA = 'mognon.db@gmail.com';
 
 function migrarTabelaResetSenha(PDO $db): void {
@@ -117,6 +120,49 @@ function migrarTabelaResetSenha(PDO $db): void {
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
 }
 
+function migrarColunaEmailUsuarios(PDO $db): void {
+  $stmt = $db->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'usuarios' AND COLUMN_NAME = 'email'");
+  if ((int)$stmt->fetchColumn() === 0) $db->exec('ALTER TABLE usuarios ADD COLUMN email VARCHAR(190) NULL AFTER nome');
+}
+
+/** Painel administrativo (papel admin) e portal do cliente (cliente/dashboard) são
+ *  duas "portas de entrada" separadas no site — o link de redefinição leva pra cada
+ *  uma dependendo de quem é o usuário. */
+function linkRedefinicaoSenha(string $username, string $tokenCru, string $papel): string {
+  $pagina = $papel === 'admin' ? 'admin/index.html' : 'portal/index.html';
+  return 'https://cmfinanceiro.com/' . $pagina . '?resetUser=' . urlencode($username) . '&resetToken=' . $tokenCru;
+}
+
+/** Gera um token de redefinição (válido por 1h, uso único) e manda por e-mail — de
+ *  boas-vindas (conta recém-criada) ou de "esqueci minha senha". */
+function enviarEmailRedefinicao(PDO $db, array $user, string $motivo): void {
+  $tokenCru = bin2hex(random_bytes(32));
+  $agora = nowIso();
+  $expiraEm = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->modify('+1 hour')->format('Y-m-d\TH:i:s.v\Z');
+  $db->prepare('INSERT INTO reset_senha (id, username, token_hash, criado_em, expira_em) VALUES (?,?,?,?,?)')
+    ->execute(['rst-' . bin2hex(random_bytes(8)), $user['username'], hash('sha256', $tokenCru), $agora, $expiraEm]);
+
+  $link = linkRedefinicaoSenha($user['username'], $tokenCru, $user['papel']);
+  $temEmailProprio = !empty($user['email']);
+  $destino = $temEmailProprio ? $user['email'] : EMAIL_RESET_SENHA;
+  $avisoSemEmail = $temEmailProprio ? '' : "\n\n(Esse usuário ainda não tem e-mail cadastrado — complete o cadastro em Usuários no painel administrativo.)";
+
+  if ($motivo === 'boas-vindas') {
+    $assunto = 'Seu acesso foi criado — CM Soluções Financeiras';
+    $corpo = "Foi criado um acesso pra você em cmfinanceiro.com, com o usuário \"{$user['username']}\".\n\n"
+      . "Antes de começar a usar, defina sua própria senha pelo link abaixo:\n{$link}\n\n"
+      . "Esse link expira em 1 hora e só pode ser usado uma vez. Depois disso é só entrar normalmente com seu usuário e a senha que você escolher.{$avisoSemEmail}";
+  } else {
+    $assunto = 'Redefinição de senha — CM Soluções Financeiras';
+    $corpo = "Foi solicitada a redefinição de senha do usuário \"{$user['username']}\" em cmfinanceiro.com.\n\n"
+      . "Para definir uma senha nova, acesse o link abaixo:\n{$link}\n\n"
+      . "Esse link expira em 1 hora e só pode ser usado uma vez.\n\n"
+      . "Se você não pediu essa redefinição, ignore este e-mail — nada foi alterado ainda.{$avisoSemEmail}";
+  }
+  $headers = "From: CM Soluções Financeiras <nao-responda@cmfinanceiro.com>\r\nContent-Type: text/plain; charset=UTF-8";
+  @mail($destino, $assunto, $corpo, $headers);
+}
+
 if ($path === '/api/esqueci-senha') {
   if ($method !== 'POST') jsonResponse(['message' => 'Método não suportado'], 405);
   $dados = bodyJson();
@@ -127,8 +173,6 @@ if ($path === '/api/esqueci-senha') {
   $respostaGenerica = ['ok' => true, 'message' => 'Se o usuário existir, um e-mail de redefinição foi enviado.'];
   $username = trim((string)($dados['username'] ?? ''));
   if ($username === '') jsonResponse($respostaGenerica);
-
-  migrarTabelaResetSenha($db);
 
   $stmt = $db->prepare('SELECT * FROM usuarios WHERE username = ? LIMIT 1');
   $stmt->execute([$username]);
@@ -145,23 +189,7 @@ if ($path === '/api/esqueci-senha') {
       $segundos = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->getTimestamp() - (new DateTimeImmutable($ultimo))->getTimestamp();
       $podeEnviar = $segundos >= 300;
     }
-
-    if ($podeEnviar) {
-      $tokenCru = bin2hex(random_bytes(32));
-      $agora = nowIso();
-      $expiraEm = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->modify('+1 hour')->format('Y-m-d\TH:i:s.v\Z');
-      $stmt = $db->prepare('INSERT INTO reset_senha (id, username, token_hash, criado_em, expira_em) VALUES (?,?,?,?,?)');
-      $stmt->execute(['rst-' . bin2hex(random_bytes(8)), $username, hash('sha256', $tokenCru), $agora, $expiraEm]);
-
-      $link = 'https://cmfinanceiro.com/admin/index.html?resetUser=' . urlencode($username) . '&resetToken=' . $tokenCru;
-      $assunto = 'Redefinição de senha — Painel CM Soluções Financeiras';
-      $corpo = "Foi solicitada a redefinição de senha do usuário \"{$username}\" no painel administrativo "
-        . "(cmfinanceiro.com/admin).\n\nPara definir uma senha nova, acesse o link abaixo:\n{$link}\n\n"
-        . "Esse link expira em 1 hora e só pode ser usado uma vez.\n\n"
-        . "Se você não pediu essa redefinição, ignore este e-mail — nada foi alterado ainda.";
-      $headers = "From: Painel CM <nao-responda@cmfinanceiro.com>\r\nContent-Type: text/plain; charset=UTF-8";
-      @mail(EMAIL_RESET_SENHA, $assunto, $corpo, $headers);
-    }
+    if ($podeEnviar) enviarEmailRedefinicao($db, $user, 'esqueci');
   }
 
   jsonResponse($respostaGenerica);
@@ -175,8 +203,6 @@ if ($path === '/api/redefinir-senha') {
   $novaSenha = (string)($dados['novaSenha'] ?? '');
   if ($username === '' || $token === '') jsonResponse(['message' => 'Link de redefinição inválido.'], 400);
   if (strlen($novaSenha) < 6) jsonResponse(['message' => 'A nova senha precisa ter pelo menos 6 caracteres.'], 400);
-
-  migrarTabelaResetSenha($db);
 
   $stmt = $db->prepare('SELECT * FROM reset_senha WHERE username = ? AND token_hash = ? AND usado_em IS NULL ORDER BY criado_em DESC LIMIT 1');
   $stmt->execute([$username, hash('sha256', $token)]);
@@ -195,7 +221,7 @@ if ($path === '/api/redefinir-senha') {
     ->execute([$saltHex, $hashHex, nowIso(), $username]);
   $db->prepare('UPDATE reset_senha SET usado_em = ? WHERE id = ?')->execute([nowIso(), $reset['id']]);
 
-  jsonResponse(['ok' => true]);
+  jsonResponse(['ok' => true, 'papel' => $user['papel'], 'clienteId' => $user['cliente_id'], 'relatorioId' => $user['relatorio_id']]);
 }
 
 // ---------- diagnóstico financeiro (formulário público do site) ----------
@@ -295,6 +321,8 @@ if (in_array($path, $rotasProtegidas, true)) {
       $dados = bodyJson();
       $username = trim($dados['username'] ?? '');
       if (!$username) jsonResponse(['message' => 'Informe o nome de usuário'], 400);
+      $email = trim($dados['email'] ?? '');
+      if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) jsonResponse(['message' => 'E-mail inválido'], 400);
       $papeisValidos = ['admin', 'cliente', 'dashboard'];
       if (!in_array($dados['papel'] ?? null, $papeisValidos, true)) jsonResponse(['message' => 'Papel inválido'], 400);
       if ($dados['papel'] === 'cliente' && empty($dados['clienteId'])) jsonResponse(['message' => 'Informe o cliente para o papel "cliente"'], 400);
@@ -304,22 +332,30 @@ if (in_array($path, $rotasProtegidas, true)) {
       $stmt->execute([$username]);
       $existente = $stmt->fetch();
       if (!$existente && empty($dados['senha'])) jsonResponse(['message' => 'Informe uma senha para o novo usuário'], 400);
+      if (!$existente && $email === '') jsonResponse(['message' => 'Informe o e-mail do novo usuário'], 400);
 
       $saltHex = ($existente && empty($dados['senha'])) ? $existente['salt_hex'] : gerarSaltHex();
       $hashHex = !empty($dados['senha']) ? hashSenha($dados['senha'], $saltHex) : $existente['hash_hex'];
       $nome = $dados['nome'] ?? $username;
+      $emailFinal = $email !== '' ? $email : ($existente['email'] ?? null);
       $clienteId = $dados['papel'] === 'cliente' ? $dados['clienteId'] : null;
       $relatorioId = $dados['papel'] === 'dashboard' ? $dados['relatorioId'] : null;
       $ativo = ($dados['ativo'] ?? true) !== false ? 1 : 0;
       $criadoEm = $existente['criado_em'] ?? nowIso();
       $atualizadoEm = nowIso();
 
-      $stmt = $db->prepare('INSERT INTO usuarios (username, nome, papel, cliente_id, relatorio_id, ativo, salt_hex, hash_hex, criado_em, atualizado_em)
-        VALUES (?,?,?,?,?,?,?,?,?,?)
-        ON DUPLICATE KEY UPDATE nome=VALUES(nome), papel=VALUES(papel), cliente_id=VALUES(cliente_id), relatorio_id=VALUES(relatorio_id), ativo=VALUES(ativo), salt_hex=VALUES(salt_hex), hash_hex=VALUES(hash_hex), atualizado_em=VALUES(atualizado_em)');
-      $stmt->execute([$username, $nome, $dados['papel'], $clienteId, $relatorioId, $ativo, $saltHex, $hashHex, $criadoEm, $atualizadoEm]);
+      $stmt = $db->prepare('INSERT INTO usuarios (username, nome, email, papel, cliente_id, relatorio_id, ativo, salt_hex, hash_hex, criado_em, atualizado_em)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?)
+        ON DUPLICATE KEY UPDATE nome=VALUES(nome), email=VALUES(email), papel=VALUES(papel), cliente_id=VALUES(cliente_id), relatorio_id=VALUES(relatorio_id), ativo=VALUES(ativo), salt_hex=VALUES(salt_hex), hash_hex=VALUES(hash_hex), atualizado_em=VALUES(atualizado_em)');
+      $stmt->execute([$username, $nome, $emailFinal, $dados['papel'], $clienteId, $relatorioId, $ativo, $saltHex, $hashHex, $criadoEm, $atualizadoEm]);
 
-      jsonResponse(['username' => $username, 'nome' => $nome, 'papel' => $dados['papel'], 'clienteId' => $clienteId, 'relatorioId' => $relatorioId, 'ativo' => (bool)$ativo, 'criadoEm' => $criadoEm]);
+      // Usuário novo: dispara o e-mail de boas-vindas com o link pra definir a senha
+      // própria (a senha que o admin acabou de definir é só a inicial/temporária).
+      if (!$existente) {
+        enviarEmailRedefinicao($db, ['username' => $username, 'email' => $emailFinal, 'papel' => $dados['papel']], 'boas-vindas');
+      }
+
+      jsonResponse(['username' => $username, 'nome' => $nome, 'email' => $emailFinal, 'papel' => $dados['papel'], 'clienteId' => $clienteId, 'relatorioId' => $relatorioId, 'ativo' => (bool)$ativo, 'criadoEm' => $criadoEm]);
     }
 
     jsonResponse(['message' => 'Método não suportado'], 405);
@@ -533,7 +569,7 @@ jsonResponse(['message' => 'Não encontrado'], 404);
 
 // ---------- helpers de formatação ----------
 function usuarioToJson(array $r): array {
-  return ['username' => $r['username'], 'nome' => $r['nome'], 'papel' => $r['papel'], 'clienteId' => $r['cliente_id'], 'relatorioId' => $r['relatorio_id'], 'ativo' => (bool)$r['ativo'], 'criadoEm' => $r['criado_em']];
+  return ['username' => $r['username'], 'nome' => $r['nome'], 'email' => $r['email'] ?? null, 'papel' => $r['papel'], 'clienteId' => $r['cliente_id'], 'relatorioId' => $r['relatorio_id'], 'ativo' => (bool)$r['ativo'], 'criadoEm' => $r['criado_em']];
 }
 function clienteToJson(array $r): array {
   $base = ['id' => $r['id'], 'nome' => $r['nome'], 'criadoEm' => $r['criado_em'], 'atualizadoEm' => $r['atualizado_em']];

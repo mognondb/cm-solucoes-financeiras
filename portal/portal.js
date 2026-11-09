@@ -87,6 +87,109 @@
     loginScreen.hidden = false;
   });
 
+  // ---------- Esqueci minha senha / redefinir senha ----------
+  // Cada usuário (cliente, dashboard ou admin acessando pelo portal) tem o próprio
+  // e-mail cadastrado — o link de redefinição vai pra lá, não pro e-mail de outra pessoa.
+
+  const btnEsqueciSenha = document.getElementById('btnEsqueciSenha');
+  const btnCancelarEsqueciSenha = document.getElementById('btnCancelarEsqueciSenha');
+  const formEsqueciSenha = document.getElementById('formEsqueciSenha');
+  const esqueciFeedback = document.getElementById('esqueciFeedback');
+  const resetScreen = document.getElementById('resetScreen');
+  const resetSub = document.getElementById('resetSub');
+  const formRedefinirSenha = document.getElementById('formRedefinirSenha');
+  const resetFeedback = document.getElementById('resetFeedback');
+
+  btnEsqueciSenha.addEventListener('click', () => {
+    loginForm.hidden = true;
+    btnEsqueciSenha.hidden = true;
+    formEsqueciSenha.hidden = false;
+    document.getElementById('esqUsuario').value = userInput.value.trim();
+    document.getElementById('esqUsuario').focus();
+  });
+
+  btnCancelarEsqueciSenha.addEventListener('click', () => {
+    formEsqueciSenha.hidden = true;
+    loginForm.hidden = false;
+    btnEsqueciSenha.hidden = false;
+    esqueciFeedback.textContent = '';
+    esqueciFeedback.className = 'admin-feedback';
+  });
+
+  formEsqueciSenha.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('esqUsuario').value.trim();
+    const website = document.getElementById('esqWebsite').value; // campo-armadilha anti-bot
+    const btn = formEsqueciSenha.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    esqueciFeedback.textContent = 'Enviando...';
+    esqueciFeedback.className = 'admin-feedback';
+    try {
+      const res = await fetch(`${API_URL}/api/esqueci-senha`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, website }),
+      });
+      const body = await res.json().catch(() => ({}));
+      esqueciFeedback.textContent = body.message || 'Se o usuário existir, um e-mail de redefinição foi enviado.';
+      esqueciFeedback.className = 'admin-feedback success';
+    } catch (err) {
+      esqueciFeedback.textContent = 'Não foi possível falar com o servidor. Tente de novo em instantes.';
+      esqueciFeedback.className = 'admin-feedback error';
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // Link que vem no e-mail: ?resetUser=...&resetToken=...
+  const paramsUrl = new URLSearchParams(location.search);
+  const resetUser = paramsUrl.get('resetUser');
+  const resetToken = paramsUrl.get('resetToken');
+  if (resetUser && resetToken) {
+    loginScreen.hidden = true;
+    resetScreen.hidden = false;
+    resetSub.textContent = `Escolha uma senha nova para o usuário "${resetUser}".`;
+
+    formRedefinirSenha.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const novaSenha = document.getElementById('novaSenha').value;
+      const confirma = document.getElementById('novaSenhaConfirma').value;
+      if (novaSenha !== confirma) {
+        resetFeedback.textContent = 'As senhas não coincidem.';
+        resetFeedback.className = 'admin-feedback error';
+        return;
+      }
+      const btn = formRedefinirSenha.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      resetFeedback.textContent = 'Salvando...';
+      resetFeedback.className = 'admin-feedback';
+      try {
+        const res = await fetch(`${API_URL}/api/redefinir-senha`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: resetUser, token: resetToken, novaSenha }),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(body.message || 'Não foi possível redefinir a senha.');
+        resetFeedback.textContent = 'Senha redefinida! Redirecionando...';
+        resetFeedback.className = 'admin-feedback success';
+        history.replaceState(null, '', location.pathname);
+        setTimeout(() => {
+          if (redirecionarPorPapel(body)) return;
+          resetScreen.hidden = true;
+          loginScreen.hidden = false;
+          userInput.value = resetUser;
+          passInput.focus();
+        }, 1200);
+      } catch (err) {
+        resetFeedback.textContent = err.message;
+        resetFeedback.className = 'admin-feedback error';
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+
   async function apiGet(path) {
     const res = await fetch(`${API_URL}${path}`, { headers: { Authorization: authHeader } });
     const body = await res.json().catch(() => ({}));
@@ -100,7 +203,9 @@
     carregarClientes();
   }
 
-  if (authHeader) {
+  // Link de redefinição de senha (tela própria) tem prioridade sobre reentrar
+  // automaticamente numa sessão salva.
+  if (!(resetUser && resetToken) && authHeader) {
     const clienteIdSalvo = localStorage.getItem('cm_admin_cliente_id') || sessionStorage.getItem('cm_admin_cliente_id');
     const relatorioIdSalvo = localStorage.getItem('cm_admin_relatorio_id') || sessionStorage.getItem('cm_admin_relatorio_id');
     if (!redirecionarPorPapel({ papel: papelSessao, clienteId: clienteIdSalvo, relatorioId: relatorioIdSalvo })) {
