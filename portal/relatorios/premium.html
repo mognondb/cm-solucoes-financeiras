@@ -14,13 +14,15 @@
   --side1:#2a1515;--side2:#6e1d1d;
   --pos:#5f8268;--neg:#a8655a;--warn:#a8761b;--warnbg:#fbf1dc;--badbg:#fbe9e7;--okbg:#e8f4ec;--infobg:#f6ece6;
   --c52:#8c2323;--c20:#a8761b;--shadow:0 1px 2px rgba(48,20,16,.06),0 2px 8px rgba(48,20,16,.05);
+  --a1:#b8860b;--a2:#9c3f73;--a3:#3366a3;--a4:#b5652e;--a5:#0d9488;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#151010;--panel:#211817;--ink:#f1e9e4;--ink2:#c9b8b1;--ink3:#93827c;--line:#3a2b28;--line2:#2a201e;
   --brand:#e8b44c;--brand2:#d9a043;--accent:#e8b44c;--gold:#e8b44c;--accentbg:#3a2a14;--side1:#140b0b;--side2:#3d1414;
   --pos:#7fa98e;--neg:#c98a7d;--warn:#e8b04a;--warnbg:#3a2e14;--badbg:#3d1d1a;--okbg:#14301f;--infobg:#2c201d;
-  --c52:#d0605a;--c20:#d9a043;--shadow:none;}}
-:root[data-theme="dark"]{--bg:#151010;--panel:#211817;--ink:#f1e9e4;--ink2:#c9b8b1;--ink3:#93827c;--line:#3a2b28;--line2:#2a201e;--brand:#e8b44c;--brand2:#d9a043;--accent:#e8b44c;--gold:#e8b44c;--accentbg:#3a2a14;--side1:#140b0b;--side2:#3d1414;--pos:#7fa98e;--neg:#c98a7d;--warn:#e8b04a;--warnbg:#3a2e14;--badbg:#3d1d1a;--okbg:#14301f;--infobg:#2c201d;--c52:#d0605a;--c20:#d9a043;--shadow:none}
+  --c52:#d0605a;--c20:#d9a043;--shadow:none;
+  --a1:#b8832c;--a2:#c06a9c;--a3:#5a8fcf;--a4:#cf7a4a;--a5:#1f9a88;}}
+:root[data-theme="dark"]{--bg:#151010;--panel:#211817;--ink:#f1e9e4;--ink2:#c9b8b1;--ink3:#93827c;--line:#3a2b28;--line2:#2a201e;--brand:#e8b44c;--brand2:#d9a043;--accent:#e8b44c;--gold:#e8b44c;--accentbg:#3a2a14;--side1:#140b0b;--side2:#3d1414;--pos:#7fa98e;--neg:#c98a7d;--warn:#e8b04a;--warnbg:#3a2e14;--badbg:#3d1d1a;--okbg:#14301f;--infobg:#2c201d;--c52:#d0605a;--c20:#d9a043;--shadow:none;--a1:#b8832c;--a2:#c06a9c;--a3:#5a8fcf;--a4:#cf7a4a;--a5:#1f9a88}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
 a{color:var(--brand2);cursor:pointer;text-decoration:none}a:hover{text-decoration:underline}
@@ -101,8 +103,10 @@ table.t{border-collapse:collapse;width:100%;font-size:12.5px}
 .chart .grid{stroke:var(--line2)}.chart .zero{stroke:var(--ink3);stroke-width:1}.chart .risk{stroke:var(--neg);stroke-dasharray:4 4}
 .chart .ax{font-size:11px;fill:var(--ink3)}.chart .line{fill:none;stroke-width:2.2}.chart .s0{stroke:var(--brand2);fill:var(--brand2)}.chart .s1{stroke:var(--accent);fill:var(--accent)}.chart .s2{stroke:var(--ink3);fill:var(--ink3)}
 .chart path.line{fill:none}.chart .bin{fill:var(--pos);opacity:.45}.chart .bout{fill:var(--neg);opacity:.45}.chart .negpt{fill:var(--neg)}
+.chart .a1{fill:var(--a1)}.chart .a2{fill:var(--a2)}.chart .a3{fill:var(--a3)}.chart .a4{fill:var(--a4)}.chart .a5{fill:var(--a5)}.chart .aOther{fill:var(--ink3)}
 .legend{display:flex;gap:16px;font-size:12px;color:var(--ink2);margin-top:6px;flex-wrap:wrap}.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 .lg.s0{background:var(--brand2)}.lg.s1{background:var(--accent)}.lg.s2{background:var(--ink3)}.lg.bin{background:var(--pos);opacity:.5}.lg.bout{background:var(--neg);opacity:.5}
+.lg.a1{background:var(--a1)}.lg.a2{background:var(--a2)}.lg.a3{background:var(--a3)}.lg.a4{background:var(--a4)}.lg.a5{background:var(--a5)}.lg.aOther{background:var(--ink3)}
 /* calendário */
 .cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}.cdh{font-size:11px;color:var(--ink3);text-align:center;text-transform:uppercase}
 .cd{min-height:92px;border:1px solid var(--line2);border-radius:7px;padding:5px;font-size:12px;background:var(--panel)}.cd.off{background:transparent;border:0}
@@ -1230,6 +1234,25 @@ function projFor(cnpj, scen) {
   return D.proj[k];
 }
 function recs() { const D = data(); return D ? byCnpj(D.all, S.ui.cnpj) : []; }
+/* saldo projetado por conta e por dia (mesmo motor de projFor, só reagrupado por conta em vez de somado) */
+function accountProjection(cnpj, scen, maxContas) {
+  const pj = projFor(cnpj, scen);
+  const parts = pj.start.parts;
+  const moves = pj.moves.concat(pj.internal).filter(m => m.r && m.r.conta);
+  const byDayAcc = U.groupBy(moves, m => m.date + '|' + m.r.conta);
+  const bal = {}; parts.forEach(p => bal[p.conta] = p.valor || 0);
+  const days = pj.days.map(day => {
+    const byAcct = {};
+    for (const p of parts) { const ms = byDayAcc.get(day.d + '|' + p.conta) || []; bal[p.conta] = U.r2(bal[p.conta] + U.sum(ms, m => m.amt)); byAcct[p.conta] = bal[p.conta]; }
+    return { d: day.d, byAcct };
+  });
+  const max = maxContas || 5;
+  if (parts.length <= max) return { names: parts.map(p => p.conta), days };
+  const ranked = [...parts].sort((a, b) => Math.abs(b.valor || 0) - Math.abs(a.valor || 0));
+  const top = ranked.slice(0, max).map(p => p.conta), rest = ranked.slice(max).map(p => p.conta);
+  const days2 = days.map(day => { const byAcct = {}; top.forEach(n => byAcct[n] = day.byAcct[n]); if (rest.length) byAcct['Outras contas'] = U.r2(U.sum(rest, n => day.byAcct[n] || 0)); return { d: day.d, byAcct }; });
+  return { names: top.concat(rest.length ? ['Outras contas'] : []), days: days2 };
+}
 S.settingsRev = 0;
 async function saveSettings() { S.settingsRev++; S.cache = null; await Store.set('settings', S.settings); }
 async function saveVersions() { S.cache = null; await Store.set('versions', S.versions); await Store.set('activeId', S.activeId); }
@@ -1500,6 +1523,49 @@ function flowChart(series, opt) {
   const legend = series.length > 1 || opt.bars ? `<div class="legend">${series.map((s, i) => `<span><i class="lg s${i}"></i>${s.name}</span>`).join('')}${opt.bars ? '<span><i class="lg bin"></i>Entradas</span><span><i class="lg bout"></i>Saídas</span>' : ''}</div>` : '';
   return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img">${g}</svg>${legend}</div>`;
 }
+function roundTopRect(x, y, w, h, r) { r = Math.min(r, w / 2, Math.max(0, h)); return `M${x} ${y + h} L${x} ${y + r} Q${x} ${y} ${x + r} ${y} L${x + w - r} ${y} Q${x + w} ${y} ${x + w} ${y + r} L${x + w} ${y + h} Z`; }
+function roundBotRect(x, y, w, h, r) { r = Math.min(r, w / 2, Math.max(0, h)); return `M${x} ${y} L${x + w} ${y} L${x + w} ${y + h - r} Q${x + w} ${y + h} ${x + w - r} ${y + h} L${x + r} ${y + h} Q${x} ${y + h} ${x} ${y + h - r} Z`; }
+/* gráfico de colunas empilhadas (ex.: saldo por conta e por dia) */
+function stackChart(labels, series, opt) {
+  opt = opt || {};
+  const W = 960, H = opt.h || 260, pl = 70, pr = 16, pt = 14, pb = 34;
+  const n = labels.length; if (!n) return '';
+  const posTot = labels.map((_, i) => U.sum(series, s => Math.max(0, s.values[i] || 0)));
+  const negTot = labels.map((_, i) => U.sum(series, s => Math.min(0, s.values[i] || 0)));
+  let mx = Math.max(...posTot, 0), mn = Math.min(...negTot, 0);
+  if (mn === mx) { mn -= 1; mx += 1; }
+  const padv = (mx - mn) * 0.08; mx += padv; if (mn < 0) mn -= padv;
+  const y = v => pt + (mx - v) * (H - pt - pb) / (mx - mn);
+  const bandW = (W - pl - pr) / n, barW = Math.min(24, bandW * 0.62);
+  const xLeft = i => pl + bandW * i + (bandW - barW) / 2;
+  let g = '';
+  const ticks = 5;
+  for (let i = 0; i <= ticks; i++) { const v = mn + (mx - mn) * i / ticks; g += `<line x1="${pl}" x2="${W - pr}" y1="${y(v)}" y2="${y(v)}" class="grid"/><text x="${pl - 6}" y="${y(v) + 4}" class="ax" text-anchor="end">${(v / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })} mil</text>`; }
+  g += `<line x1="${pl}" x2="${W - pr}" y1="${y(0)}" y2="${y(0)}" class="zero"/>`;
+  const step = Math.max(1, Math.ceil(n / 12));
+  labels.forEach((l, i) => { if (i % step === 0) g += `<text x="${xLeft(i) + barW / 2}" y="${H - 12}" class="ax" text-anchor="middle">${l}</text>`; });
+  const GAP = 2, R = 4;
+  for (let i = 0; i < n; i++) {
+    const segsPos = [], segsNeg = [];
+    series.forEach(s => { const v = s.values[i] || 0; if (v > 0) segsPos.push({ s, v }); else if (v < 0) segsNeg.push({ s, v }); });
+    let acc = 0;
+    segsPos.forEach((seg, k) => {
+      const v0 = acc, v1 = acc + seg.v; acc = v1;
+      const rawTop = y(v1), rawBot = y(v0), yy = rawTop + GAP / 2, h = Math.max(0, rawBot - GAP / 2 - yy);
+      const title = `<title>${seg.s.name} · ${labels[i]}: ${U.money(seg.v)}</title>`;
+      g += k === segsPos.length - 1 ? `<path d="${roundTopRect(xLeft(i), yy, barW, h, R)}" class="${seg.s.cls}">${title}</path>` : `<rect x="${xLeft(i)}" y="${yy}" width="${barW}" height="${h}" class="${seg.s.cls}">${title}</rect>`;
+    });
+    acc = 0;
+    segsNeg.forEach((seg, k) => {
+      const v0 = acc, v1 = acc + seg.v; acc = v1;
+      const rawTop = y(v0), rawBot = y(v1), yy = rawTop + GAP / 2, h = Math.max(0, rawBot - GAP / 2 - yy);
+      const title = `<title>${seg.s.name} · ${labels[i]}: ${U.money(seg.v)}</title>`;
+      g += k === segsNeg.length - 1 ? `<path d="${roundBotRect(xLeft(i), yy, barW, h, R)}" class="${seg.s.cls}">${title}</path>` : `<rect x="${xLeft(i)}" y="${yy}" width="${barW}" height="${h}" class="${seg.s.cls}">${title}</rect>`;
+    });
+  }
+  const legend = `<div class="legend">${series.map(s => `<span><i class="lg ${s.cls}"></i>${s.name}</span>`).join('')}</div>`;
+  return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img">${g}</svg>${legend}</div>`;
+}
 
 /* ==========================================================================
    Telas: painel, fluxo, calendário, a receber, a pagar
@@ -1615,13 +1681,13 @@ VIEWS.fluxo = function (main) {
   let html = head('Fluxo de caixa projetado', scopeNote() + ' · cenário ' + sc, `<div class="seg">${['dia', 'semana', 'mes'].map(m => `<button class="${mode === m ? 'on' : ''}" onclick="S.ui.flowMode='${m}';render()">${m === 'dia' ? 'Diário (30 dias)' : m === 'semana' ? 'Semanal (13 semanas)' : 'Mensal (12 meses)'}</button>`).join('')}</div>
     <select onchange="S.ui.scenario=this.value;render()">${['conservador', 'base', 'otimista'].map(s => `<option ${s === sc ? 'selected' : ''} value="${s}">Cenário ${s}</option>`).join('')}</select>`);
   const sb = pj.start;
-  html += `<div class="card formula"><b>Saldo inicial</b> ${U.money(sb.total)} ${confTag(sb.status)} + <b>entradas previstas</b> − <b>saídas previstas</b> = <b>saldo final projetado</b>.
-    <p class="small">Entram só lançamentos <b>em aberto</b> (o que já foi pago ou recebido está no saldo inicial) e quitados com data posterior à data-base (pendentes). Compras em aberto no cartão entram na data prevista do Conta Azul (vencimento da fatura), que é quando o dinheiro sai da conta corrente; um pagamento de fatura agendado só entra no que passar das compras em aberto. Aplicações e conta capital ficam fora do disponível. Vencidos em aberto entram na data-base (${U.br(S.ui.base)}). Recebíveis não são dinheiro disponível até entrarem na conta: a data usada é a prevista no Conta Azul.</p>
-    <p class="small"><b>Premissas do cenário ${sc}:</b> ${scenarioText(S.settings.scenarios[sc])}</p>
-    ${pj.excluded.length || pj.internal.length ? `<p class="small">${pj.excluded.length ? `<a data-drill="${drillId('Fora da projeção (com motivo)', pj.excluded.map(x => Object.assign({}, x.r, { _amt: x.amt, _date: x.r.dueDate, _conf: 'pendente', _nota: x.motivo })), COLS.move())}">${pj.excluded.length} lançamento(s) fora da projeção, com motivo</a>. ` : ''}${pj.internal.length ? `<a data-drill="${drillId('Transferências entre contas próprias (anuladas)', movesToRows(pj.internal), COLS.move())}">${pj.internal.length / 2} transferência(s) entre contas próprias anuladas</a> (efeito zero no saldo).` : ''}</p>` : ''}
-    ${pj.needGiro ? `<p class="small bad-t">Capital de giro necessário no horizonte: <b>${U.money(pj.needGiro.v)}</b> em ${U.br(pj.needGiro.d)} (para não ficar abaixo do saldo mínimo de ${U.money(S.settings.riskMin || 0)}).</p>` : ''}
-    ${sb.parts.map(p => `<div class="small">${cnpjTag(p.cnpj)} ${U.esc(p.conta)}: ${U.money(p.valor)} · ${U.esc(p.src)}${p.ref ? ' · ref. ' + U.br(p.ref) : ''}</div>`).join('')}
-    ${mode === 'mes' && lastWithData && U.iso(new Date(lastWithData)) < U.addDays(S.ui.base, 330) ? `<p class="small warn-t">Há lançamentos futuros só até ${U.br(U.iso(new Date(lastWithData)))}. Meses depois disso não têm dados suficientes: o saldo fica parado porque faltam compromissos e receitas, não porque não existam.</p>` : ''}</div>`;
+  const scObj = S.settings.scenarios[sc] || {};
+  const hasPremises = scObj.atrasoRec || scObj.antecipaRec || scObj.perdaRec || scObj.aumentoCustos || scObj.adiarPag || (scObj.extras || []).length || (scObj.shifts || []).length || scObj.premissa;
+  html += `<div class="card formula"><b>Saldo inicial</b> ${U.money(sb.total)} ${confTag(sb.status)} + entradas − saídas = <b>saldo final projetado</b>.
+    ${hasPremises ? `<p class="small">Premissas do cenário ${sc}: ${scenarioText(scObj)}</p>` : ''}
+    ${pj.excluded.length || pj.internal.length ? `<p class="small">${pj.excluded.length ? `<a data-drill="${drillId('Fora da projeção (com motivo)', pj.excluded.map(x => Object.assign({}, x.r, { _amt: x.amt, _date: x.r.dueDate, _conf: 'pendente', _nota: x.motivo })), COLS.move())}">${pj.excluded.length} fora da projeção</a> · ` : ''}${pj.internal.length ? `<a data-drill="${drillId('Transferências entre contas próprias (anuladas)', movesToRows(pj.internal), COLS.move())}">${pj.internal.length / 2} transferência(s) internas anuladas</a>` : ''}</p>` : ''}
+    ${pj.needGiro ? `<p class="small bad-t">Capital de giro necessário no horizonte: <b>${U.money(pj.needGiro.v)}</b> em ${U.br(pj.needGiro.d)}.</p>` : ''}
+    ${mode === 'mes' && lastWithData && U.iso(new Date(lastWithData)) < U.addDays(S.ui.base, 330) ? `<p class="small warn-t">Há lançamentos futuros só até ${U.br(U.iso(new Date(lastWithData)))}; meses depois ficam parados por falta de dados.</p>` : ''}</div>`;
   if (pj.firstNeg) {
     const upTo = movesToRows(pj.moves.filter(m => m.date && m.date <= pj.firstNeg.d));
     const pays = upTo.filter(m => m._amt < 0).sort((a, b) => a._amt - b._amt);
@@ -1632,6 +1698,20 @@ VIEWS.fluxo = function (main) {
       <a class="btn sm" data-drill="${drillId('Recebimentos que cobririam a falta (antecipar/cobrar)', need, COLS.move())}">Recebimentos necessários para cobrir: ${need.length} (${U.money(acc)})</a></div></div>`;
   } else html += `<div class="banner ok">Sem saldo projetado abaixo de ${U.money(S.settings.riskMin || 0)} no horizonte com dados. Menor saldo: ${U.money(pj.minBal.v)} em ${U.br(pj.minBal.d)}.</div>`;
   html += `<div class="card">${flowChart([{ name: 'Saldo final', points: g.map(x => ({ l: mode === 'mes' ? U.monthLabel(x.k) : U.brShort(x.from), v: x.fim })) }], { bars: g.map(x => ({ l: label(x), ent: x.ent, sai: x.sai })), riskMin: S.settings.riskMin, h: 280 })}</div>`;
+  const acctProj = accountProjection(S.ui.cnpj, sc, 5);
+  if (acctProj.names.length) {
+    const acctDays = acctProj.days.slice(0, 30);
+    const palette = ['a1', 'a2', 'a3', 'a4', 'a5', 'aOther'];
+    const acctSeries = acctProj.names.map((name, i) => ({ name, cls: palette[i % palette.length], values: acctDays.map(d => d.byAcct[name] || 0) }));
+    const first = acctDays[0], last = acctDays[acctDays.length - 1];
+    html += `<div class="card"><h3>Saldo por conta, dia a dia (próximos ${acctDays.length} dias)</h3>${stackChart(acctDays.map(d => U.brShort(d.d)), acctSeries, { h: 280 })}
+      ${stable([
+      { l: 'Conta', k: 'name' },
+      { l: 'Saldo em ' + U.brShort(first.d), n: true, f: r => U.money(first.byAcct[r.name] || 0) },
+      { l: 'Saldo em ' + U.brShort(last.d), n: true, f: r => U.money(last.byAcct[r.name] || 0) },
+      { l: 'Variação no período', n: true, f: r => { const dv = U.r2((last.byAcct[r.name] || 0) - (first.byAcct[r.name] || 0)); return `<span class="${dv < 0 ? 'neg' : 'pos'}">${U.money(dv, { sign: 1 })}</span>`; } },
+    ], acctProj.names.map(name => ({ name })))}</div>`;
+  }
   html += `<div class="card"><h3>Tabela ${mode === 'dia' ? 'diária' : mode === 'semana' ? 'semanal' : 'mensal'}</h3>${stable([
     { l: 'Período', f: x => label(x) }, { l: 'Saldo inicial', n: true, f: x => U.money(x.ini) }, { l: 'Entradas', n: true, f: x => x.ent ? `<span class="pos">${U.money(x.ent)}</span>` : '—' }, { l: 'Saídas', n: true, f: x => x.sai ? `<span class="neg">${U.money(-x.sai)}</span>` : '—' },
     { l: 'Saldo final', n: true, f: x => `<b class="${x.fim < (S.settings.riskMin || 0) ? 'neg' : ''}">${U.money(x.fim)}</b>` }, { l: 'Confiabilidade', f: x => x.moves.length ? confTag(x.conf) : '' }, { l: 'Lanç.', n: true, f: x => x.moves.length || '' }],
@@ -1672,11 +1752,28 @@ function riskChangeHtml(pv) {
 }
 
 /* ---------- calendário ---------- */
+/* saldo histórico (realizado) por dia, pra preencher o calendário em meses anteriores à data-base
+   (a projeção de projFor só cobre dias >= data-base) */
+function historicalDailyBalance(cnpj, fromDay, base) {
+  const map = new Map();
+  if (fromDay > base) return map;
+  const sb = startingBalance(data().balances, cnpj, base);
+  const R = byCnpj(data().all, cnpj).filter(r => r.isCash && r.st === 'realizado' && r.effDate && r.effDate > fromDay && r.effDate <= base);
+  const byDay = U.groupBy(R, r => r.effDate);
+  let bal = sb.total;
+  for (let d = base; d > fromDay; d = U.addDays(d, -1)) {
+    const net = U.sum(byDay.get(d) || [], r => r.sign * r.valor);
+    bal = U.r2(bal - net);
+    map.set(U.addDays(d, -1), bal);
+  }
+  return map;
+}
 VIEWS.calendario = function (main) {
   const pj = projFor(S.ui.cnpj);
   const ym = S.ui.calMonth || U.month(S.ui.base);
   const [y, m] = ym.split('-').map(Number);
   const first = U.iso(new Date(y, m - 1, 1)), last = U.endOfMonth(first);
+  const hist = first < S.ui.base ? historicalDailyBalance(S.ui.cnpj, U.addDays(first, -1), S.ui.base) : null;
   const R = recs();
   // no calendário: realizados pela data efetiva e abertos pela data prevista (vencidos aparecem na data original)
   const items = R.filter(r => (r.k === 'receita' || r.k === 'despesa') && r.st !== 'cancelado').map(r => ({ r, d: r.open ? r.dueDate : r.effDate })).filter(x => x.d && x.d >= first && x.d <= last);
@@ -1689,15 +1786,16 @@ VIEWS.calendario = function (main) {
   for (let d = first; d <= last; d = U.addDays(d, 1)) {
     const l = byD.get(d) || []; const rec = l.filter(x => x.r.k === 'receita'), pag = l.filter(x => x.r.k === 'despesa');
     const day = pj.days.find(x => x.d === d);
+    const fim = day ? day.fim : (d < S.ui.base && hist ? hist.get(d) : null);
     const id = l.length ? drillId('Lançamentos de ' + U.br(d), l.map(x => x.r), COLS.base()) : null;
-    cells += `<div class="cd ${d === S.ui.base ? 'today' : ''} ${l.length ? 'click' : ''} ${day && day.fim < (S.settings.riskMin || 0) ? 'risk' : ''}" ${id ? `data-drill="${id}"` : ''}><div class="cdn">${+d.slice(8)}</div>
+    cells += `<div class="cd ${d === S.ui.base ? 'today' : ''} ${l.length ? 'click' : ''} ${fim != null && fim < (S.settings.riskMin || 0) ? 'risk' : ''}" ${id ? `data-drill="${id}"` : ''}><div class="cdn">${+d.slice(8)}</div>
       ${rec.length ? `<div class="pos small">+${U.money(U.sum(rec, x => x.r.open ? x.r.openAmt : x.r.valor))} <span class="muted-t">(${rec.length})</span></div>` : ''}
       ${pag.length ? `<div class="neg small">−${U.money(U.sum(pag, x => x.r.open ? x.r.openAmt : x.r.valor))} <span class="muted-t">(${pag.length})</span></div>` : ''}
       ${l.some(x => x.r.overdue) ? '<div class="tag bad">vencido</div>' : ''}
-      ${day ? `<div class="cdb">saldo ${U.money(day.fim)}</div>` : ''}</div>`;
+      ${fim != null ? `<div class="cdb">saldo ${U.money(fim)}</div>` : ''}</div>`;
   }
   html += `<div class="card"><div class="cal">${['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom'].map(x => `<div class="cdh">${x}</div>`).join('')}${cells}</div>
-  <p class="small">Realizados aparecem na data efetiva; em aberto, na data prevista. "Saldo" é o saldo projetado do cenário base a partir da data-base.</p></div>`;
+  <p class="small">Realizados aparecem na data efetiva; em aberto, na data prevista. "Saldo" é o saldo projetado (dias futuros) ou o saldo realizado (dias passados), ambos em caixa/banco disponível.</p></div>`;
   main.innerHTML = html;
 };
 
