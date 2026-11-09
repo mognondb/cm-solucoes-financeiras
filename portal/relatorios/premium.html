@@ -12,19 +12,19 @@
   --bg:#f7f3ef;--panel:#ffffff;--ink:#241614;--ink2:#5b4743;--ink3:#8c7a75;--line:#e8dfd9;--line2:#f3ede8;
   --brand:#3b1716;--brand2:#8c2323;--accent:#d4a03f;--gold:#e8b44c;--accentbg:#f8efe0;
   --side1:#2a1515;--side2:#6e1d1d;
-  --pos:#2f7d4a;--neg:#c0392b;--warn:#a8761b;--warnbg:#fbf1dc;--badbg:#fbe9e7;--okbg:#e8f4ec;--infobg:#f6ece6;
+  --pos:#5f8268;--neg:#a8655a;--warn:#a8761b;--warnbg:#fbf1dc;--badbg:#fbe9e7;--okbg:#e8f4ec;--infobg:#f6ece6;
   --c52:#8c2323;--c20:#a8761b;--shadow:0 1px 2px rgba(48,20,16,.06),0 2px 8px rgba(48,20,16,.05);
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#151010;--panel:#211817;--ink:#f1e9e4;--ink2:#c9b8b1;--ink3:#93827c;--line:#3a2b28;--line2:#2a201e;
   --brand:#e8b44c;--brand2:#d9a043;--accent:#e8b44c;--gold:#e8b44c;--accentbg:#3a2a14;--side1:#140b0b;--side2:#3d1414;
-  --pos:#5cc48a;--neg:#ff7b6b;--warn:#e8b04a;--warnbg:#3a2e14;--badbg:#3d1d1a;--okbg:#14301f;--infobg:#2c201d;
+  --pos:#7fa98e;--neg:#c98a7d;--warn:#e8b04a;--warnbg:#3a2e14;--badbg:#3d1d1a;--okbg:#14301f;--infobg:#2c201d;
   --c52:#d0605a;--c20:#d9a043;--shadow:none;}}
-:root[data-theme="dark"]{--bg:#151010;--panel:#211817;--ink:#f1e9e4;--ink2:#c9b8b1;--ink3:#93827c;--line:#3a2b28;--line2:#2a201e;--brand:#e8b44c;--brand2:#d9a043;--accent:#e8b44c;--gold:#e8b44c;--accentbg:#3a2a14;--side1:#140b0b;--side2:#3d1414;--pos:#5cc48a;--neg:#ff7b6b;--warn:#e8b04a;--warnbg:#3a2e14;--badbg:#3d1d1a;--okbg:#14301f;--infobg:#2c201d;--c52:#d0605a;--c20:#d9a043;--shadow:none}
+:root[data-theme="dark"]{--bg:#151010;--panel:#211817;--ink:#f1e9e4;--ink2:#c9b8b1;--ink3:#93827c;--line:#3a2b28;--line2:#2a201e;--brand:#e8b44c;--brand2:#d9a043;--accent:#e8b44c;--gold:#e8b44c;--accentbg:#3a2a14;--side1:#140b0b;--side2:#3d1414;--pos:#7fa98e;--neg:#c98a7d;--warn:#e8b04a;--warnbg:#3a2e14;--badbg:#3d1d1a;--okbg:#14301f;--infobg:#2c201d;--c52:#d0605a;--c20:#d9a043;--shadow:none}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
 a{color:var(--brand2);cursor:pointer;text-decoration:none}a:hover{text-decoration:underline}
-h1{font-size:22px;margin:0}h2{font-size:15px;margin:22px 0 10px;color:var(--brand2);text-transform:uppercase;letter-spacing:.04em}h3{font-size:15px;margin:0 0 10px}h4{font-size:13px;margin:16px 0 6px;color:var(--ink2)}
+h1{font-size:22px;margin:0}h2{font-size:15px;margin:22px 0 10px;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em}h3{font-size:15px;margin:0 0 10px}h4{font-size:13px;margin:16px 0 6px;color:var(--ink2)}
 .small{font-size:12px;color:var(--ink2)}.muted-t{color:var(--ink3)}.ok-t{color:var(--pos)}.bad-t{color:var(--neg)}.warn-t{color:var(--warn)}
 .pos{color:var(--pos)}.neg{color:var(--neg)}
 code{background:var(--line2);padding:1px 4px;border-radius:4px}
@@ -56,8 +56,9 @@ textarea{width:100%;font-family:ui-monospace,Menlo,monospace;font-size:12px}
 .ch{display:flex;justify-content:space-between;align-items:baseline}
 .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
 .kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin-bottom:14px}
-.kpi{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--brand2);border-radius:9px;padding:10px 12px;box-shadow:var(--shadow)}
+.kpi{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--ink3);border-radius:9px;padding:10px 12px;box-shadow:var(--shadow)}
 .kpi.click{cursor:pointer}.kpi.click:hover{border-color:var(--brand2)}.kpi.sel{outline:2px solid var(--brand2)}
+.kpi.receita{border-left-color:var(--pos)}
 .kpi.bad,.kpi.pendente{border-left-color:var(--neg)}.kpi.warn,.kpi.estimado{border-left-color:var(--warn)}.kpi.ok,.kpi.confirmado{border-left-color:var(--pos)}
 .kl{font-size:12px;color:var(--ink2);font-weight:600}.kv{font-size:20px;font-weight:700;margin:2px 0;font-variant-numeric:tabular-nums}.kp{font-size:11.5px;color:var(--ink3)}.kn{margin-top:4px}
 .banner{background:var(--infobg);border-radius:8px;padding:10px 12px;margin:0 0 12px;font-size:13px}.banner.warn{background:var(--warnbg)}.banner.bad{background:var(--badbg)}.banner.ok{background:var(--okbg)}.banner .btns{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap}
@@ -65,11 +66,11 @@ textarea{width:100%;font-family:ui-monospace,Menlo,monospace;font-size:12px}
 .tag{display:inline-block;font-size:11px;font-weight:700;border-radius:5px;padding:0 6px;background:var(--line2);color:var(--ink2)}
 .tag.c52{background:var(--c52);color:#fff}.tag.c20{background:var(--c20);color:#fff}.tag.warn{background:var(--warnbg);color:var(--warn)}.tag.bad{background:var(--badbg);color:var(--neg)}.tag.ok{background:var(--okbg);color:var(--pos)}
 .st{font-size:11.5px;font-weight:600;border-radius:10px;padding:1px 8px;white-space:nowrap}
-.st.ok{background:var(--okbg);color:var(--pos)}.st.open{background:var(--infobg);color:var(--brand2)}.st.bad{background:var(--badbg);color:var(--neg)}.st.part,.st.warn{background:var(--warnbg);color:var(--warn)}.st.muted{background:var(--line2);color:var(--ink3)}
+.st.ok{background:var(--okbg);color:var(--pos)}.st.open{background:var(--infobg);color:var(--ink2)}.st.bad{background:var(--badbg);color:var(--neg)}.st.part,.st.warn{background:var(--warnbg);color:var(--warn)}.st.muted{background:var(--line2);color:var(--ink3)}
 label.col{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--ink2);margin-top:8px}label.col textarea{font-family:inherit;font-size:13px}
 .form-row.tight{gap:6px;margin-top:6px}.form-row.tight input,.form-row.tight select{padding:3px 6px;font-size:12px;max-width:120px}
 input.num{text-align:right;width:100px}.legend-conf{margin:-6px 0 12px}
-.conf.calculado{background:var(--infobg);color:var(--brand2)}.kpi.calculado{border-left-color:var(--accent)}
+.conf.calculado{background:var(--infobg);color:var(--ink2)}.kpi.calculado{border-left-color:var(--accent)}
 .rv{width:16px;height:16px}.rvdone td{opacity:.6}
 .chk{list-style:none;margin:0;padding:0}.chk li{display:grid;grid-template-columns:28px 1fr 170px 130px 1fr 110px;gap:8px;align-items:center;padding:7px 4px;border-bottom:1px solid var(--line2);font-size:13px}.chk li .hint{font-size:11.5px;color:var(--ink3)}.chk li .n{font-weight:700;color:var(--ink3)}
 .chk li.feito .n{color:var(--pos)}.chk li.pend .n{color:var(--warn)}
@@ -93,7 +94,7 @@ table.t{border-collapse:collapse;width:100%;font-size:12.5px}
 .t tr.rowbad td{background:var(--badbg)}
 .tbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}.tbar input{min-width:220px}.tinfo{font-size:12px;color:var(--ink2);flex:1}
 .pager{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px}
-.bar{width:90px;height:7px;background:var(--line2);border-radius:4px;overflow:hidden}.bar i{display:block;height:100%;background:var(--brand2)}.bar i.pos{background:var(--pos)}.bar i.neg{background:var(--neg)}
+.bar{width:90px;height:7px;background:var(--line2);border-radius:4px;overflow:hidden}.bar i{display:block;height:100%;background:var(--ink3)}.bar i.pos{background:var(--pos)}.bar i.neg{background:var(--neg)}
 .kvt{border-collapse:collapse;width:100%;font-size:13px}.kvt th{text-align:left;color:var(--ink2);font-weight:500;padding:4px 10px 4px 0;width:240px;vertical-align:top}.kvt td{padding:4px 0;border-bottom:1px solid var(--line2)}.kvt.raw{font-size:12px}
 /* gráfico */
 .chart svg{width:100%;height:auto;display:block}
@@ -108,7 +109,7 @@ table.t{border-collapse:collapse;width:100%;font-size:12.5px}
 .cd.click{cursor:pointer}.cd.click:hover{border-color:var(--brand2)}.cd.today{outline:2px solid var(--brand2)}.cd.risk{background:var(--badbg)}
 .cdn{font-weight:700;color:var(--ink2)}.cdb{font-size:10.5px;color:var(--ink3);margin-top:3px}
 /* alertas */
-ul.alerts{list-style:none;margin:0;padding:0}ul.alerts li{display:grid;grid-template-columns:260px 1fr auto;gap:10px;padding:8px 10px;border-left:4px solid var(--brand2);background:var(--line2);border-radius:6px;margin-bottom:6px;cursor:pointer;align-items:baseline}
+ul.alerts{list-style:none;margin:0;padding:0}ul.alerts li{display:grid;grid-template-columns:260px 1fr auto;gap:10px;padding:8px 10px;border-left:4px solid var(--ink3);background:var(--line2);border-radius:6px;margin-bottom:6px;cursor:pointer;align-items:baseline}
 ul.alerts li.bad{border-left-color:var(--neg);background:var(--badbg)}ul.alerts li.warn{border-left-color:var(--warn);background:var(--warnbg)}ul.alerts li span{font-size:13px}ul.alerts li em{font-size:12px;color:var(--ink3);font-style:normal}
 /* formulários */
 .form-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-top:10px}.form-row label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--ink2)}.form-row .grow{flex:1;min-width:200px}
@@ -1531,9 +1532,9 @@ VIEWS.painel = function (main) {
     ${kpi('Primeira data de risco', neg ? U.br(neg.d) : 'Nenhuma', neg ? 'saldo projetado ' + U.money(neg.fim) + ' (faltam ' + U.money(neg.gap) + ')' : 'saldo nunca abaixo de ' + U.money(S.settings.riskMin || 0), neg ? fut.filter(m => m._date <= neg.d && m._amt < 0) : null, { cls: neg ? 'bad' : 'ok', cols: COLS.move() })}
   </div>
   <h2>A receber e a pagar</h2><div class="kpis">
-    ${kpi('A receber em aberto', U.sum(arOpen, r => r.openAmt), 'todas as datas (lançado no Conta Azul, não é dinheiro em conta)', arOpen, { cols: COLS.receber() })}
+    ${kpi('A receber em aberto', U.sum(arOpen, r => r.openAmt), 'todas as datas (lançado no Conta Azul, não é dinheiro em conta)', arOpen, { cls: 'receita', cols: COLS.receber() })}
     ${kpi('A pagar em aberto', U.sum(apOpen, r => r.openAmt), 'todas as datas', apOpen, { cols: COLS.pagar() })}
-    ${kpi('Recebíveis vencidos', U.sum(arVenc, r => r.openAmt), 'previstos antes de ' + U.br(base) + ' e não recebidos', arVenc, { cls: arVenc.length ? 'warn' : '', cols: COLS.receber() })}
+    ${kpi('Recebíveis vencidos', U.sum(arVenc, r => r.openAmt), 'previstos antes de ' + U.br(base) + ' e não recebidos', arVenc, { cls: arVenc.length ? 'warn' : 'receita', cols: COLS.receber() })}
     ${kpi('Obrigações vencidas', U.sum(apVenc, r => r.openAmt), 'previstas antes de ' + U.br(base) + ' e não pagas', apVenc, { cls: apVenc.length ? 'bad' : '', cols: COLS.pagar() })}
     ${kpi('Diferenças previsto x pago', U.sum(conc, o => o.var), conc.length + ' quitado(s) com valor diferente do original', conc.map(o => o.r), { cls: conc.length ? 'warn' : '', cols: COLS.pagar() })}
   </div>`;
@@ -1753,7 +1754,7 @@ function arapView(main, kind) {
     <label>vencimento/data de <input type="date" data-arf="de" value="${F.de || ''}"></label><label>até <input type="date" data-arf="ate" value="${F.ate || ''}"></label>
     ${nF ? `<button class="btn sm" id="arf-clear">Limpar filtros (${nF})</button>` : ''}<span class="small">CNPJ: use o seletor no topo.</span></div>`;
   if (isR) html += `<div class="banner small">A receber = receitas lançadas no Conta Azul ainda não recebidas (parcelas de contrato provisionadas). Recebido = dinheiro que entrou na conta (realizado). Faturamento (NF emitida) não vem no extrato: é informado na tela Obras e contratos.</div>`;
-  html += `<div class="kpis">${Object.entries(groups).map(([k, [l, L]]) => `<div class="kpi click ${tab === k ? 'sel' : ''}" onclick="S.ui['tab_${kind}']='${k}';render()"><div class="kl">${l}</div><div class="kv">${U.money(U.sum(L, r => k === 'realizado' ? r.valor : (r.open ? r.openAmt : r.valor)))}</div><div class="kp">${L.length} lanç.</div></div>`).join('')}</div>`;
+  html += `<div class="kpis">${Object.entries(groups).map(([k, [l, L]]) => `<div class="kpi click ${isR ? 'receita' : ''} ${tab === k ? 'sel' : ''}" onclick="S.ui['tab_${kind}']='${k}';render()"><div class="kl">${l}</div><div class="kv">${U.money(U.sum(L, r => k === 'realizado' ? r.valor : (r.open ? r.openAmt : r.valor)))}</div><div class="kp">${L.length} lanç.</div></div>`).join('')}</div>`;
   if (['aberto', 'futuros', 'parcial'].includes(tab)) html += `<div class="seg">${[['todos', 'Todos'], ['7', '7 dias'], ['15', '15 dias'], ['30', '30 dias'], ['mes', 'Até o fim do mês'], ['seguintes', 'Meses seguintes'], ['vencidos', 'Vencidos']].map(([k, l]) => `<button class="${hz === k ? 'on' : ''}" onclick="S.ui['hz_${kind}']='${k}';render()">${l}</button>`).join('')}</div>`;
   html += `<div class="card"><h3>${groups[tab][0]}</h3><div id="tbl"></div></div>`;
   // concentração por pessoa e por data
@@ -2605,7 +2606,7 @@ VIEWS.obras = function (main) {
   let html = head('Obras e contratos', scopeNote() + ' · obra = centro de custo do Conta Azul');
   html += `<div class="banner small"><b>Como ler:</b> receita <b>lançada</b> = recebido + a receber no Conta Azul (parcelas provisionadas); <b>faturado</b> (NF emitida) e <b>contratado</b> não vêm no extrato e são informados em "Detalhes" pela CM. Custo <b>identificado</b> = despesas pagas e em aberto com o centro de custo da obra, agrupadas pela <b>categoria</b> do Conta Azul (o sistema nunca atribui despesa a uma obra pelo nome do fornecedor). Resultado = lançado − custo identificado. A margem é <b>provisória</b> enquanto houver despesas sem obra, contrato não informado ou mão de obra não alocada.</div>`;
   const tot = k => U.sum(L, o => o[k]);
-  html += `<div class="kpis">${kpi('Obras com lançamentos', String(L.length), 'centros de custo de natureza obra')}${kpi('Receita lançada', tot('lancado'), 'recebido + a receber', L.flatMap(o => o.rec), { cols: COLS.receber() })}${kpi('Recebido', tot('recebido'), 'dinheiro que entrou', L.flatMap(o => o.rec.filter(r => r.st === 'realizado')), { cols: COLS.receber(), cls: 'confirmado' })}${kpi('A receber', tot('aReceber'), 'em aberto', L.flatMap(o => o.rec.filter(r => r.open)), { cols: COLS.receber() })}${kpi('Custo identificado', tot('custo'), 'pago + em aberto com centro de obra', L.flatMap(o => o.dsp), { cols: COLS.pagar() })}${kpi('Despesas sem obra', O.naoAlocDesp, 'Obras a identificar, sem centro ou a identificar', O.naoAloc.desp, { cls: O.naoAlocDesp ? 'warn' : '', cols: COLS.pagar() })}</div>`;
+  html += `<div class="kpis">${kpi('Obras com lançamentos', String(L.length), 'centros de custo de natureza obra')}${kpi('Receita lançada', tot('lancado'), 'recebido + a receber', L.flatMap(o => o.rec), { cls: 'receita', cols: COLS.receber() })}${kpi('Recebido', tot('recebido'), 'dinheiro que entrou', L.flatMap(o => o.rec.filter(r => r.st === 'realizado')), { cols: COLS.receber(), cls: 'confirmado' })}${kpi('A receber', tot('aReceber'), 'em aberto', L.flatMap(o => o.rec.filter(r => r.open)), { cls: 'receita', cols: COLS.receber() })}${kpi('Custo identificado', tot('custo'), 'pago + em aberto com centro de obra', L.flatMap(o => o.dsp), { cols: COLS.pagar() })}${kpi('Despesas sem obra', O.naoAlocDesp, 'Obras a identificar, sem centro ou a identificar', O.naoAloc.desp, { cls: O.naoAlocDesp ? 'warn' : '', cols: COLS.pagar() })}</div>`;
   html += `<div class="card"><h3>Rentabilidade por obra</h3>${stable([
     { l: 'Obra', f: o => `<b>${U.esc(o.centro)}</b> ${o.cnpjs.map(cnpjTag).join('')}` },
     { l: 'Lançado', n: true, f: o => `<a data-drill="${drillId('Receitas: ' + o.centro, o.rec, COLS.receber())}">${U.money(o.lancado)}</a>` },
