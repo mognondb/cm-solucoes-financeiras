@@ -173,9 +173,112 @@
     userInput.focus();
   });
 
+  // ---------- Esqueci minha senha / redefinir senha ----------
+  // O servidor sempre manda o e-mail de redefinição pra uma caixa fixa combinada
+  // com a CM (não existe e-mail por usuário aqui) — esta tela só pede o usuário.
+
+  const btnEsqueciSenha = document.getElementById('btnEsqueciSenha');
+  const btnCancelarEsqueciSenha = document.getElementById('btnCancelarEsqueciSenha');
+  const formEsqueciSenha = document.getElementById('formEsqueciSenha');
+  const esqueciFeedback = document.getElementById('esqueciFeedback');
+  const resetScreen = document.getElementById('resetScreen');
+  const resetSub = document.getElementById('resetSub');
+  const formRedefinirSenha = document.getElementById('formRedefinirSenha');
+  const resetFeedback = document.getElementById('resetFeedback');
+
+  btnEsqueciSenha.addEventListener('click', () => {
+    loginForm.hidden = true;
+    btnEsqueciSenha.hidden = true;
+    formEsqueciSenha.hidden = false;
+    document.getElementById('esqUsuario').value = userInput.value.trim();
+    document.getElementById('esqUsuario').focus();
+  });
+
+  btnCancelarEsqueciSenha.addEventListener('click', () => {
+    formEsqueciSenha.hidden = true;
+    loginForm.hidden = false;
+    btnEsqueciSenha.hidden = false;
+    esqueciFeedback.textContent = '';
+    esqueciFeedback.className = 'admin-feedback';
+  });
+
+  formEsqueciSenha.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('esqUsuario').value.trim();
+    const website = document.getElementById('esqWebsite').value; // campo-armadilha anti-bot
+    const btn = formEsqueciSenha.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    esqueciFeedback.textContent = 'Enviando...';
+    esqueciFeedback.className = 'admin-feedback';
+    try {
+      const res = await fetch(`${config.apiUrl}/api/esqueci-senha`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, website }),
+      });
+      const body = await res.json().catch(() => ({}));
+      esqueciFeedback.textContent = body.message || 'Se o usuário existir, um e-mail de redefinição foi enviado.';
+      esqueciFeedback.className = 'admin-feedback success';
+    } catch (err) {
+      esqueciFeedback.textContent = 'Não foi possível falar com o servidor. Tente de novo em instantes.';
+      esqueciFeedback.className = 'admin-feedback error';
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // Link que vem no e-mail de redefinição: ?resetUser=...&resetToken=...
+  const paramsUrl = new URLSearchParams(location.search);
+  const resetUser = paramsUrl.get('resetUser');
+  const resetToken = paramsUrl.get('resetToken');
+  if (resetUser && resetToken) {
+    loginScreen.hidden = true;
+    resetScreen.hidden = false;
+    resetSub.textContent = `Escolha uma senha nova para o usuário "${resetUser}".`;
+
+    formRedefinirSenha.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const novaSenha = document.getElementById('novaSenha').value;
+      const confirma = document.getElementById('novaSenhaConfirma').value;
+      if (novaSenha !== confirma) {
+        resetFeedback.textContent = 'As senhas não coincidem.';
+        resetFeedback.className = 'admin-feedback error';
+        return;
+      }
+      const btn = formRedefinirSenha.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      resetFeedback.textContent = 'Salvando...';
+      resetFeedback.className = 'admin-feedback';
+      try {
+        const res = await fetch(`${config.apiUrl}/api/redefinir-senha`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: resetUser, token: resetToken, novaSenha }),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(body.message || 'Não foi possível redefinir a senha.');
+        resetFeedback.textContent = 'Senha redefinida! Você já pode entrar com a senha nova.';
+        resetFeedback.className = 'admin-feedback success';
+        history.replaceState(null, '', location.pathname);
+        setTimeout(() => {
+          resetScreen.hidden = true;
+          loginScreen.hidden = false;
+          userInput.value = resetUser;
+          passInput.focus();
+        }, 1800);
+      } catch (err) {
+        resetFeedback.textContent = err.message;
+        resetFeedback.className = 'admin-feedback error';
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+
   // Se já existe uma sessão salva (reentrou na aba, ou marcou "Manter-me
-  // conectado" numa visita anterior), reentra direto
-  if (authHeader && config.apiUrl) {
+  // conectado" numa visita anterior), reentra direto — exceto se a tela de
+  // redefinição de senha estiver aberta (link do e-mail tem prioridade).
+  if (!(resetUser && resetToken) && authHeader && config.apiUrl) {
     fetch(`${config.apiUrl}/api/login`, { headers: { Authorization: authHeader } })
       .then(async (res) => {
         if (!res.ok) {

@@ -99,6 +99,105 @@ if ($path === '/api/login') {
   jsonResponse(['ok' => true, 'papel' => $sessao['papel'], 'nome' => $sessao['nome'], 'clienteId' => $sessao['clienteId'], 'relatorioId' => $sessao['relatorioId']]);
 }
 
+// ---------- esqueci minha senha (painel administrativo) ----------
+// O e-mail de redefinição sempre vai pra uma caixa fixa (combinada com a CM), não pro
+// e-mail do usuário (a tabela "usuarios" nem guarda e-mail) — é o ponto único de controle
+// de quem consegue resetar uma senha do painel.
+const EMAIL_RESET_SENHA = 'mognon.db@gmail.com';
+
+function migrarTabelaResetSenha(PDO $db): void {
+  $db->exec('CREATE TABLE IF NOT EXISTS reset_senha (
+    id VARCHAR(40) PRIMARY KEY,
+    username VARCHAR(80) NOT NULL,
+    token_hash CHAR(64) NOT NULL,
+    criado_em VARCHAR(40) NOT NULL,
+    expira_em VARCHAR(40) NOT NULL,
+    usado_em VARCHAR(40) NULL,
+    INDEX idx_reset_username (username)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+
+if ($path === '/api/esqueci-senha') {
+  if ($method !== 'POST') jsonResponse(['message' => 'Método não suportado'], 405);
+  $dados = bodyJson();
+  if (!empty($dados['website'])) jsonResponse(['ok' => true]); // campo-armadilha: bots preenchem, finge sucesso
+
+  // Resposta sempre igual, exista ou não o usuário — evita que alguém descubra
+  // quais usuários existem só testando esta tela.
+  $respostaGenerica = ['ok' => true, 'message' => 'Se o usuário existir, um e-mail de redefinição foi enviado.'];
+  $username = trim((string)($dados['username'] ?? ''));
+  if ($username === '') jsonResponse($respostaGenerica);
+
+  migrarTabelaResetSenha($db);
+
+  $stmt = $db->prepare('SELECT * FROM usuarios WHERE username = ? LIMIT 1');
+  $stmt->execute([$username]);
+  $user = $stmt->fetch();
+
+  if ($user && $user['ativo']) {
+    // no máximo 1 e-mail a cada 5 minutos por usuário, pra não virar spam se alguém
+    // ficar clicando ou tentar usar isso pra encher a caixa de entrada.
+    $stmt = $db->prepare('SELECT criado_em FROM reset_senha WHERE username = ? ORDER BY criado_em DESC LIMIT 1');
+    $stmt->execute([$username]);
+    $ultimo = $stmt->fetchColumn();
+    $podeEnviar = true;
+    if ($ultimo) {
+      $segundos = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->getTimestamp() - (new DateTimeImmutable($ultimo))->getTimestamp();
+      $podeEnviar = $segundos >= 300;
+    }
+
+    if ($podeEnviar) {
+      $tokenCru = bin2hex(random_bytes(32));
+      $agora = nowIso();
+      $expiraEm = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->modify('+1 hour')->format('Y-m-d\TH:i:s.v\Z');
+      $stmt = $db->prepare('INSERT INTO reset_senha (id, username, token_hash, criado_em, expira_em) VALUES (?,?,?,?,?)');
+      $stmt->execute(['rst-' . bin2hex(random_bytes(8)), $username, hash('sha256', $tokenCru), $agora, $expiraEm]);
+
+      $link = 'https://cmfinanceiro.com/admin/index.html?resetUser=' . urlencode($username) . '&resetToken=' . $tokenCru;
+      $assunto = 'Redefinição de senha — Painel CM Soluções Financeiras';
+      $corpo = "Foi solicitada a redefinição de senha do usuário \"{$username}\" no painel administrativo "
+        . "(cmfinanceiro.com/admin).\n\nPara definir uma senha nova, acesse o link abaixo:\n{$link}\n\n"
+        . "Esse link expira em 1 hora e só pode ser usado uma vez.\n\n"
+        . "Se você não pediu essa redefinição, ignore este e-mail — nada foi alterado ainda.";
+      $headers = "From: Painel CM <nao-responda@cmfinanceiro.com>\r\nContent-Type: text/plain; charset=UTF-8";
+      @mail(EMAIL_RESET_SENHA, $assunto, $corpo, $headers);
+    }
+  }
+
+  jsonResponse($respostaGenerica);
+}
+
+if ($path === '/api/redefinir-senha') {
+  if ($method !== 'POST') jsonResponse(['message' => 'Método não suportado'], 405);
+  $dados = bodyJson();
+  $username = trim((string)($dados['username'] ?? ''));
+  $token = (string)($dados['token'] ?? '');
+  $novaSenha = (string)($dados['novaSenha'] ?? '');
+  if ($username === '' || $token === '') jsonResponse(['message' => 'Link de redefinição inválido.'], 400);
+  if (strlen($novaSenha) < 6) jsonResponse(['message' => 'A nova senha precisa ter pelo menos 6 caracteres.'], 400);
+
+  migrarTabelaResetSenha($db);
+
+  $stmt = $db->prepare('SELECT * FROM reset_senha WHERE username = ? AND token_hash = ? AND usado_em IS NULL ORDER BY criado_em DESC LIMIT 1');
+  $stmt->execute([$username, hash('sha256', $token)]);
+  $reset = $stmt->fetch();
+  if (!$reset) jsonResponse(['message' => 'Link inválido ou já utilizado. Peça uma nova redefinição.'], 400);
+  if ($reset['expira_em'] < nowIso()) jsonResponse(['message' => 'Link expirado. Peça uma nova redefinição.'], 400);
+
+  $stmt = $db->prepare('SELECT * FROM usuarios WHERE username = ?');
+  $stmt->execute([$username]);
+  $user = $stmt->fetch();
+  if (!$user || !$user['ativo']) jsonResponse(['message' => 'Usuário não encontrado ou inativo.'], 404);
+
+  $saltHex = gerarSaltHex();
+  $hashHex = hashSenha($novaSenha, $saltHex);
+  $db->prepare('UPDATE usuarios SET salt_hex = ?, hash_hex = ?, atualizado_em = ? WHERE username = ?')
+    ->execute([$saltHex, $hashHex, nowIso(), $username]);
+  $db->prepare('UPDATE reset_senha SET usado_em = ? WHERE id = ?')->execute([nowIso(), $reset['id']]);
+
+  jsonResponse(['ok' => true]);
+}
+
 // ---------- diagnóstico financeiro (formulário público do site) ----------
 if ($path === '/api/diagnostico') {
   if ($method === 'POST') {

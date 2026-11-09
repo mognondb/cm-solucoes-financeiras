@@ -35,6 +35,39 @@
       <button type="submit" class="btn btn-primary btn-block" id="btnEntrar">Entrar</button>
       <p class="admin-feedback" id="loginFeedback" role="status"></p>
     </form>
+
+    <button type="button" class="admin-login-link" id="btnEsqueciSenha">Esqueci minha senha</button>
+
+    <form id="formEsqueciSenha" class="admin-login-aux" hidden>
+      <p class="admin-sub">Informe seu usuário. Um link de redefinição será enviado para o e-mail de segurança da CM.</p>
+      <label for="esqUsuario">Usuário</label>
+      <input type="text" id="esqUsuario" autocomplete="username" required>
+      <input type="text" id="esqWebsite" name="website" autocomplete="off" tabindex="-1" class="admin-honeypot">
+
+      <button type="submit" class="btn btn-primary btn-block">Enviar link de redefinição</button>
+      <button type="button" class="admin-login-link" id="btnCancelarEsqueciSenha">Voltar para o login</button>
+      <p class="admin-feedback" id="esqueciFeedback" role="status"></p>
+    </form>
+  </div>
+</div>
+
+<!-- REDEFINIR SENHA (abre sozinho quando o link do e-mail tem ?resetUser=&resetToken=) -->
+<div class="admin-login" id="resetScreen" hidden>
+  <div class="admin-login-box">
+    <img src="../assets/img/logo-cm.png" alt="CM Soluções Financeiras" class="admin-logo">
+    <h1>Definir nova senha</h1>
+    <p class="admin-sub" id="resetSub">Escolha uma senha nova para o usuário.</p>
+
+    <form id="formRedefinirSenha">
+      <label for="novaSenha">Nova senha</label>
+      <input type="password" id="novaSenha" autocomplete="new-password" minlength="6" required>
+
+      <label for="novaSenhaConfirma">Confirme a nova senha</label>
+      <input type="password" id="novaSenhaConfirma" autocomplete="new-password" minlength="6" required>
+
+      <button type="submit" class="btn btn-primary btn-block">Salvar nova senha</button>
+      <p class="admin-feedback" id="resetFeedback" role="status"></p>
+    </form>
   </div>
 </div>
 
