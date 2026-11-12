@@ -125,6 +125,7 @@ table.t{border-collapse:collapse;width:100%;font-size:12.5px}
 .chart svg{width:100%;height:auto;display:block}
 .chart .grid{stroke:var(--line2)}.chart .zero{stroke:var(--ink3);stroke-width:1}.chart .risk{stroke:var(--neg);stroke-dasharray:4 4}
 .chart .ax{font-size:11px;fill:var(--ink3)}.chart .line{fill:none;stroke-width:2.2}.chart .s0{stroke:var(--brand2);fill:var(--brand2)}.chart .s1{stroke:var(--accent);fill:var(--accent)}.chart .s2{stroke:var(--ink3);fill:var(--ink3)}
+.chart .lnrec{stroke:var(--pos);fill:var(--pos)}.chart .lndesp{stroke:var(--neg);fill:var(--neg)}.chart .lnres{stroke:var(--ink3);fill:var(--ink3)}
 .chart path.line{fill:none}.chart .bin{fill:var(--pos);opacity:.45}.chart .bout{fill:var(--neg);opacity:.45}.chart .negpt{fill:var(--neg)}
 .chart .a1{fill:var(--a1)}.chart .a2{fill:var(--a2)}.chart .a3{fill:var(--a3)}.chart .a4{fill:var(--a4)}.chart .a5{fill:var(--a5)}.chart .aOther{fill:var(--ink3)}
 .chart .wfpos{fill:var(--pos)}.chart .wfneg{fill:var(--neg)}.chart .wftot{fill:var(--brand2)}.chart .wfconn{stroke:var(--ink3);stroke-dasharray:3 3}
@@ -133,6 +134,7 @@ table.t{border-collapse:collapse;width:100%;font-size:12.5px}
 #tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--panel);padding:7px 10px;border-radius:7px;font-size:12px;line-height:1.4;z-index:9999;max-width:280px;box-shadow:var(--shadow);display:none}
 #tip b{font-weight:700}
 .lg.s0{background:var(--brand2)}.lg.s1{background:var(--accent)}.lg.s2{background:var(--ink3)}.lg.bin{background:var(--pos);opacity:.5}.lg.bout{background:var(--neg);opacity:.5}
+.lg.lnrec{background:var(--pos)}.lg.lndesp{background:var(--neg)}.lg.lnres{background:var(--ink3)}
 .lg.a1{background:var(--a1)}.lg.a2{background:var(--a2)}.lg.a3{background:var(--a3)}.lg.a4{background:var(--a4)}.lg.a5{background:var(--a5)}.lg.aOther{background:var(--ink3)}
 /* calendário */
 .cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}.cdh{font-size:11px;color:var(--ink3);text-align:center;text-transform:uppercase}
@@ -414,6 +416,7 @@ function defaultSettings() {
     statusMap: {},         // valor bruto de Situação -> realizado|aberto|parcial|cancelado|indefinido
     tipoMap: {},           // valor bruto de Tipo -> receita|despesa|transferencia|saldo|indefinido
     catClass: {},          // categoria de despesa -> { fixo?:bool, direto?:bool } (sobrepõe guessCatClass)
+    profCategoria: {},     // nome do profissional (no repasse) -> categoria de receita (pra margem por especialidade)
     mappingValidated: false,
     openingBalances: {},   // conta -> { valor, data, fonte, nota }
     overduePolicy: { pagar: 'hoje', receber: 'hoje' },
@@ -1451,10 +1454,11 @@ function flowChart(series, opt) {
   }
   series.forEach((s, si) => {
     const d = s.points.map((p, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p.v).toFixed(1)).join('');
-    g += `<path d="${d}" class="line s${si} ${s.cls || ''}"/>`;
-    s.points.forEach((p, i) => { if (p.v < (opt.riskMin || 0)) g += `<circle cx="${x(i)}" cy="${y(p.v)}" r="3" class="negpt"><title>${p.l}: ${U.money(p.v)}</title></circle>`; else if (n <= 40) g += `<circle cx="${x(i)}" cy="${y(p.v)}" r="2.5" class="pt s${si}"><title>${s.name ? s.name + ' · ' : ''}${p.l}: ${U.money(p.v)}</title></circle>`; });
+    const sc = s.cls || 's' + si;
+    g += `<path d="${d}" class="line ${sc}"/>`;
+    s.points.forEach((p, i) => { if (p.v < (opt.riskMin || 0)) g += `<circle cx="${x(i)}" cy="${y(p.v)}" r="3" class="negpt"><title>${p.l}: ${U.money(p.v)}</title></circle>`; else if (n <= 40) g += `<circle cx="${x(i)}" cy="${y(p.v)}" r="2.5" class="pt ${sc}"><title>${s.name ? s.name + ' · ' : ''}${p.l}: ${U.money(p.v)}</title></circle>`; });
   });
-  const legend = series.length > 1 || opt.bars ? `<div class="legend">${series.map((s, i) => `<span><i class="lg s${i}"></i>${s.name}</span>`).join('')}${opt.bars ? '<span><i class="lg bin"></i>Entradas</span><span><i class="lg bout"></i>Saídas</span>' : ''}</div>` : '';
+  const legend = series.length > 1 || opt.bars ? `<div class="legend">${series.map((s, i) => `<span><i class="lg ${s.cls || 's' + i}"></i>${s.name}</span>`).join('')}${opt.bars ? '<span><i class="lg bin"></i>Entradas</span><span><i class="lg bout"></i>Saídas</span>' : ''}</div>` : '';
   return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img">${g}</svg>${legend}</div>`;
 }
 function roundTopRect(x, y, w, h, r) { r = Math.min(r, w / 2, Math.max(0, h)); return `M${x} ${y + h} L${x} ${y + r} Q${x} ${y} ${x + r} ${y} L${x + w - r} ${y} Q${x + w} ${y} ${x + w} ${y + r} L${x + w} ${y + h} Z`; }
@@ -1605,6 +1609,12 @@ function wfStepsBalanco(st, proj) {
   if (st.abertosDesp) steps.push({ label: 'A pagar em aberto', value: -st.abertosDesp });
   steps.push({ label: 'Resultado projetado', value: U.r2(st.res + st.abertosRec - st.abertosDesp), total: true });
   return steps;
+}
+/* monthStats dos últimos n meses terminando em ym (inclusive), do mais antigo pro mais novo */
+function monthSeries(all, settings, ym, n) {
+  const months = []; let cur = ym;
+  for (let i = 0; i < n; i++) { months.unshift(cur); cur = U.month(U.addDays(cur + '-01', -1)); }
+  return months.map(m => monthStats(all, settings, m, 'C'));
 }
 /* mescla duas listas {k,v,n} (categoria atual x mês anterior) pra tabela/gráfico comparativo */
 function compareCat(curList, prevList) {
@@ -2488,6 +2498,12 @@ VIEWS.config = function (main) {
     { l: 'Natureza', f: c => `<select data-ccf="${U.esc(c)}">${[['fixo', 'Fixo'], ['variavel', 'Variável']].map(([x, l]) => `<option value="${x}" ${(catClass(st, c).fixo ? 'fixo' : 'variavel') === x ? 'selected' : ''}>${l}</option>`).join('')}</select>` },
     { l: 'Tipo', f: c => `<select data-ccd="${U.esc(c)}">${[['direto', 'Custo direto (varia com o atendimento)'], ['indireto', 'Despesa operacional']].map(([x, l]) => `<option value="${x}" ${(catClass(st, c).direto ? 'direto' : 'indireto') === x ? 'selected' : ''}>${l}</option>`).join('')}</select>` },
   ], despCats)}</div>`;
+  const profissionais = D ? [...new Set(D.all.filter(r => r.k === 'despesa' && /repasse/i.test(r.categoria || '')).map(r => r.pessoa).filter(Boolean))].sort() : Object.keys(st.profCategoria);
+  const receitaCats = D ? [...new Set(D.all.filter(r => r.k === 'receita').map(r => r.categoria).filter(Boolean))].sort() : [];
+  if (profissionais.length) html += `<div class="card"><h3>Mapeamento profissional → especialidade</h3><p class="small">Liga quem recebe o repasse à categoria de receita correspondente, pra calcular a margem por especialidade no Fechamento mensal. Deixe "(não mapeado)" se não souber.</p>${stable([
+    { l: 'Profissional (repasse)', f: p => U.esc(p) },
+    { l: 'Especialidade', f: p => `<select data-pc="${U.esc(p)}"><option value="">(não mapeado)</option>${receitaCats.map(c => `<option value="${U.esc(c)}" ${st.profCategoria[p] === c ? 'selected' : ''}>${U.esc(c)}</option>`).join('')}</select>` },
+  ], profissionais)}</div>`;
   html += `<div class="card"><h3>Parâmetros</h3><div class="form-row">
     <label>Saldo mínimo de segurança (R$) <input type="number" step="any" id="riskmin" value="${st.riskMin || 0}"></label></div>
     <h4>Regras de classificação da folha</h4><p class="small">Uma regra por linha: <code>Classe = termo1 | termo2</code>. Procura na categoria + descrição.</p>
@@ -2506,13 +2522,14 @@ VIEWS.config = function (main) {
   $$('[data-tm]').forEach(el => el.onchange = async () => { st.tipoMap[el.dataset.tm] = el.value; await upd(); });
   $$('[data-ccf]').forEach(el => el.onchange = async () => { const c = el.dataset.ccf; st.catClass[c] = Object.assign({}, st.catClass[c], { fixo: el.value === 'fixo' }); await upd(); });
   $$('[data-ccd]').forEach(el => el.onchange = async () => { const c = el.dataset.ccd; st.catClass[c] = Object.assign({}, st.catClass[c], { direto: el.value === 'direto' }); await upd(); });
+  $$('[data-pc]').forEach(el => el.onchange = async () => { if (el.value) st.profCategoria[el.dataset.pc] = el.value; else delete st.profCategoria[el.dataset.pc]; await upd(); });
   $('#val-all') && ($('#val-all').onclick = async () => { if (!confirm('Marcar todas as contas como validadas? Confira antes se o tipo de cada conta está certo.')) return; Object.values(st.accounts).forEach(a => { if (!a.validated) a.validatedAt = Date.now(); a.validated = true; }); st.mappingValidated = true; await upd(); toast('Contas validadas'); });
   $('#save-params').onclick = async () => {
     st.riskMin = +$('#riskmin').value || 0;
     st.payrollRules = $('#prules').value.split('\n').map(l => l.split('=')).filter(x => x.length >= 2 && x[0].trim()).map(([c, ...t]) => ({ cls: c.trim(), re: t.join('=').split('|').map(s => s.trim()).filter(Boolean).join('|') }));
     await upd(); toast('Parâmetros salvos');
   };
-  $('#reset-settings').onclick = async () => { if (!confirm('Restaurar as configurações padrão? Ajustes manuais, contas validadas, saldos do banco, cenários, rotinas e revisões serão apagados (as versões importadas e os fechamentos registrados ficam). Faça um backup antes.')) return; const keep = { fechamentos: S.settings.fechamentos, accountAlias: S.settings.accountAlias || {}, catClass: S.settings.catClass || {} }; S.settings = Object.assign(defaultSettings(), keep); for (const v of S.versions) for (const r of v.records) { const c = aliasOf(r.conta, S.settings); if (c && !S.settings.accounts[c]) S.settings.accounts[c] = { type: guessAcctType(c), validated: false }; } await upd(); };
+  $('#reset-settings').onclick = async () => { if (!confirm('Restaurar as configurações padrão? Ajustes manuais, contas validadas, saldos do banco, cenários, rotinas e revisões serão apagados (as versões importadas e os fechamentos registrados ficam). Faça um backup antes.')) return; const keep = { fechamentos: S.settings.fechamentos, accountAlias: S.settings.accountAlias || {}, catClass: S.settings.catClass || {}, profCategoria: S.settings.profCategoria || {} }; S.settings = Object.assign(defaultSettings(), keep); for (const v of S.versions) for (const r of v.records) { const c = aliasOf(r.conta, S.settings); if (c && !S.settings.accounts[c]) S.settings.accounts[c] = { type: guessAcctType(c), validated: false }; } await upd(); };
 };
 
 /* ---------- relatório executivo ---------- */
@@ -2738,10 +2755,16 @@ VIEWS.rotina = function (main) {
 /* ---------- fechamento mensal ---------- */
 function fechMonthDefault() { const b = S.ui.base; return +b.slice(8) <= 15 ? U.month(U.addDays(b.slice(0, 7) + '-01', -1)) : U.month(b); }
 /* ---------- fechamento mensal: dashboard interativo ---------- */
-function tabBalanco(st, pv, ym, prevYm, proj) {
+function trendTabs(trendN) { return `<div class="tabs" style="margin:0 0 10px">${[3, 6, 12].map(n => `<button class="tabbtn ${trendN === n ? 'on' : ''}" data-ftrend="${n}">${n} meses</button>`).join('')}</div>`; }
+function tabBalanco(st, pv, ym, prevYm, proj, series, trendN) {
   const pctRec = st.prevRec ? Math.min(1, st.rec / st.prevRec) : (st.rec > 0 ? 1 : 0);
   const pctDesp = st.prevDesp ? Math.min(1, st.desp / st.prevDesp) : (st.desp > 0 ? 1 : 0);
-  let h = `<div class="card"><h3>Formação do resultado${proj ? ' (realizado + projeção)' : ''}</h3><p class="small">Verde soma, vermelho subtrai${proj ? ', dourado é a camada projetada' : ''}, o total é o resultado.</p>${waterfall(wfStepsBalanco(st, proj))}</div>`;
+  let h = `<div class="card"><h3>Evolução do resultado de caixa</h3>${trendTabs(trendN)}${flowChart([
+    { name: 'Receita', cls: 'lnrec', points: series.map(s => ({ l: U.monthLabel(s.ym), v: s.rec })) },
+    { name: 'Despesa', cls: 'lndesp', points: series.map(s => ({ l: U.monthLabel(s.ym), v: s.desp })) },
+    { name: 'Resultado', cls: 'lnres', points: series.map(s => ({ l: U.monthLabel(s.ym), v: s.res })) },
+  ], { h: 230 })}<p class="small hint">Evita julgar o mês isolado: mostra se ${U.money(st.res)} é uma oscilação ou uma tendência.</p></div>`;
+  h += `<div class="card"><h3>Formação do resultado${proj ? ' (realizado + projeção)' : ''}</h3><p class="small">Verde soma, vermelho subtrai${proj ? ', dourado é a camada projetada' : ''}, o total é o resultado.</p>${waterfall(wfStepsBalanco(st, proj))}</div>`;
   h += `<div class="grid2">
     <div class="card"><h3>Demonstrativo do mês</h3>${stable([{ l: 'Item', k: 'l' }, { l: 'Valor', n: true, f: r => r.b ? `<b class="${r.v < 0 ? 'neg' : 'pos'}">${U.money(r.v)}</b>` : U.money(r.v) }], [
     { l: 'Receitas realizadas', v: st.rec },
@@ -2763,7 +2786,26 @@ function tabBalanco(st, pv, ym, prevYm, proj) {
     { l: 'Diferença', n: true, f: b => b.diff == null ? '—' : U.money(b.diff) },
     { l: 'Base', f: b => confTag(b.banco != null && !b.diff ? 'confirmado' : 'calculado') },
   ], st.saldos.filter(b => b.cash))}</div>`;
+  if (proj) {
+    const recAging = agingBuckets(st.abertosVenc.filter(r => r.k === 'receita'));
+    const despAging = agingBuckets(st.abertosVenc.filter(r => r.k === 'despesa'));
+    const agingBlock = rows => rows.some(x => x.n) ? hbar2(rows.filter(x => x.n).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: x.k === 'A vencer' ? 'wftot' : 'wfneg' })), { valueWidth: 132 }) + stable([{ l: 'Atraso', k: 'k' }, { l: 'Lanç.', n: true, f: x => x.n }, { l: 'Valor', n: true, f: x => U.money(x.v) }], rows.filter(x => x.n)) : '<p class="small muted-t">Nada em aberto.</p>';
+    h += `<div class="grid2">
+      <div class="card"><h3>A receber em aberto por atraso</h3>${agingBlock(recAging)}</div>
+      <div class="card"><h3>A pagar em aberto por atraso</h3>${agingBlock(despAging)}</div>
+    </div>`;
+  }
   return h;
+}
+function agingBuckets(list) {
+  const buckets = [
+    { k: 'A vencer', test: d => d <= 0 },
+    { k: '1-30 dias', test: d => d >= 1 && d <= 30 },
+    { k: '31-60 dias', test: d => d >= 31 && d <= 60 },
+    { k: '61-90 dias', test: d => d >= 61 && d <= 90 },
+    { k: '90+ dias', test: d => d > 90 },
+  ];
+  return buckets.map(b => { const l = list.filter(r => b.test(r.diasAtraso || 0)); return { k: b.k, v: U.sum(l, r => r.openAmt), n: l.length }; });
 }
 function porPessoa(real, kind) {
   return [...U.groupBy(real.filter(r => r.k === kind), r => r.pessoa || '(sem identificação)').entries()].map(([k, l]) => ({ k, v: U.sum(l, r => r.valor), n: l.length })).sort((a, b) => b.v - a.v);
@@ -2785,13 +2827,39 @@ function catCompareBlock(titulo, cur, prev, cls, opt) {
   ].concat(opt.extraCols || []);
   return hbar2(cur.slice(0, 12).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls })), { valueWidth: 132 }) + stable(cols, cmp.slice(0, 15));
 }
-function tabReceitas(st, pv, ym, prevYm, proj) {
+function margemEspecialidadeCard(st) {
+  const map = S.settings.profCategoria || {};
+  const repasseR = st.real.filter(r => r.k === 'despesa' && /repasse/i.test(r.categoria || ''));
+  const repasseTotal = U.sum(repasseR, r => r.valor);
+  const mapeado = U.sum(repasseR.filter(r => map[r.pessoa]), r => r.valor);
+  const porCat = {};
+  st.porCatReceita.forEach(c => porCat[c.k] = { categoria: c.k, receita: c.v, repasse: 0 });
+  repasseR.forEach(r => { const cat = map[r.pessoa]; if (cat && porCat[cat]) porCat[cat].repasse = U.r2(porCat[cat].repasse + r.valor); });
+  const rows = Object.values(porCat).filter(x => x.receita || x.repasse).sort((a, b) => b.receita - a.receita);
+  if (!rows.length) return '';
+  return `<div class="card"><h3>Margem por especialidade (aproximada)</h3><p class="small hint">Usa o mapeamento profissional → especialidade em Configurações${repasseTotal ? ' · cobertura: ' + U.pct(mapeado / repasseTotal) + ' do repasse mapeado' : ''}.</p>${stable([
+    { l: 'Especialidade', k: 'categoria' },
+    { l: 'Receita', n: true, f: r => U.money(r.receita) },
+    { l: 'Repasse mapeado', n: true, f: r => U.money(r.repasse) },
+    { l: 'Margem aprox.', n: true, f: r => U.money(U.r2(r.receita - r.repasse)) },
+  ], rows)}</div>`;
+}
+function tabReceitas(st, pv, ym, prevYm, proj, series, trendN) {
   const porPac = porPessoa(st.real, 'receita');
   const topPac = porPac[0], conc = topPac && st.rec ? topPac.v / st.rec : 0;
   const repasseR = st.real.filter(r => r.k === 'despesa' && /repasse/i.test(r.categoria || ''));
   const repasseTotal = U.sum(repasseR, r => r.valor);
+  const ticketRows = series.map(s => { const n = s.real.filter(r => r.k === 'receita').length; return { ym: s.ym, n, rec: s.rec, tm: n ? s.rec / n : 0 }; });
+  const maxTicket = Math.max(...ticketRows.map(r => r.tm), 1);
 
   let h = `<div class="card"><h3>Receitas por categoria</h3>${catCompareBlock('Receitas', st.porCatReceita, pv.porCatReceita, 'wfpos')}</div>`;
+  h += `<div class="card"><h3>Ticket médio e atendimentos</h3>${trendTabs(trendN)}${stable([
+    { l: 'Mês', f: r => U.monthLabel(r.ym) },
+    { l: 'Atendimentos', n: true, f: r => r.n },
+    { l: 'Receita', n: true, f: r => U.money(r.rec) },
+    { l: 'Ticket médio', n: true, f: r => U.money(r.tm) },
+    { l: '', f: r => `<div class="bar"><i style="width:${maxTicket ? Math.min(100, r.tm / maxTicket * 100) : 0}%"></i></div>` },
+  ], ticketRows)}<p class="small hint">Atendimentos = lançamentos de receita realizados no mês (proxy de volume, não de sessões exatas).</p></div>`;
   h += `<div class="grid2">
     <div class="card"><h3>Receitas por paciente</h3>${porPac.length ? hbar2(porPac.slice(0, 12).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wfpos' })), { valueWidth: 132 }) + stable([{ l: 'Paciente', k: 'k' }, { l: 'Lanç.', n: true, f: x => x.n }, { l: 'Valor', n: true, f: x => U.money(x.v) }, { l: '%', n: true, f: x => U.pct(st.rec ? x.v / st.rec : 0) }], porPac.slice(0, 15)) : '<p class="small muted-t">Sem dados.</p>'}${conc > 0.3 ? `<p class="small hint">${U.esc(topPac.k)} responde por ${U.pct(conc)} da receita do mês — concentração a observar.</p>` : ''}</div>
     <div class="card"><h3>Repasse e margem</h3>${stable([{ l: 'Item', k: 'l' }, { l: 'Valor', n: true, f: r => r.b ? `<b class="${r.v < 0 ? 'neg' : 'pos'}">${U.money(r.v)}</b>` : U.money(r.v) }], [
@@ -2800,6 +2868,7 @@ function tabReceitas(st, pv, ym, prevYm, proj) {
     { l: 'Retido pela clínica', v: U.r2(st.rec - repasseTotal), b: true },
   ])}<p class="small hint">Repasse representa ${U.pct(st.rec ? repasseTotal / st.rec : 0)} da receita do mês. Detalhamento por profissional na aba Despesas.</p></div>
   </div>`;
+  h += margemEspecialidadeCard(st);
   if (proj) h += abertoBlock('Receitas', st.porCatAbertoRec);
   return h;
 }
@@ -2858,6 +2927,12 @@ VIEWS.fechamento = function (main) {
   const saldosCash = st.saldos.filter(b => b.cash);
   const saldosOk = saldosCash.filter(b => b.banco != null && !b.diff).length;
   const kCols = COLS.base();
+  const trendN = [3, 6, 12].includes(S.ui.fechTrend) ? S.ui.fechTrend : 6;
+  const series = monthSeries(D.all, S.settings, ym, trendN);
+  const last3 = trendN === 3 ? series : monthSeries(D.all, S.settings, ym, 3);
+  const dailyBurn = U.sum(last3, s => s.desp) / last3.length / 30.44;
+  let runwayLabel = '—', runwayCls = '';
+  if (dailyBurn > 0) { const d = saldoCaixa <= 0 ? 0 : Math.round(saldoCaixa / dailyBurn); runwayLabel = String(d); runwayCls = d < 30 ? 'bad' : d < 60 ? 'warn' : 'ok'; }
 
   const monthSel = `<select onchange="S.ui.fechMes=this.value;render()">${[...new Set(months.concat([ym]))].sort().reverse().map(m => `<option value="${m}" ${m === ym ? 'selected' : ''}>${U.monthLabel(m)}</option>`).join('')}</select>`;
   let html = head('Fechamento mensal', U.monthLabel(ym), `${monthSel}<label class="small" style="margin-left:12px"><input type="checkbox" id="fch-proj" ${proj ? 'checked' : ''}> Mostrar projeção (em aberto)</label><button class="btn" id="fch-ppt">Exportar PPT</button>`);
@@ -2876,16 +2951,18 @@ VIEWS.fechamento = function (main) {
     ${kpi('Pendências de validação', String(pendR.length), 'lançamentos no mês', pendR, { cls: pendR.length ? 'warn' : 'ok', cols: kCols })}
     ${kpi('Em aberto (vencidos)', String(st.nAbertosVenc), 'a receber ' + U.money(st.abertosRec) + ' · a pagar ' + U.money(st.abertosDesp), st.abertosVenc, { cls: st.nAbertosVenc ? 'warn' : 'ok', cols: kCols })}
     ${kpi('Saldos bancários conferidos', saldosOk + '/' + saldosCash.length, 'contas com extrato batendo com o calculado', null, { cls: saldosOk === saldosCash.length ? 'ok' : 'warn' })}
+    ${kpi('Fôlego de caixa', runwayLabel === '—' ? '—' : runwayLabel + ' dias', 'no ritmo de despesas dos últimos 3 meses', null, { cls: runwayCls })}
   </div>`;
 
   html += `<div class="tabs">${FECH_TABS.map(([k, l]) => `<button class="tabbtn ${tab === k ? 'on' : ''}" data-ftab="${k}">${l}</button>`).join('')}</div>`;
-  if (tab === 'balanco') html += tabBalanco(st, pv, ym, prevYm, proj);
-  else if (tab === 'receitas') html += tabReceitas(st, pv, ym, prevYm, proj);
+  if (tab === 'balanco') html += tabBalanco(st, pv, ym, prevYm, proj, series, trendN);
+  else if (tab === 'receitas') html += tabReceitas(st, pv, ym, prevYm, proj, series, trendN);
   else if (tab === 'despesas') html += tabDespesas(st, pv, ym, prevYm, proj);
   else html += tabComparativo(st, pv, ym, prevYm);
 
   main.innerHTML = html;
   $$('[data-ftab]').forEach(b => b.onclick = () => { S.ui.fechTab = b.dataset.ftab; render(); });
+  $$('[data-ftrend]').forEach(b => b.onclick = () => { S.ui.fechTrend = +b.dataset.ftrend; render(); });
   $('#fch-proj').onchange = e => { S.ui.fechProj = e.target.checked; render(); };
   $('#fch-ppt').onclick = () => exportFechamentoPpt(ym, prevYm, st, pv, proj);
 };
