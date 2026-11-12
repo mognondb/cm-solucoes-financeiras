@@ -103,6 +103,23 @@ table.t{border-collapse:collapse;width:100%;font-size:12.5px}
 .tbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}.tbar input{min-width:220px}.tinfo{font-size:12px;color:var(--ink2);flex:1}
 .pager{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px}
 .bar{width:90px;height:7px;background:var(--line2);border-radius:4px;overflow:hidden}.bar i{display:block;height:100%;background:var(--ink3)}.bar i.pos{background:var(--pos)}.bar i.neg{background:var(--neg)}
+/* painel do fechamento: hero, barras de progresso e abas */
+.hero{display:flex;gap:28px;align-items:center;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin:0 0 14px;box-shadow:var(--shadow)}
+.hero-main{min-width:170px}
+.hero-main .hl{font-size:12px;color:var(--ink2);font-weight:600}
+.hero-main .hv{font-family:var(--serif);font-size:38px;font-weight:700;line-height:1;margin:4px 0;white-space:nowrap}
+.hero-main .hv.pos{color:var(--pos)}.hero-main .hv.neg{color:var(--neg)}
+.hero-main .hs{font-size:12px;color:var(--ink2)}
+.hero-grid{display:flex;gap:22px;flex-wrap:wrap;border-left:1px solid var(--line);padding-left:26px}
+.hero-grid .hi{min-width:100px}
+.hero-grid .hi .hl{font-size:11px;color:var(--ink2);font-weight:600}
+.hero-grid .hi .hv{font-size:18px;font-weight:700;margin:2px 0 0;white-space:nowrap}
+.pbar{height:8px;border-radius:4px;background:var(--line2);overflow:hidden;margin-top:5px}
+.pbar i{display:block;height:100%;border-radius:4px}
+.pbar i.rec{background:var(--pos)}.pbar i.desp{background:var(--accent)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}
+.tabbtn{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:7px 16px;font-size:13px;font-weight:600;color:var(--ink2);cursor:pointer}
+.tabbtn.on{background:var(--brand);border-color:var(--brand);color:#fff}
 .kvt{border-collapse:collapse;width:100%;font-size:13px}.kvt th{text-align:left;color:var(--ink2);font-weight:500;padding:4px 10px 4px 0;width:240px;vertical-align:top}.kvt td{padding:4px 0;border-bottom:1px solid var(--line2)}.kvt.raw{font-size:12px}
 /* gráfico */
 .chart svg{width:100%;height:auto;display:block}
@@ -144,46 +161,9 @@ ul.alerts li.bad{border-left-color:var(--neg);background:var(--badbg)}ul.alerts 
 .rhead{display:flex;justify-content:space-between;align-items:center;gap:20px;background:linear-gradient(110deg,#4b5646,#57634f);color:#fff;border-bottom:4px solid #ad7f27;border-radius:10px;padding:16px 20px;margin-bottom:10px;flex-wrap:wrap}
 .brand{display:flex;gap:14px;align-items:center}.brand img{width:78px;height:78px;border-radius:50%;box-shadow:0 0 0 2px #d7b977}.brand h1{color:#fff;font-size:22px;margin:0;font-family:var(--serif)}.brand span{font-size:12px;color:#d7b977}
 .rt{text-align:right}.rt p{margin:2px 0}.rt .by{font-size:11px;color:#e3dcc4}.rhead .small{color:#e8e4d4}
-.rmeta{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;background:#f2ede3;border-radius:8px;padding:9px 16px;margin-bottom:20px;font-size:12px;color:#5c6657}
-.rmeta b{color:#2e342c}
-.rflag{display:inline-flex;align-items:center;gap:6px;font-weight:700;padding:3px 11px;border-radius:9px;background:#e4ebe0;color:#44623a}
-.rflag.warn{background:#fbe9d8;color:#9a5a16}
-.rhero{display:flex;gap:30px;align-items:center;flex-wrap:wrap;margin:0 0 18px;padding:20px 24px;background:#faf8f0;border:1px solid #ece4cf;border-radius:12px}
-.rhero-main{min-width:190px}
-.rhero-main .rl{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#8a9180;font-weight:700;margin:0 0 4px}
-.rhero-main .rnum{font-family:var(--serif);font-size:42px;font-weight:700;line-height:1;margin:0;white-space:nowrap}
-.rhero-main .rnum.pos{color:#2f6b3f}.rhero-main .rnum.neg{color:#b5422c}
-.rhero-main .rs{font-size:12.5px;color:#5c6657;margin:7px 0 0}.rhero-main .rs b{color:#2e342c}
-.rhero-grid{display:flex;gap:24px;flex-wrap:wrap;border-left:1px solid #e3dcc4;padding-left:28px}
-.rhero-grid .ri{min-width:110px}
-.rhero-grid .ri .rl{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#8a9180;font-weight:600;margin:0 0 3px}
-.rhero-grid .ri .rnum{font-size:19px;font-weight:700;color:#2e342c;margin:0;white-space:nowrap}
 .rsec{margin-top:16px;break-inside:avoid}.rsec h2{color:#4b5646;border-bottom:2px solid #d7b977;padding-bottom:4px;font-size:13px}
-.rsec p.hint{margin:6px 0 10px}
 .report .small{color:#4d5749}
-.rprog{display:flex;flex-direction:column;gap:16px;margin-top:6px}
-.rprog-item .rl{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;color:#4d5749;margin-bottom:6px}
-.rprog-item .rl b{color:#2e342c}
-.rprog-item .rbar{height:9px;border-radius:5px;background:#f2ede3;overflow:hidden}
-.rprog-item .rbar i{display:block;height:100%;border-radius:5px}
-.rprog-item .rbar i.rec{background:#2f6b3f}.rprog-item .rbar i.desp{background:#ad7f27}
-.rsec-attn{margin-top:16px;break-inside:avoid;background:#fbf3e6;border:1px solid #efd9ad;border-radius:10px;padding:14px 18px}
-.rsec-attn h2{color:#8a5a16;border-bottom:none;padding-bottom:0;font-size:13px;margin:0 0 8px}
-.rsec-attn ul{margin:0;padding-left:18px;font-size:12.5px;color:#5c4a1e}
-.rsec-attn.ok{background:#eef5ea;border-color:#cfe3c2}
-.rsec-attn.ok h2{color:#44623a}
-.rsec-attn.ok p{margin:0;font-size:12.5px;color:#395e30}
-.rdetails{margin-top:16px;break-inside:avoid;border:1px solid #ece4cf;border-radius:10px;padding:2px 18px;background:#fbfaf6}
-.rdetails summary{cursor:pointer;list-style:none;font-weight:700;color:#4b5646;padding:12px 0;font-size:13px;display:flex;align-items:center;gap:8px}
-.rdetails summary::-webkit-details-marker{display:none}
-.rdetails summary::before{content:'▸';font-size:11px;color:#ad7f27;transition:.15s transform}
-.rdetails[open] summary::before{content:'▾'}
-.rdetails .rdbody{padding:2px 0 16px}
-.rdetails ul.checklist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px}
-.rdetails ul.checklist li{display:flex;align-items:baseline;gap:9px;font-size:12.5px;color:#4d5749}
-.rchk{display:inline-block;width:15px;text-align:center;font-weight:700;flex-shrink:0}
-.rchk.ok{color:#2f6b3f}.rchk.mid{color:#9a5a16}.rchk.pend{color:#b5422c}.rchk.na{color:#aba795}
-@media print{.rhead{-webkit-print-color-adjust:exact;print-color-adjust:exact}.rhero{-webkit-print-color-adjust:exact;print-color-adjust:exact}.rdetails summary::before{display:none}}
+@media print{.rhead{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 @media (max-width:900px){.shell{grid-template-columns:1fr}aside{position:fixed;left:-260px;width:240px;z-index:40;transition:.2s}body.navopen aside{left:0}#menu{display:inline-block}.grid2,.grid3{grid-template-columns:1fr}main{padding:14px 16px 60px}.top{padding:10px 16px}ul.alerts li{grid-template-columns:1fr}}
 @media print{
   aside,.top,.noprint,#modal,#toast{display:none!important}.shell{display:block}main{padding:0;max-width:none}
@@ -208,6 +188,7 @@ ul.alerts li.bad{border-left-color:var(--neg);background:var(--badbg)}ul.alerts 
 <div id="toast"></div>
 <div id="tip"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@4.0.1/dist/pptxgen.bundle.js"></script>
 <script>const LOGO = '../../assets/img/clientes/instituto-luanda.png';</script>
 <script>/* ==========================================================================
    Instituto Luanda Caixa: núcleo (utilitários, leitura, normalização e cálculos)
@@ -1056,19 +1037,6 @@ const ROTINA_STEPS = [
   ['relatorio', 'Gerar o relatório executivo da semana'],
   ['backup', 'Fazer o backup e guardar na pasta do Instituto Luanda'],
 ];
-const FECH_STEPS = [
-  ['cobertura', 'Cobertura dos arquivos (período e contas)'],
-  ['saldos', 'Saldos bancários conferidos com o extrato'],
-  ['apar', 'Contas a pagar e a receber conferidas'],
-  ['realizados', 'Movimentações realizadas conferidas'],
-  ['transf', 'Transferências e cartões revisados'],
-  ['classif', 'Classificações financeiras (categoria e centro)'],
-  ['prevreal', 'Previsto x realizado'],
-  ['mesant', 'Comparação com o mês anterior'],
-  ['diverg', 'Divergências e pendências identificadas'],
-  ['premissas', 'Premissas e ajustes manuais registrados'],
-  ['relatorio', 'Relatório final gerado'],
-];
 /* números do mês (realizado pela data efetiva; previsto pelo vencimento original) */
 function monthStats(all, settings, ym, cnpj) {
   const R = byCnpj(all, cnpj).filter(r => r.st !== 'cancelado');
@@ -1082,10 +1050,15 @@ function monthStats(all, settings, ym, cnpj) {
   const prevRec = U.sum(op.filter(r => r.k === 'receita' && inM(r.dtVenc || r.dueDate)), r => r.orig), prevDesp = U.sum(op.filter(r => r.k === 'despesa' && inM(r.dtVenc || r.dueDate)), r => r.orig);
   const abertosVenc = op.filter(r => r.open && r.dueDate && r.dueDate <= last);
   const bals = accountBalances(all, settings, last).filter(b => cnpj === 'C' || b.cnpj === cnpj);
-  const porCat = [...U.groupBy(real.filter(r => r.k === 'despesa'), r => r.categoria || '(sem categoria)').entries()].map(([k, l]) => ({ k, v: U.sum(l, r => r.valor), n: l.length })).sort((a, b) => b.v - a.v);
+  const porCatOf = (list, valFn) => [...U.groupBy(list, r => r.categoria || '(sem categoria)').entries()].map(([k, l]) => ({ k, v: U.sum(l, valFn), n: l.length })).sort((a, b) => b.v - a.v);
+  const porCat = porCatOf(real.filter(r => r.k === 'despesa'), r => r.valor);
+  const porCatReceita = porCatOf(real.filter(r => r.k === 'receita'), r => r.valor);
+  const porCatAbertoRec = porCatOf(abertosVenc.filter(r => r.k === 'receita'), r => r.openAmt);
+  const porCatAbertoDesp = porCatOf(abertosVenc.filter(r => r.k === 'despesa'), r => r.openAmt);
   return { ym, first, last, rec, desp, res: U.r2(rec - desp), nReal: real.length, transf: U.sum(transf, r => r.sign * r.valor), nTransf: transf.length,
     prevRec, prevDesp, abertosRec: U.sum(abertosVenc.filter(r => r.k === 'receita'), r => r.openAmt), abertosDesp: U.sum(abertosVenc.filter(r => r.k === 'despesa'), r => r.openAmt),
-    nAbertosVenc: abertosVenc.length, saldos: bals.map(b => ({ conta: b.conta, cnpj: b.cnpj, type: b.type, calc: b.calc, banco: b.opening && b.opening.data === last ? +b.opening.valor : null, cash: b.cash })), porCat, real };
+    nAbertosVenc: abertosVenc.length, saldos: bals.map(b => ({ conta: b.conta, cnpj: b.cnpj, type: b.type, calc: b.calc, banco: b.opening && b.opening.data === last ? +b.opening.valor : null, cash: b.cash })),
+    porCat, porCatReceita, porCatAbertoRec, porCatAbertoDesp, abertosVenc, real };
 }
 
 /* ---------- persistência: base própria da CM (mesmo login do portal) ----------
@@ -1538,7 +1511,7 @@ function shortNum(v) {
    steps: [{label, value, total?}] — total:true fecha a barra em 0 (resultado final). */
 function waterfall(steps, opt) {
   opt = opt || {};
-  const W = opt.w || 680, H = opt.h || 260, pl = 58, pr = 10, pt = 22, pb = 34;
+  const W = opt.w || Math.max(680, steps.length * 95), H = opt.h || 260, pl = 58, pr = 10, pt = 22, pb = 34;
   let run = 0; const bars = [];
   steps.forEach(st => {
     if (st.total) { bars.push({ label: st.label, a: 0, b: st.value, v: st.value, total: true }); run = st.value; }
@@ -1554,13 +1527,15 @@ function waterfall(steps, opt) {
   sc.ticks.forEach(t => { g += `<line x1="${pl}" x2="${W - pr}" y1="${y(t)}" y2="${y(t)}" class="grid"/><text x="${pl - 6}" y="${y(t) + 4}" class="ax" text-anchor="end">${shortNum(t)}</text>`; });
   g += `<line x1="${pl}" x2="${W - pr}" y1="${y(0)}" y2="${y(0)}" class="zero"/>`;
   const band = iw / bars.length, bw = Math.min(64, band * 0.62);
+  const maxChars = Math.max(4, Math.floor(band / 6.2));
   bars.forEach((b, i) => {
     const x = pl + i * band + (band - bw) / 2, top = y(Math.max(b.a, b.b)), h = Math.max(1, Math.abs(y(b.a) - y(b.b)));
     const cls = b.total ? 'wftot' : (b.v >= 0 ? 'wfpos' : 'wfneg');
+    const lbl = b.label.length > maxChars ? b.label.slice(0, maxChars - 1) + '…' : b.label;
     g += `<rect x="${x}" y="${top}" width="${bw}" height="${h}" rx="3" class="${cls}"/>`;
     if (i < bars.length - 1) g += `<line x1="${x + bw}" x2="${pl + (i + 1) * band + (band - bw) / 2}" y1="${y(b.b)}" y2="${y(b.b)}" class="wfconn"/>`;
     g += `<text class="val" x="${x + bw / 2}" y="${top - 6}" text-anchor="middle">${shortNum(b.v)}</text>`;
-    g += `<text class="lbl" x="${x + bw / 2}" y="${H - 12}" text-anchor="middle">${U.esc(b.label)}</text>`;
+    g += `<text class="lbl" x="${x + bw / 2}" y="${H - 12}" text-anchor="middle">${U.esc(lbl)}</text>`;
     g += `<rect x="${pl + i * band}" y="${pt}" width="${band}" height="${ih}" fill="transparent" data-tip="<b>${U.esc(b.label)}</b><br>${U.money(b.v)}${b.total ? '' : '<br>Acumulado: ' + U.money(b.b)}"/>`;
   });
   return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img">${g}</svg></div>`;
@@ -1609,6 +1584,24 @@ function wfStepsCaixa(st) {
   if (despOutras) steps.push({ label: 'Outras despesas', value: -despOutras });
   steps.push({ label: 'Resultado de caixa', value: st.res, total: true });
   return steps;
+}
+/* cascata do fechamento: cai pro caixa realizado e, se proj=true, continua com o que ainda está em aberto */
+function wfStepsBalanco(st, proj) {
+  const base = wfStepsCaixa(st);
+  if (!proj || !base.length) return base;
+  const steps = base.slice(0, -1);
+  steps.push({ label: 'Resultado de caixa', value: st.res, total: true });
+  if (st.abertosRec) steps.push({ label: 'A receber em aberto', value: st.abertosRec });
+  if (st.abertosDesp) steps.push({ label: 'A pagar em aberto', value: -st.abertosDesp });
+  steps.push({ label: 'Resultado projetado', value: U.r2(st.res + st.abertosRec - st.abertosDesp), total: true });
+  return steps;
+}
+/* mescla duas listas {k,v,n} (categoria atual x mês anterior) pra tabela/gráfico comparativo */
+function compareCat(curList, prevList) {
+  const map = new Map();
+  (curList || []).forEach(x => map.set(x.k, { k: x.k, cur: x.v, prev: 0 }));
+  (prevList || []).forEach(x => { const e = map.get(x.k) || { k: x.k, cur: 0, prev: 0 }; e.prev = x.v; map.set(x.k, e); });
+  return [...map.values()].sort((a, b) => Math.abs(b.cur) - Math.abs(a.cur));
 }
 
 /* ==========================================================================
@@ -2726,118 +2719,204 @@ VIEWS.rotina = function (main) {
 
 /* ---------- fechamento mensal ---------- */
 function fechMonthDefault() { const b = S.ui.base; return +b.slice(8) <= 15 ? U.month(U.addDays(b.slice(0, 7) + '-01', -1)) : U.month(b); }
-function fechSnapshot(ym, draft) {
-  const D = data(); const v = activeVersion(); const prevYm = U.month(U.addDays(ym + '-01', -1));
-  const strip = m => { const o = Object.assign({}, m); delete o.real; return o; };
-  const statsRaw = monthStats(D.all, S.settings, ym, 'C');
-  // guarda só o número (não o array de lançamentos) pra cascata continuar funcionando
-  // mesmo num fechamento antigo já registrado, sem inflar o registro congelado.
-  const despFolha = U.r2(U.sum(statsRaw.real.filter(r => r.k === 'despesa' && r.folha && r.folha !== 'Não é folha'), r => r.valor));
-  const stats = Object.assign(strip(statsRaw), { despFolha }), prev = strip(monthStats(D.all, S.settings, prevYm, 'C'));
-  const last = U.endOfMonth(ym + '-01');
-  const inM = r => { const d = r.effDate || r.dueDate; return d && d.slice(0, 7) === ym; };
-  const pendR = D.all.filter(r => inM(r) && r.pend.some(p => !/Sem centro de custo/.test(p)));
-  const pendTypes = [...U.groupBy(pendR.flatMap(r => r.pend.filter(p => !/Sem centro de custo/.test(p)).map(p => ({ p, r }))), x => x.p).entries()].map(([k, l]) => ({ k, n: l.length, v: U.sum(l, x => x.r.open ? x.r.openAmt : x.r.valor) }));
-  const iss = [...U.groupBy(findIssues(D.all.filter(inM)), i => i.tipo).entries()].map(([k, l]) => ({ k, n: l.length }));
-  const cards = cardCheck(D.all).filter(x => x.venc && x.venc.slice(0, 7) <= U.month(U.addDays(last, 31)));
-  const dts = D.all.map(r => r.effDate || r.dueDate).filter(Boolean).sort();
-  const cover = { de: dts[0], ate: dts[dts.length - 1], completo: dts.length && dts[0] <= ym + '-01' && dts[dts.length - 1] >= last, contas: [...new Set(D.all.map(r => r.conta).filter(Boolean))] };
-  const saldos = accountBalances(D.all, S.settings, last).map(b => ({ conta: b.conta, cnpj: b.cnpj, type: b.type, cash: b.cash, calc: b.calc, banco: b.opening && b.opening.data === last ? +b.opening.valor : null, bancoData: b.opening ? b.opening.data : null, diff: b.opening && b.opening.data <= last ? b.diffOpening : null, conciliadoAte: b.conciliadoAte, validated: b.validated }));
-  return { id: U.uid(), ym, at: Date.now(), base: S.ui.base, versao: { id: v.id, label: v.label, at: v.at, files: v.files.map(f => f.name), n: v.records.length }, cover, stats, prev, saldos, pendTypes, nPend: pendR.length, issues: iss,
-    cards,
-    manual: Object.keys(S.settings.manual).length, premissas: Object.fromEntries(['conservador', 'base', 'otimista'].map(n => [n, scenarioText(S.settings.scenarios[n]).replace(/<[^>]+>/g, '')])),
-    riskMin: S.settings.riskMin || 0, steps: JSON.parse(JSON.stringify(draft.steps || {})), notas: draft.notas || '', app: APP_VERSION };
-}
-VIEWS.fechamento = function (main) {
-  const F = S.settings.fechamentos;
-  if (S.ui.fechShow) { const f = F.find(x => x.id === S.ui.fechShow); if (f) { main.innerHTML = fechReportHtml(f); bindFechReport(f); return; } S.ui.fechShow = null; }
-  const ym = S.ui.fechMes || fechMonthDefault();
-  const draft = (S.settings.fechDraft = S.settings.fechDraft || {})[ym] = S.settings.fechDraft[ym] || { steps: {}, notas: '' };
-  const snap = fechSnapshot(ym, draft);
-  const months = [...new Set(data().all.map(r => U.month(r.effDate)).filter(Boolean))].sort();
-  const C = snap.stats, Pm = snap.prev;
-  const statsFull = monthStats(data().all, S.settings, ym, 'C'); // versão não "stripada": precisa de .real para a cascata
-  const hints = {
-    cobertura: `Arquivo da versão ativa cobre ${U.br(snap.cover.de)} a ${U.br(snap.cover.ate)} ${snap.cover.completo ? '(mês completo)' : '<span class="warn-t">(não cobre o mês inteiro)</span>'}; ${snap.cover.contas.length} conta(s).`,
-    saldos: snap.saldos.filter(b => b.cash).map(b => `${U.esc(b.conta)}: calculado ${U.money(b.calc)}${b.banco != null ? ', extrato ' + U.money(b.banco) : ' <span class="warn-t">sem saldo do extrato em ' + U.br(U.endOfMonth(ym + '-01')) + '</span>'}`).join('<br>'),
-    apar: `Em aberto com vencimento até o fim do mês: ${C.nAbertosVenc} (a receber ${U.money(C.abertosRec)}, a pagar ${U.money(C.abertosDesp)}).`,
-    realizados: `${C.nReal} realizados no mês: recebido ${U.money(C.rec)}, pago ${U.money(C.desp)}.`,
-    transf: `${C.nTransf} transferência(s) no mês (saldo líquido ${U.money(C.transf)}; no consolidado deve ser zero, exceto aplicação/capital). Cartões: ${snap.cards.map(x => U.esc(x.conta.replace(/ - Oliveira/i, '')) + ' venc. ' + U.br(x.venc) + ' compras ' + U.money(x.compras) + (x.fatura ? ', fatura ' + U.money(x.fatura) : '')).join('; ') || 'nenhuma fatura em aberto'}.`,
-    classif: snap.pendTypes.map(p => U.esc(p.k) + ' ' + p.n).join('; ') || 'Sem pendência de classificação no mês.',
-    prevreal: `Receitas: previsto ${U.money(C.prevRec)} x recebido ${U.money(C.rec)}. Despesas: previsto ${U.money(C.prevDesp)} x pago ${U.money(C.desp)}.`,
-    mesant: `${U.monthLabel(Pm.ym)}: recebido ${U.money(Pm.rec)}, pago ${U.money(Pm.desp)}, resultado de caixa ${U.money(Pm.res)}. ${U.monthLabel(ym)}: ${U.money(C.rec)}, ${U.money(C.desp)}, ${U.money(C.res)}.`,
-    diverg: snap.issues.map(i => U.esc(i.k) + ' ' + i.n).join('; ') || 'Nenhuma inconsistência no mês.',
-    premissas: `${snap.manual} ajuste(s) manual(is) salvos. Cenário base: ${U.esc(snap.premissas.base)}.`,
-    relatorio: 'Ao registrar, o relatório do fechamento fica disponível no histórico abaixo (PDF e planilha).',
-  };
-  let html = head('Fechamento mensal', 'Mês de ' + U.monthLabel(ym) + ' · data-base ' + U.br(S.ui.base), `<select onchange="S.ui.fechMes=this.value;render()">${[...new Set(months.concat([ym]))].sort().reverse().map(m => `<option value="${m}" ${m === ym ? 'selected' : ''}>${U.monthLabel(m)}</option>`).join('')}</select>`);
-  html += `<div class="banner small">Prazos no Notion da CM: documentos da cliente até o 2º dia útil, fechamento até o 7º dia útil, relatório e reunião entre o 8º e o 10º dia útil.</div>`;
-  if (U.endOfMonth(ym + '-01') > S.ui.base) html += `<div class="banner warn small"><b>Mês em andamento:</b> a data-base (${U.br(S.ui.base)}) é anterior ao fim de ${U.monthLabel(ym)}. Os realizados vão só até a data-base; registre o fechamento depois que o mês terminar e as contas estiverem conciliadas.</div>`;
-  html += `<div class="grid2"><div class="card"><h3>Números do mês (caixa realizado)</h3>${stable([{ l: 'Recebido', n: true, f: () => U.money(C.rec) }, { l: 'Pago', n: true, f: () => U.money(C.desp) }, { l: 'Resultado de caixa', n: true, f: () => `<b class="${C.res < 0 ? 'neg' : 'pos'}">${U.money(C.res)}</b>` }, { l: 'Transferências (líquido)', n: true, f: () => U.money(C.transf) }, { l: 'Previsto receber', n: true, f: () => U.money(C.prevRec) }, { l: 'Previsto pagar', n: true, f: () => U.money(C.prevDesp) }, { l: 'Mês anterior (resultado)', n: true, f: () => U.money(Pm.res) }], [{}])}<p class="small">Realizado pela data efetiva; previsto pelo vencimento original (valor original). Resultado de caixa não é resultado contábil (não considera competência).</p></div>
-    <div class="card"><h3>Formação do resultado de caixa</h3><p class="small">${U.monthLabel(ym)}. Verde soma, vermelho subtrai, dourado é o resultado final.</p>${waterfall(wfStepsCaixa(statsFull))}</div></div>`;
-  html += `<div class="card"><h3>Checklist do fechamento</h3>${checklistHtml(FECH_STEPS, draft.steps, hints, 'fch')}
-    <label class="col">Observações do fechamento<textarea id="fch-notas" rows="3">${U.esc(draft.notas || '')}</textarea></label>
-    <div class="form-row"><button class="btn primary" id="fch-save">Registrar fechamento de ${U.monthLabel(ym)}</button><span class="small">Grava uma fotografia que não é alterada depois. Um novo registro do mesmo mês vira uma nova revisão; as anteriores continuam no histórico.</span></div></div>`;
-  html += `<div class="card"><h3>Histórico de fechamentos</h3>${F.length ? stable([{ l: 'Mês', f: f => U.monthLabel(f.ym) }, { l: 'Revisão', n: true, f: f => f.rev }, { l: 'Registrado em', f: f => U.dt(f.at) }, { l: 'Base', f: f => U.esc(f.versao.label) }, { l: 'Pendências', n: true, f: f => f.nPend + ' lanç. · ' + FECH_STEPS.filter(([id]) => !['feito', 'na'].includes((f.steps[id] || {}).st)).length + ' etapa(s)' }, { l: 'Situação', f: f => F.some(x => x.ym === f.ym && x.rev > f.rev) ? '<span class="muted-t">substituído por revisão posterior</span>' : '<span class="st ok">vigente</span>' }, { l: '', f: f => `<button class="btn sm" data-fshow="${f.id}">Ver / PDF</button> <button class="btn sm" data-fxls="${f.id}">Planilha</button>` }], [...F].reverse()) : '<p class="small">Nenhum fechamento registrado.</p>'}</div>`;
-  main.innerHTML = html;
-  $$('[data-fch]').forEach(el => el.onchange = async () => { const s = draft.steps[el.dataset.fch] = draft.steps[el.dataset.fch] || {}; s[el.dataset.f] = el.value; s.at = Date.now(); await saveSettings(); if (el.dataset.f === 'st') render(); });
-  $('#fch-notas').onchange = async e => { draft.notas = e.target.value; await saveSettings(); };
-  $('#fch-save').onclick = async () => {
-    const open = FECH_STEPS.filter(([id]) => !['feito', 'na'].includes((draft.steps[id] || {}).st));
-    if (!confirm(`Registrar o fechamento de ${U.monthLabel(ym)}${open.length ? ' com ' + open.length + ' etapa(s) não concluída(s) e ' + snap.nPend + ' lançamento(s) com pendência (ficam registrados no fechamento)' : ''}?`)) return;
-    const f = fechSnapshot(ym, draft); f.rev = F.filter(x => x.ym === ym).length + 1;
-    F.push(Object.freeze(f)); await saveSettings(); S.ui.fechShow = f.id; render(); toast('Fechamento registrado');
-  };
-  $$('[data-fshow]').forEach(b => b.onclick = () => { S.ui.fechShow = b.dataset.fshow; render(); });
-  $$('[data-fxls]').forEach(b => b.onclick = () => fechXlsx(F.find(x => x.id === b.dataset.fxls)));
-};
-function fechReportHtml(f) {
-  const st = f.stats, pv = f.prev;
-  const openSteps = FECH_STEPS.filter(([id]) => !['feito', 'na'].includes((f.steps[id] || {}).st));
-  const sec = (t, b) => `<section class="rsec"><h2>${t}</h2>${b}</section>`;
-  const saldoFinal = U.sum(f.saldos.filter(b => b.cash), b => b.calc);
-  const variacao = U.r2(st.res - pv.res);
-  const stepBadge = s => s.st === 'feito' ? '<span class="rchk ok">✓</span>' : s.st === 'ressalva' ? '<span class="rchk mid">✓</span>' : s.st === 'na' ? '<span class="rchk na">–</span>' : '<span class="rchk pend">○</span>';
-  const attnMap = new Map();
-  f.pendTypes.forEach(p => attnMap.set(p.k, { k: p.k, n: p.n, v: p.v }));
-  f.issues.forEach(i => { if (!attnMap.has(i.k)) attnMap.set(i.k, { k: i.k, n: i.n, v: null }); });
-  const attnItems = [...attnMap.values()].map(x => `<li>${U.esc(x.k)}: ${x.n} lançamento(s)${x.v != null ? ' (' + U.money(x.v) + ')' : ''}</li>`);
+/* ---------- fechamento mensal: dashboard interativo ---------- */
+function tabBalanco(st, pv, ym, prevYm, proj) {
   const pctRec = st.prevRec ? Math.min(1, st.rec / st.prevRec) : (st.rec > 0 ? 1 : 0);
   const pctDesp = st.prevDesp ? Math.min(1, st.desp / st.prevDesp) : (st.desp > 0 ? 1 : 0);
-  const premLabel = { conservador: 'Conservador', base: 'Base', otimista: 'Otimista' };
-
-  let h = `<div class="noprint">${head('Relatório do fechamento', U.monthLabel(f.ym) + ' · revisão ' + f.rev, `<button class="btn" id="f-back">Voltar</button><button class="btn" id="f-xls">Planilha</button><button class="btn primary" id="f-pdf">Gerar PDF</button>`)}</div>
-  <div class="report">
-  <header class="rhead"><div class="brand"><img src="${LOGO}" alt="Instituto Luanda Oliveira"><div><h1>Instituto Luanda Oliveira</h1><span>Fechamento mensal · ${U.monthLabel(f.ym)} · revisão ${f.rev}</span></div></div><div class="rt"><p class="small">Registrado em <b>${U.dt(f.at)}</b></p><p class="small">Data-base ${U.br(f.base)}</p><p class="by">Elaborado por CM Soluções Financeiras</p></div></header>
-  <div class="rmeta"><span>Base: <b>${U.esc(f.versao.label)}</b> · ${f.versao.n} lançamentos · cobertura ${U.br(f.cover.de)} a ${U.br(f.cover.ate)}${f.cover.completo ? '' : ' (parcial)'}</span>${openSteps.length ? `<span class="rflag warn">Revisão em andamento · ${FECH_STEPS.length - openSteps.length}/${FECH_STEPS.length} etapas confirmadas</span>` : '<span class="rflag">Revisão interna concluída</span>'}</div>
-  <div class="rhero">
-    <div class="rhero-main"><p class="rl">Resultado de caixa do mês</p><p class="rnum ${st.res >= 0 ? 'pos' : 'neg'}">${U.money(st.res)}</p><p class="rs">${variacao >= 0 ? '▲' : '▼'} ${U.money(Math.abs(variacao))} vs. ${U.monthLabel(pv.ym)} (<b>${U.money(pv.res)}</b>)</p></div>
-    <div class="rhero-grid"><div class="ri"><p class="rl">Recebido</p><p class="rnum">${U.money(st.rec)}</p></div><div class="ri"><p class="rl">Pago</p><p class="rnum">${U.money(st.desp)}</p></div><div class="ri"><p class="rl">Saldo final em caixa</p><p class="rnum">${U.money(saldoFinal)}</p></div></div>
-  </div>`;
-  h += sec('Formação do resultado de caixa', `<p class="small hint">Verde soma, dourado subtrai, o total é o resultado do mês. Pela data efetiva de pagamento/recebimento (caixa), não pela competência.</p>${waterfall(wfStepsCaixa(st))}`);
-  h += sec('Previsto × realizado', `<div class="rprog">
-    <div class="rprog-item"><div class="rl"><span>Receitas — recebido <b>${U.money(st.rec)}</b> de <b>${U.money(st.prevRec)}</b> previstos</span><span>${U.pct(pctRec)}</span></div><div class="rbar"><i class="rec" style="width:${(pctRec * 100).toFixed(1)}%"></i></div></div>
-    <div class="rprog-item"><div class="rl"><span>Despesas — pago <b>${U.money(st.desp)}</b> de <b>${U.money(st.prevDesp)}</b> previstos</span><span>${U.pct(pctDesp)}</span></div><div class="rbar"><i class="desp" style="width:${(pctDesp * 100).toFixed(1)}%"></i></div></div>
-  </div>${(st.abertosRec || st.abertosDesp) ? `<p class="small hint">Ainda vencidos e não quitados: ${U.money(st.abertosRec)} a receber e ${U.money(st.abertosDesp)} a pagar.</p>` : ''}`);
-  h += sec('Principais despesas do mês', (st.porCat || []).length ? hbar2(st.porCat.slice(0, 10).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.' }))) + '<p class="small hint">Detalhamento completo disponível na planilha.</p>' : '<p class="small muted-t">Sem despesas realizadas no mês.</p>');
-  h += sec('Saldos bancários no fim do mês', stable([{ l: 'Conta', f: b => U.esc(b.conta) }, { l: 'Calculado', n: true, f: b => U.money(b.calc) }, { l: 'Extrato', n: true, f: b => b.banco != null ? U.money(b.banco) : '<span class="warn-t">não informado</span>' }, { l: 'Diferença', n: true, f: b => b.diff == null ? '—' : U.money(b.diff) }, { l: 'Base', f: b => confTag(b.banco != null && !b.diff ? 'confirmado' : 'calculado') }], f.saldos.filter(b => b.cash)) + (f.saldos.some(b => !b.cash) ? `<p class="small">Fora do disponível: ${f.saldos.filter(b => !b.cash).map(b => U.esc(b.conta) + ' ' + U.money(b.calc)).join(' · ')}.</p>` : ''));
-  h += attnItems.length ? `<section class="rsec-attn"><h2>Pontos de atenção</h2><ul>${attnItems.join('')}</ul></section>` : `<section class="rsec-attn ok"><h2>Pontos de atenção</h2><p>Nenhuma pendência ou divergência identificada neste mês.</p></section>`;
-  h += `<details class="rdetails"><summary>Checklist de conferência interna (${FECH_STEPS.length - openSteps.length} de ${FECH_STEPS.length} confirmadas)</summary><div class="rdbody"><ul class="checklist">${FECH_STEPS.map(([id, l]) => { const s = f.steps[id] || {}; return `<li>${stepBadge(s)}<span>${l}${s.resp ? ' · ' + U.esc(s.resp) : ''}${s.nota ? ' · ' + U.esc(s.nota) : ''}</span></li>`; }).join('')}</ul>${f.notas ? '<p class="small"><b>Observações:</b> ' + U.esc(f.notas) + '</p>' : ''}</div></details>`;
-  h += `<details class="rdetails"><summary>Premissas e fontes</summary><div class="rdbody"><ul class="small"><li>Fonte: extrato financeiro do Conta Azul (${U.esc(f.versao.files.join(', '))}), importado em ${U.dt(f.versao.at)}; cobertura ${U.br(f.cover.de)} a ${U.br(f.cover.ate)}${f.cover.completo ? '' : ' (não cobre o mês inteiro)'}.</li><li>Cenários de projeção considerados: ${Object.entries(f.premissas).map(([k, v]) => (premLabel[k] || k) + ': ' + U.esc(v)).join(' · ')}.</li><li>${f.manual} ajuste(s) manual(is) registrados no sistema na data do fechamento. Saldo mínimo de segurança ${U.money(f.riskMin)}.</li><li>Registro imutável: correções geram nova revisão do fechamento.</li></ul></div></details>`;
-  h += `</div>`;
+  let h = `<div class="card"><h3>Formação do resultado${proj ? ' (realizado + projeção)' : ''}</h3><p class="small">Verde soma, vermelho subtrai${proj ? ', dourado é a camada projetada' : ''}, o total é o resultado.</p>${waterfall(wfStepsBalanco(st, proj))}</div>`;
+  h += `<div class="grid2">
+    <div class="card"><h3>Demonstrativo do mês</h3>${stable([{ l: 'Item', k: 'l' }, { l: 'Valor', n: true, f: r => r.b ? `<b class="${r.v < 0 ? 'neg' : 'pos'}">${U.money(r.v)}</b>` : U.money(r.v) }], [
+    { l: 'Receitas realizadas', v: st.rec },
+    { l: 'Despesas realizadas', v: st.desp },
+    { l: 'Resultado de caixa', v: st.res, b: true },
+  ].concat(proj ? [
+    { l: 'A receber em aberto', v: st.abertosRec },
+    { l: 'A pagar em aberto', v: st.abertosDesp },
+    { l: 'Resultado projetado', v: U.r2(st.res + st.abertosRec - st.abertosDesp), b: true },
+  ] : []))}</div>
+    <div class="card"><h3>Previsto × realizado</h3>
+      <p class="small">Receitas: ${U.money(st.rec)} de ${U.money(st.prevRec)} previstos (${U.pct(pctRec)})</p><div class="pbar"><i class="rec" style="width:${(pctRec * 100).toFixed(1)}%"></i></div>
+      <p class="small" style="margin-top:14px">Despesas: ${U.money(st.desp)} de ${U.money(st.prevDesp)} previstos (${U.pct(pctDesp)})</p><div class="pbar"><i class="desp" style="width:${(pctDesp * 100).toFixed(1)}%"></i></div>
+    </div></div>`;
+  h += `<div class="card"><h3>Saldos bancários</h3>${stable([
+    { l: 'Conta', f: b => U.esc(b.conta) },
+    { l: 'Calculado', n: true, f: b => U.money(b.calc) },
+    { l: 'Extrato', n: true, f: b => b.banco != null ? U.money(b.banco) : '<span class="warn-t">não informado</span>' },
+    { l: 'Diferença', n: true, f: b => b.diff == null ? '—' : U.money(b.diff) },
+    { l: 'Base', f: b => confTag(b.banco != null && !b.diff ? 'confirmado' : 'calculado') },
+  ], st.saldos.filter(b => b.cash))}</div>`;
   return h;
 }
-function prepararImpressao() { $$('.rdetails').forEach(d => d.open = true); window.print(); }
-function bindFechReport(f) { $('#f-back').onclick = () => { S.ui.fechShow = null; render(); }; $('#f-xls').onclick = () => fechXlsx(f); $('#f-pdf').onclick = prepararImpressao; }
-function fechXlsx(f) {
-  const wb = XLSX.utils.book_new(); const add = (n, rows) => XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length ? rows : [{ '-': 'sem dados' }]), n);
-  add('Resumo', [{ Recebido: f.stats.rec, Pago: f.stats.desp, Resultado: f.stats.res, 'Previsto receber': f.stats.prevRec, 'Previsto pagar': f.stats.prevDesp, 'Resultado mes anterior': f.prev.res, 'Transferencias liquido': f.stats.transf }]);
-  add('Saldos', f.saldos.map(b => ({ Conta: b.conta, Tipo: b.type, Disponivel: b.cash ? 'sim' : 'nao', Calculado: b.calc, Extrato: b.banco, Diferenca: b.diff })));
-  add('Despesas por categoria', (f.stats.porCat || []).map(x => ({ Categoria: x.k, Lancamentos: x.n, Valor: x.v })));
-  add('Pendencias', f.pendTypes.map(p => ({ Pendencia: p.k, Lancamentos: p.n, Valor: p.v })).concat(f.issues.map(i => ({ Pendencia: i.k, Lancamentos: i.n }))));
-  add('Checklist', FECH_STEPS.map(([id, l]) => ({ Etapa: l, Status: (ST_OPTS.find(o => o[0] === ((f.steps[id] || {}).st || '')) || [])[1], Responsavel: (f.steps[id] || {}).resp || '', Nota: (f.steps[id] || {}).nota || '', Data: (f.steps[id] || {}).at ? U.dt(f.steps[id].at) : '' })));
-  add('Fontes', [{ Item: 'Versao', Valor: f.versao.label }, { Item: 'Arquivos', Valor: f.versao.files.join(', ') }, { Item: 'Registrado em', Valor: U.dt(f.at) }, { Item: 'Revisao', Valor: f.rev }, { Item: 'Data-base', Valor: U.br(f.base) }, { Item: 'Observacoes', Valor: f.notas }]);
-  XLSX.writeFile(wb, 'fechamento_luanda_' + f.ym + '_rev' + f.rev + '.xlsx');
+function tabCategoria(titulo, real, aberto, proj, cls) {
+  let h = `<div class="card"><h3>${titulo} por categoria</h3>${real.length ? hbar2(real.slice(0, 12).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls })), { valueWidth: 132 }) + stable([{ l: 'Categoria', k: 'k' }, { l: 'Lanç.', n: true, f: x => x.n }, { l: 'Valor', n: true, f: x => U.money(x.v) }], real.slice(0, 15)) : `<p class="small muted-t">Nenhuma ${titulo.toLowerCase()} realizada no mês.</p>`}</div>`;
+  if (proj) h += `<div class="card"><h3>${titulo} em aberto (projeção)</h3>${aberto.length ? hbar2(aberto.slice(0, 12).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wftot' })), { valueWidth: 132 }) + stable([{ l: 'Categoria', k: 'k' }, { l: 'Lanç.', n: true, f: x => x.n }, { l: 'Em aberto', n: true, f: x => U.money(x.v) }], aberto.slice(0, 15)) : '<p class="small muted-t">Nada em aberto.</p>'}</div>`;
+  return h;
+}
+function tabComparativo(st, pv, ym, prevYm) {
+  const recRows = compareCat(st.porCatReceita, pv.porCatReceita);
+  const despRows = compareCat(st.porCat, pv.porCat);
+  const cmpTable = rows => stable([{ l: 'Categoria', k: 'k' }, { l: U.monthLabel(ym), n: true, f: r => U.money(r.cur) }, { l: U.monthLabel(prevYm), n: true, f: r => U.money(r.prev) }, { l: 'Variação', n: true, f: r => U.money(r.cur - r.prev, { sign: 1 }) }], rows.slice(0, 15));
+  let h = `<div class="grid2">
+    <div class="card"><h3>Receitas: ${U.monthLabel(ym)} × ${U.monthLabel(prevYm)}</h3>${hbar2([{ label: U.monthLabel(ym), value: st.rec, cls: 'wfpos' }, { label: U.monthLabel(prevYm), value: pv.rec, cls: 'wftot' }])}</div>
+    <div class="card"><h3>Despesas: ${U.monthLabel(ym)} × ${U.monthLabel(prevYm)}</h3>${hbar2([{ label: U.monthLabel(ym), value: st.desp, cls: 'wfneg' }, { label: U.monthLabel(prevYm), value: pv.desp, cls: 'wftot' }])}</div>
+  </div><div class="grid2">
+    <div class="card"><h3>Receitas por categoria</h3>${recRows.length ? cmpTable(recRows) : '<p class="small muted-t">Sem dados.</p>'}</div>
+    <div class="card"><h3>Despesas por categoria</h3>${despRows.length ? cmpTable(despRows) : '<p class="small muted-t">Sem dados.</p>'}</div>
+  </div>`;
+  return h;
+}
+const FECH_TABS = [['balanco', 'Balanço geral'], ['receitas', 'Receitas'], ['despesas', 'Despesas'], ['comparativo', 'Comparativo']];
+VIEWS.fechamento = function (main) {
+  const D = data();
+  const months = [...new Set(D.all.map(r => U.month(r.effDate)).filter(Boolean))].sort();
+  const ym = S.ui.fechMes || fechMonthDefault();
+  const prevYm = U.month(U.addDays(ym + '-01', -1));
+  const st = monthStats(D.all, S.settings, ym, 'C');
+  const pv = monthStats(D.all, S.settings, prevYm, 'C');
+  const proj = !!S.ui.fechProj;
+  const tab = FECH_TABS.some(([k]) => k === S.ui.fechTab) ? S.ui.fechTab : 'balanco';
+  const variacao = U.r2(st.res - pv.res);
+  const saldoCaixa = U.sum(st.saldos.filter(b => b.cash), b => b.calc);
+  const inM = r => { const d = r.effDate || r.dueDate; return d && d.slice(0, 7) === ym; };
+  const pendR = D.all.filter(r => inM(r) && r.pend.some(p => !/Sem centro de custo/.test(p)));
+  const saldosCash = st.saldos.filter(b => b.cash);
+  const saldosOk = saldosCash.filter(b => b.banco != null && !b.diff).length;
+  const kCols = COLS.base();
+
+  const monthSel = `<select onchange="S.ui.fechMes=this.value;render()">${[...new Set(months.concat([ym]))].sort().reverse().map(m => `<option value="${m}" ${m === ym ? 'selected' : ''}>${U.monthLabel(m)}</option>`).join('')}</select>`;
+  let html = head('Fechamento mensal', U.monthLabel(ym), `${monthSel}<label class="small" style="margin-left:12px"><input type="checkbox" id="fch-proj" ${proj ? 'checked' : ''}> Mostrar projeção (em aberto)</label><button class="btn" id="fch-ppt">Exportar PPT</button>`);
+  if (U.endOfMonth(ym + '-01') > S.ui.base) html += `<div class="banner warn small">Mês em andamento: a data-base (${U.br(S.ui.base)}) é anterior ao fim de ${U.monthLabel(ym)}. Os realizados vão só até a data-base.</div>`;
+
+  html += `<div class="hero">
+    <div class="hero-main"><div class="hl">Resultado de caixa · ${U.monthLabel(ym)}</div><div class="hv ${st.res >= 0 ? 'pos' : 'neg'}">${U.money(st.res)}</div><div class="hs">${variacao >= 0 ? '▲' : '▼'} ${U.money(Math.abs(variacao))} vs. ${U.monthLabel(prevYm)} (${U.money(pv.res)})</div></div>
+    <div class="hero-grid">
+      <div class="hi"><div class="hl">Recebido</div><div class="hv">${U.money(st.rec)}</div></div>
+      <div class="hi"><div class="hl">Pago</div><div class="hv">${U.money(st.desp)}</div></div>
+      <div class="hi"><div class="hl">Saldo em caixa</div><div class="hv">${U.money(saldoCaixa)}</div></div>
+      ${proj ? `<div class="hi"><div class="hl">Resultado projetado</div><div class="hv ${(st.res + st.abertosRec - st.abertosDesp) >= 0 ? 'pos' : 'neg'}">${U.money(U.r2(st.res + st.abertosRec - st.abertosDesp))}</div></div>` : ''}
+    </div></div>`;
+
+  html += `<div class="kpis">
+    ${kpi('Pendências de validação', String(pendR.length), 'lançamentos no mês', pendR, { cls: pendR.length ? 'warn' : 'ok', cols: kCols })}
+    ${kpi('Em aberto (vencidos)', String(st.nAbertosVenc), 'a receber ' + U.money(st.abertosRec) + ' · a pagar ' + U.money(st.abertosDesp), st.abertosVenc, { cls: st.nAbertosVenc ? 'warn' : 'ok', cols: kCols })}
+    ${kpi('Saldos bancários conferidos', saldosOk + '/' + saldosCash.length, 'contas com extrato batendo com o calculado', null, { cls: saldosOk === saldosCash.length ? 'ok' : 'warn' })}
+  </div>`;
+
+  html += `<div class="tabs">${FECH_TABS.map(([k, l]) => `<button class="tabbtn ${tab === k ? 'on' : ''}" data-ftab="${k}">${l}</button>`).join('')}</div>`;
+  if (tab === 'balanco') html += tabBalanco(st, pv, ym, prevYm, proj);
+  else if (tab === 'receitas') html += tabCategoria('Receitas', st.porCatReceita, st.porCatAbertoRec, proj, 'wfpos');
+  else if (tab === 'despesas') html += tabCategoria('Despesas', st.porCat, st.porCatAbertoDesp, proj, 'wfneg');
+  else html += tabComparativo(st, pv, ym, prevYm);
+
+  main.innerHTML = html;
+  $$('[data-ftab]').forEach(b => b.onclick = () => { S.ui.fechTab = b.dataset.ftab; render(); });
+  $('#fch-proj').onchange = e => { S.ui.fechProj = e.target.checked; render(); };
+  $('#fch-ppt').onclick = () => exportFechamentoPpt(ym, prevYm, st, pv, proj);
+};
+
+/* ---------- exportação para PPT ---------- */
+function svgInline(svgEl) {
+  const clone = svgEl.cloneNode(true);
+  const srcEls = svgEl.querySelectorAll('*'), dstEls = clone.querySelectorAll('*');
+  const copy = (src, dst) => { const cs = getComputedStyle(src); ['fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'font-size', 'font-weight', 'font-family', 'text-anchor'].forEach(p => { const v = cs.getPropertyValue(p); if (v) dst.style.setProperty(p, v); }); };
+  copy(svgEl, clone);
+  srcEls.forEach((src, i) => copy(src, dstEls[i]));
+  return clone;
+}
+function svgToPng(svgEl, scale) {
+  return new Promise((resolve, reject) => {
+    const clone = svgInline(svgEl);
+    const vb = svgEl.viewBox.baseVal;
+    const w = (vb && vb.width) || svgEl.clientWidth || 640, h = (vb && vb.height) || svgEl.clientHeight || 260;
+    clone.setAttribute('width', w); clone.setAttribute('height', h);
+    const xml = new XMLSerializer().serializeToString(clone);
+    const img = new Image();
+    img.onload = () => {
+      const s = scale || 2, canvas = document.createElement('canvas');
+      canvas.width = w * s; canvas.height = h * s;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.scale(s, s); ctx.drawImage(img, 0, 0, w, h);
+      resolve({ dataUrl: canvas.toDataURL('image/png'), w, h });
+    };
+    img.onerror = reject;
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(xml)));
+  });
+}
+async function chartToPng(chartHtml) {
+  const holder = document.createElement('div');
+  holder.style.cssText = 'position:fixed;left:-9999px;top:0;background:#fff';
+  holder.innerHTML = chartHtml;
+  document.body.appendChild(holder);
+  const svgEl = holder.querySelector('svg');
+  let out = null;
+  if (svgEl) { try { out = await svgToPng(svgEl); } catch (e) { console.warn(e); } }
+  document.body.removeChild(holder);
+  return out;
+}
+async function exportFechamentoPpt(ym, prevYm, st, pv, proj) {
+  const btn = $('#fch-ppt'); const prevLabel = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Gerando PPT…'; }
+  try {
+    const pptx = new PptxGenJS();
+    pptx.layout = 'LAYOUT_16x9';
+    const brand = '4B5646', ink = '2E342C', ink2 = '6B7566', line = 'E3DCC4';
+    const addTitle = (s, title, sub) => { s.addText(title, { x: 0.4, y: 0.3, w: 9.2, h: 0.5, fontSize: 22, bold: true, color: brand, fontFace: 'Georgia' }); if (sub) s.addText(sub, { x: 0.4, y: 0.78, w: 9.2, h: 0.3, fontSize: 12, color: ink2 }); };
+
+    let s = pptx.addSlide();
+    s.background = { color: brand };
+    s.addText('Instituto Luanda Oliveira', { x: 0.6, y: 2.0, w: 8.8, h: 0.7, fontSize: 30, bold: true, color: 'FFFFFF', fontFace: 'Georgia' });
+    s.addText('Fechamento mensal · ' + U.monthLabel(ym), { x: 0.6, y: 2.7, w: 8.8, h: 0.5, fontSize: 16, color: 'D7B977' });
+    s.addText('Elaborado por CM Soluções Financeiras · ' + U.dt(Date.now()), { x: 0.6, y: 5.0, w: 8.8, h: 0.3, fontSize: 10, color: line });
+
+    s = pptx.addSlide();
+    addTitle(s, 'Resultado do mês', U.monthLabel(ym) + (proj ? ' · realizado + projeção' : ' · realizado'));
+    const variacao = U.r2(st.res - pv.res), resCor = st.res >= 0 ? '2F6B3F' : 'B5422C';
+    s.addText(U.money(st.res), { x: 0.4, y: 1.2, w: 5, h: 0.9, fontSize: 34, bold: true, color: resCor, fontFace: 'Georgia' });
+    s.addText((variacao >= 0 ? '+' : '') + U.money(variacao) + ' vs. ' + U.monthLabel(prevYm), { x: 0.4, y: 2.05, w: 5, h: 0.4, fontSize: 12, color: ink2 });
+    s.addTable([['Recebido', U.money(st.rec)], ['Pago', U.money(st.desp)], ['Saldo em caixa', U.money(U.sum(st.saldos.filter(b => b.cash), b => b.calc))]], { x: 0.4, y: 2.6, w: 5, fontSize: 12, border: { type: 'solid', color: line, pt: 0.5 }, color: ink });
+    const wf = await chartToPng(waterfall(wfStepsBalanco(st, proj)));
+    if (wf) s.addImage({ data: wf.dataUrl, x: 5.6, y: 1.2, w: 4.0, h: 4.0 * wf.h / wf.w });
+
+    const catSlide = (titulo, real, cls) => {
+      const sl = pptx.addSlide();
+      addTitle(sl, titulo, U.monthLabel(ym) + ' · realizado');
+      if (real.length) return chartToPng(hbar2(real.slice(0, 10).map(x => ({ label: x.k, value: x.v, cls })), { valueWidth: 132 })).then(img => {
+        if (img) sl.addImage({ data: img.dataUrl, x: 0.4, y: 1.2, w: 5.2, h: 5.2 * img.h / img.w });
+        sl.addTable([['Categoria', 'Lanç.', 'Valor']].concat(real.slice(0, 10).map(x => [x.k, String(x.n), U.money(x.v)])), { x: 5.8, y: 1.2, w: 3.8, fontSize: 10, border: { type: 'solid', color: line, pt: 0.5 }, color: ink });
+      });
+      sl.addText('Nenhum lançamento realizado no mês.', { x: 0.4, y: 1.2, fontSize: 14, color: ink2 });
+    };
+    await catSlide('Receitas', st.porCatReceita, 'wfpos');
+    await catSlide('Despesas', st.porCat, 'wfneg');
+
+    s = pptx.addSlide();
+    addTitle(s, 'Comparativo', U.monthLabel(ym) + ' × ' + U.monthLabel(prevYm));
+    const cmpImg = await chartToPng(hbar2([
+      { label: 'Receitas ' + U.monthLabel(ym), value: st.rec, cls: 'wfpos' },
+      { label: 'Receitas ' + U.monthLabel(prevYm), value: pv.rec, cls: 'wftot' },
+      { label: 'Despesas ' + U.monthLabel(ym), value: st.desp, cls: 'wfneg' },
+      { label: 'Despesas ' + U.monthLabel(prevYm), value: pv.desp, cls: 'wftot' },
+    ], { valueWidth: 132 }));
+    if (cmpImg) s.addImage({ data: cmpImg.dataUrl, x: 0.4, y: 1.2, w: 6.2, h: 6.2 * cmpImg.h / cmpImg.w });
+
+    s = pptx.addSlide();
+    addTitle(s, 'Pontos de atenção', U.monthLabel(ym));
+    const inM = r => { const d = r.effDate || r.dueDate; return d && d.slice(0, 7) === ym; };
+    const pendN = data().all.filter(r => inM(r) && r.pend.some(p => !/Sem centro de custo/.test(p))).length;
+    const saldosCash = st.saldos.filter(b => b.cash);
+    const saldosOk = saldosCash.filter(b => b.banco != null && !b.diff).length;
+    s.addTable([
+      ['Pendências de validação', String(pendN)],
+      ['Em aberto (vencidos até o fim do mês)', st.nAbertosVenc + ' · a receber ' + U.money(st.abertosRec) + ' · a pagar ' + U.money(st.abertosDesp)],
+      ['Saldos bancários conferidos', saldosOk + ' de ' + saldosCash.length],
+    ], { x: 0.4, y: 1.3, w: 9.0, fontSize: 13, border: { type: 'solid', color: line, pt: 0.5 }, color: ink });
+
+    await pptx.writeFile({ fileName: 'fechamento_luanda_' + ym + '.pptx' });
+  } catch (e) {
+    console.error(e); toast('Não foi possível gerar o PPT: ' + (e.message || e), true);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = prevLabel; }
+  }
 }
 
 </script>
