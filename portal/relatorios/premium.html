@@ -99,7 +99,7 @@ label.col{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--
 input.num{text-align:right;width:100px}.legend-conf{margin:-6px 0 12px}
 .conf.calculado{background:var(--infobg);color:var(--ink2)}.kpi.calculado{border-left-color:var(--accent)}
 .rv{width:16px;height:16px}.rvdone td{opacity:.6}
-.chk{list-style:none;margin:0;padding:0}.chk li{display:grid;grid-template-columns:28px 1fr 170px 130px 1fr 110px;gap:8px;align-items:center;padding:7px 4px;border-bottom:1px solid var(--line2);font-size:13px}.chk li .hint{font-size:11.5px;color:var(--ink3)}.chk li .n{font-weight:700;color:var(--ink3)}
+.chk{list-style:none;margin:0;padding:0}.chk li{display:grid;grid-template-columns:28px 1fr 170px 130px 1fr 110px;gap:8px;align-items:center;padding:7px 4px;border-bottom:1px solid var(--line2);font-size:12.5px}.chk li .hint{font-size:11.5px;color:var(--ink3)}.chk li .n{font-weight:700;color:var(--ink3)}
 .chk li.feito .n{color:var(--pos)}.chk li.pend .n{color:var(--warn)}
 @media (max-width:900px){.chk li{grid-template-columns:24px 1fr}}
 .conf{font-size:11px;font-weight:600;border-radius:4px;padding:1px 6px;white-space:nowrap}.conf.confirmado{background:var(--okbg);color:var(--pos)}.conf.estimado{background:var(--warnbg);color:var(--warn)}.conf.pendente{background:var(--badbg);color:var(--neg)}
@@ -112,6 +112,7 @@ input.num{text-align:right;width:100px}.legend-conf{margin:-6px 0 12px}
   background-attachment: local, local, scroll, scroll;
 }
 table.t{border-collapse:collapse;width:100%;font-size:12.5px}
+.t td.small,.t th.small{font-size:inherit}
 .t th{position:sticky;top:0;background:var(--line2);text-align:left;font-weight:600;color:var(--ink2);padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap;cursor:pointer;user-select:none}
 .t th.asc:after{content:" ▲";font-size:9px}.t th.desc:after{content:" ▼";font-size:9px}
 .t td{padding:5px 8px;border-bottom:1px solid var(--line2);vertical-align:top;white-space:nowrap}
@@ -127,15 +128,16 @@ table.t{border-collapse:collapse;width:100%;font-size:12.5px}
 .tbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}.tbar input{min-width:220px}.tinfo{font-size:12px;color:var(--ink2);flex:1}
 .pager{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px}
 .bar{width:90px;height:7px;background:var(--line2);border-radius:4px;overflow:hidden}.bar i{display:block;height:100%;background:var(--ink3)}.bar i.pos{background:var(--pos)}.bar i.neg{background:var(--neg)}
-.kvt{border-collapse:collapse;width:100%;font-size:13px}.kvt th{text-align:left;color:var(--ink2);font-weight:500;padding:4px 10px 4px 0;width:240px;vertical-align:top}.kvt td{padding:4px 0;border-bottom:1px solid var(--line2)}.kvt.raw{font-size:12px}
+.kvt{border-collapse:collapse;width:100%;font-size:12.5px}.kvt th{text-align:left;color:var(--ink2);font-weight:500;padding:4px 10px 4px 0;width:240px;vertical-align:top}.kvt td{padding:4px 0;border-bottom:1px solid var(--line2)}.kvt.raw{font-size:12px}
 /* gráfico */
 .chart svg{width:100%;height:auto;display:block}
 .chart .grid{stroke:var(--line2)}.chart .zero{stroke:var(--ink3);stroke-width:1}.chart .risk{stroke:var(--neg);stroke-dasharray:4 4}
-.chart .ax{font-size:11px;fill:var(--ink3)}.chart .line{fill:none;stroke-width:2.2}.chart .s0{stroke:var(--brand2);fill:var(--brand2)}.chart .s1{stroke:var(--accent);fill:var(--accent)}.chart .s2{stroke:var(--ink3);fill:var(--ink3)}
+.chart .line,.chart .grid,.chart .zero,.chart .risk,.chart .wfconn{vector-effect:non-scaling-stroke}
+.chart .ax{font-size:var(--fs,11px);fill:var(--ink3)}.chart .line{fill:none;stroke-width:2.2}.chart .s0{stroke:var(--brand2);fill:var(--brand2)}.chart .s1{stroke:var(--accent);fill:var(--accent)}.chart .s2{stroke:var(--ink3);fill:var(--ink3)}
 .chart path.line{fill:none}.chart .bin{fill:var(--pos);opacity:.45}.chart .bout{fill:var(--neg);opacity:.45}.chart .negpt{fill:var(--neg)}
 .chart .a1{fill:var(--a1)}.chart .a2{fill:var(--a2)}.chart .a3{fill:var(--a3)}.chart .a4{fill:var(--a4)}.chart .a5{fill:var(--a5)}.chart .aOther{fill:var(--ink3)}
 .chart .wfpos{fill:var(--pos)}.chart .wfneg{fill:var(--neg)}.chart .wftot{fill:var(--brand2)}.chart .wfconn{stroke:var(--ink3);stroke-dasharray:3 3}
-.chart .val{font-size:11px;font-weight:700;fill:var(--ink)}.chart .lbl{font-size:11px;fill:var(--ink2)}
+.chart .val{font-size:var(--fs,11px);font-weight:700;fill:var(--ink)}.chart .lbl{font-size:var(--fs,11px);fill:var(--ink2)}
 .chart .lnrec{stroke:var(--pos);fill:var(--pos)}.chart .lndesp{stroke:var(--neg);fill:var(--neg)}.chart .lnres{stroke:var(--ink3);fill:var(--ink3)}
 .legend{display:flex;gap:16px;font-size:12px;color:var(--ink2);margin-top:6px;flex-wrap:wrap}.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 .legend button.lgbtn{display:inline-flex;align-items:center;border:0;background:none;padding:0;margin:0;font:inherit;color:inherit;cursor:pointer}.legend button.lgbtn.off{opacity:.35}
@@ -1711,6 +1713,26 @@ function hbar2(items, opt) {
   });
   return s + '</svg></div>';
 }
+/* Texto dos gráficos SVG: o viewBox escala com a largura do card, então o texto dos gráficos
+   (cascata, barras, linhas) saía bem maior que o das tabelas. Aqui o corpo do texto fica fixo em
+   CHART_FS px reais em qualquer largura (a variável --fs vem em unidades do viewBox). */
+const CHART_FS = 11;
+function fitCharts() {
+  document.querySelectorAll('#main .chart svg[viewBox]').forEach(svg => {
+    const vb = svg.viewBox.baseVal, w = svg.getBoundingClientRect().width;
+    if (!vb || !vb.width || !w) return;
+    svg.style.setProperty('--fs', Math.min(CHART_FS / (w / vb.width), CHART_FS * 1.4).toFixed(2) + 'px');
+  });
+}
+function bindChartFit() {
+  const main = $('#main');
+  new MutationObserver(fitCharts).observe(main, { childList: true, subtree: true });
+  if (window.ResizeObserver) new ResizeObserver(fitCharts).observe(main);
+  document.addEventListener('toggle', fitCharts, true); // <details> recolhidos que abrem
+  window.addEventListener('resize', fitCharts);
+  window.addEventListener('beforeprint', fitCharts);
+  fitCharts();
+}
 /* tooltip flutuante dos gráficos novos (waterfall/hbar2): segue o mouse sobre [data-tip] */
 function bindChartTips() {
   const tip = $('#tip');
@@ -2892,6 +2914,7 @@ async function init() {
   applyNavCollapsed(localStorage.getItem('cm_nav_collapsed') === '1');
   $('#navtoggle').onclick = () => { const v = !document.body.classList.contains('navcollapsed'); localStorage.setItem('cm_nav_collapsed', v ? '1' : '0'); applyNavCollapsed(v); };
   bindChartTips();
+  bindChartFit();
   const h = location.hash.slice(1); if (NAV.some(n => n[0] === h)) S.ui.view = h; else if (!S.versions.length) S.ui.view = 'importacao';
   render();
 }
