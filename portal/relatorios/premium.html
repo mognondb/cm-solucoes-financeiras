@@ -3313,72 +3313,290 @@ async function saveOrShareFile(blob, fileName, mimeType) {
   const a = document.createElement('a'); a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
+async function imgDataUrl(path) {
+  try {
+    const r = await fetch(path); if (!r.ok) return null;
+    const blob = await r.blob();
+    return await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(blob); });
+  } catch (e) { console.warn('logo', e); return null; }
+}
 async function exportFechamentoPpt(ym, prevYm, st, pv, proj, cnpj) {
   const btn = $('#fch-ppt'); const prevLabel = btn ? btn.textContent : '';
   if (btn) { btn.disabled = true; btn.textContent = 'Gerando PPT…'; }
   try {
     const pptx = new PptxGenJS();
-    pptx.layout = 'LAYOUT_16x9';
-    const brand = '3B1716', ink = '241614', ink2 = '5B4743', line = 'E8DFD9';
-    const addTitle = (s, title, sub) => { s.addText(title, { x: 0.4, y: 0.3, w: 9.2, h: 0.5, fontSize: 22, bold: true, color: brand, fontFace: 'Georgia' }); if (sub) s.addText(sub, { x: 0.4, y: 0.78, w: 9.2, h: 0.3, fontSize: 12, color: ink2 }); };
+    pptx.layout = 'LAYOUT_WIDE';
+    const W = 13.333, H = 7.5;
+    const TH = { ink: '241614', ink2: '5B4743', ink3: '8C7A75', line: 'E8DFD9', brand: '3B1716', accent: 'D4A03F', pos: '5F8268', neg: 'A8655A' };
+    const CLIENT = 'Premium Pinturas Prediais';
+    const logoData = await imgDataUrl('../../assets/img/clientes/premium-pinturas.png');
+    const subScope = cnpjName(cnpj);
+    let pageNum = 1;
 
-    let s = pptx.addSlide();
-    s.background = { color: brand };
-    s.addText('Premium Pinturas Prediais', { x: 0.6, y: 2.0, w: 8.8, h: 0.7, fontSize: 30, bold: true, color: 'FFFFFF', fontFace: 'Georgia' });
-    s.addText('Fechamento mensal · ' + U.monthLabel(ym) + ' · ' + cnpjName(cnpj), { x: 0.6, y: 2.7, w: 8.8, h: 0.5, fontSize: 16, color: 'E8B44C' });
-    s.addText('Elaborado por CM Soluções Financeiras · ' + U.dt(Date.now()), { x: 0.6, y: 5.0, w: 8.8, h: 0.3, fontSize: 10, color: line });
-
-    s = pptx.addSlide();
-    addTitle(s, 'Resultado do mês', U.monthLabel(ym) + (proj ? ' · realizado + projeção' : ' · realizado'));
-    const variacao = U.r2(st.res - pv.res), resCor = st.res >= 0 ? '2F6B3F' : 'B5422C';
-    s.addText(U.money(st.res), { x: 0.4, y: 1.2, w: 5, h: 0.9, fontSize: 34, bold: true, color: resCor, fontFace: 'Georgia' });
-    s.addText((variacao >= 0 ? '+' : '') + U.money(variacao) + ' vs. ' + U.monthLabel(prevYm), { x: 0.4, y: 2.05, w: 5, h: 0.4, fontSize: 12, color: ink2 });
-    s.addTable([['Recebido', U.money(st.rec)], ['Pago', U.money(st.desp)], ['Saldo em caixa', U.money(U.sum(st.saldos.filter(b => b.cash), b => b.calc))]], { x: 0.4, y: 2.6, w: 5, fontSize: 12, border: { type: 'solid', color: line, pt: 0.5 }, color: ink });
-    const wf = await chartToPng(waterfall(wfStepsBalanco(st, proj)));
-    if (wf) s.addImage({ data: wf.dataUrl, x: 5.6, y: 1.2, w: 4.0, h: 4.0 * wf.h / wf.w });
-
-    const catSlide = (titulo, real, cls) => {
-      const sl = pptx.addSlide();
-      addTitle(sl, titulo, U.monthLabel(ym) + ' · realizado');
-      if (real.length) return chartToPng(hbar2(real.slice(0, 10).map(x => ({ label: x.k, value: x.v, cls })), { valueWidth: 132 })).then(img => {
-        if (img) sl.addImage({ data: img.dataUrl, x: 0.4, y: 1.2, w: 5.2, h: 5.2 * img.h / img.w });
-        sl.addTable([['Categoria', 'Lanç.', 'Valor']].concat(real.slice(0, 10).map(x => [x.k, String(x.n), U.money(x.v)])), { x: 5.8, y: 1.2, w: 3.8, fontSize: 10, border: { type: 'solid', color: line, pt: 0.5 }, color: ink });
-      });
-      sl.addText('Nenhum lançamento realizado no mês.', { x: 0.4, y: 1.2, fontSize: 14, color: ink2 });
+    const header = (slide, title, subtitle) => {
+      slide.addShape('rect', { x: 0, y: 0, w: W, h: 0.09, fill: { color: TH.accent }, line: { type: 'none' } });
+      slide.addText(title, { x: 0.6, y: 0.3, w: W - 1.2, h: 0.6, fontSize: 26, bold: true, color: TH.brand, fontFace: 'Georgia' });
+      if (subtitle) slide.addText(subtitle, { x: 0.6, y: 0.84, w: W - 1.2, h: 0.32, fontSize: 13, color: TH.ink2 });
+      slide.addShape('line', { x: 0.6, y: 1.2, w: W - 1.2, h: 0, line: { color: TH.line, width: 1 } });
     };
-    await catSlide('Receitas', st.porCatReceita, 'wfpos');
-    await catSlide('Despesas', st.porCat, 'wfneg');
+    const footer = slide => {
+      slide.addShape('line', { x: 0.6, y: H - 0.5, w: W - 1.2, h: 0, line: { color: TH.line, width: 0.75 } });
+      slide.addText(CLIENT + '   ·   CM Soluções Financeiras   ·   Confidencial', { x: 0.6, y: H - 0.42, w: W - 2, h: 0.3, fontSize: 9, color: TH.ink3 });
+      slide.addText(String(pageNum), { x: W - 1.1, y: H - 0.42, w: 0.5, h: 0.3, fontSize: 9, color: TH.ink3, align: 'right' });
+      pageNum++;
+    };
+    const newSlide = (title, subtitle) => { const s = pptx.addSlide(); s.background = { color: 'FFFFFF' }; header(s, title, subtitle); return s; };
+    const kpiRow = (slide, y, items) => {
+      const gap = 0.18, x0 = 0.6, totalW = W - 1.2, n = items.length, cw = (totalW - gap * (n - 1)) / n, h = 1.35;
+      items.forEach((it, i) => {
+        const x = x0 + i * (cw + gap);
+        slide.addShape('roundRect', { x, y, w: cw, h, rectRadius: 0.06, fill: { color: 'FFFFFF' }, line: { color: TH.line, width: 1 } });
+        slide.addShape('rect', { x, y, w: 0.07, h, fill: { color: it.bar || TH.accent }, line: { type: 'none' } });
+        slide.addText(it.label.toUpperCase(), { x: x + 0.22, y: y + 0.13, w: cw - 0.4, h: 0.28, fontSize: 9.5, bold: true, color: TH.ink2, charSpacing: 1 });
+        slide.addText(it.value, { x: x + 0.2, y: y + 0.4, w: cw - 0.4, h: 0.55, fontSize: 19, bold: true, color: TH.ink, fontFace: 'Georgia', fit: 'shrink' });
+        if (it.note) slide.addText(it.note, { x: x + 0.22, y: y + h - 0.32, w: cw - 0.4, h: 0.28, fontSize: 8.5, color: TH.ink3 });
+      });
+    };
+    const divider = (title, subtitle) => {
+      const s = pptx.addSlide(); s.background = { color: TH.brand };
+      if (logoData) s.addImage({ data: logoData, x: W - 2.3, y: H - 2.2, w: 1.6, h: 1.6, transparency: 25 });
+      s.addShape('rect', { x: 0.8, y: H / 2 - 0.62, w: 1.1, h: 0.055, fill: { color: TH.accent }, line: { type: 'none' } });
+      s.addText(title, { x: 0.8, y: H / 2 - 0.5, w: W - 2, h: 1.0, fontSize: 40, bold: true, color: 'FFFFFF', fontFace: 'Georgia' });
+      if (subtitle) s.addText(subtitle, { x: 0.8, y: H / 2 + 0.35, w: W - 2, h: 0.5, fontSize: 15, color: 'EAD9CE' });
+      return s;
+    };
+    const chartSlide = async (title, subtitle, chartHtml, opt) => {
+      opt = opt || {};
+      const s = newSlide(title, subtitle);
+      const img = chartHtml ? await chartToPng(chartHtml) : null;
+      if (img) { const w = opt.w || W - 2.0; let h = w * img.h / img.w; if (h > 4.7) h = 4.7; s.addImage({ data: img.dataUrl, x: (W - w) / 2, y: 1.5, w, h }); }
+      else s.addText('Sem dados no mês.', { x: 0.6, y: 1.5, fontSize: 14, color: TH.ink2 });
+      if (opt.caption) s.addText(opt.caption, { x: 0.6, y: H - 0.95, w: W - 1.2, h: 0.4, fontSize: 11, color: TH.ink2 });
+      footer(s);
+      return s;
+    };
+    const twoChartSlide = async (title, subtitle, l, r) => {
+      const s = newSlide(title, subtitle);
+      const halfW = (W - 1.2 - 0.4) / 2;
+      s.addText(l.title, { x: 0.6, y: 1.35, w: halfW, h: 0.3, fontSize: 13, bold: true, color: TH.ink2 });
+      s.addText(r.title, { x: 0.6 + halfW + 0.4, y: 1.35, w: halfW, h: 0.3, fontSize: 13, bold: true, color: TH.ink2 });
+      const [imgL, imgR] = await Promise.all([l.html ? chartToPng(l.html) : null, r.html ? chartToPng(r.html) : null]);
+      if (imgL) s.addImage({ data: imgL.dataUrl, x: 0.6, y: 1.7, w: halfW, h: Math.min(4.4, halfW * imgL.h / imgL.w) });
+      else s.addText('Sem dados.', { x: 0.6, y: 1.7, fontSize: 12, color: TH.ink3 });
+      if (imgR) s.addImage({ data: imgR.dataUrl, x: 0.6 + halfW + 0.4, y: 1.7, w: halfW, h: Math.min(4.4, halfW * imgR.h / imgR.w) });
+      else s.addText('Sem dados.', { x: 0.6 + halfW + 0.4, y: 1.7, fontSize: 12, color: TH.ink3 });
+      footer(s);
+      return s;
+    };
+    const tableSlide = (title, subtitle, cols, rows, opt) => {
+      opt = opt || {};
+      const s = newSlide(title, subtitle);
+      const head = cols.map(c => ({ text: c.l, options: { bold: true, color: 'FFFFFF', fill: { color: TH.brand }, align: c.n ? 'right' : 'left' } }));
+      const body = rows.length ? rows.map(r => cols.map(c => ({ text: c.f(r), options: { align: c.n ? 'right' : 'left', color: c.color ? c.color(r) : TH.ink } }))) : [cols.map((c, i) => i === 0 ? { text: 'Sem dados no mês.', options: { color: TH.ink3 } } : { text: '' })];
+      s.addTable([head].concat(body), { x: 0.6, y: 1.4, w: W - 1.2, colW: opt.colW, fontSize: 11, color: TH.ink, border: { type: 'solid', color: TH.line, pt: 0.5 }, autoPage: false, rowH: 0.32 });
+      if (opt.caption) s.addText(opt.caption, { x: 0.6, y: H - 0.95, w: W - 1.2, h: 0.4, fontSize: 10, color: TH.ink3 });
+      footer(s);
+      return s;
+    };
+    const kpiSlide = (title, subtitle, items) => { const s = newSlide(title, subtitle); kpiRow(s, 1.5, items); footer(s); return s; };
 
-    const mObras = obraMonthStats(data().all, S.settings, ym, cnpj);
-    if (mObras.length) {
-      s = pptx.addSlide();
-      addTitle(s, 'Obras', U.monthLabel(ym) + ' · comparação entre obras');
-      const obrasImg = await chartToPng(hbar2(mObras.slice(0, 10).map(o => ({ label: o.centro, value: o.res, cls: o.res < 0 ? 'wfneg' : 'wfpos' })), { valueWidth: 132 }));
-      if (obrasImg) s.addImage({ data: obrasImg.dataUrl, x: 0.4, y: 1.2, w: 5.2, h: 5.2 * obrasImg.h / obrasImg.w });
-      s.addTable([['Obra', 'Receita', 'Despesa', 'Resultado']].concat(mObras.slice(0, 10).map(o => [o.centro, U.money(o.rec), U.money(o.desp), U.money(o.res)])), { x: 5.8, y: 1.2, w: 3.8, fontSize: 10, border: { type: 'solid', color: line, pt: 0.5 }, color: ink });
+    /* ---------- Capa (bloco maciço na cor da marca, logo é um selo circular) ---------- */
+    let s = pptx.addSlide(); s.background = { color: TH.brand };
+    if (logoData) s.addImage({ data: logoData, x: W / 2 - 1.1, y: 0.85, w: 2.2, h: 2.2 });
+    s.addText('Fechamento mensal', { x: 0, y: 3.35, w: W, h: 0.7, fontSize: 32, bold: true, color: 'FFFFFF', fontFace: 'Georgia', align: 'center' });
+    s.addText(U.monthLabel(ym) + ' · ' + subScope, { x: 0, y: 4.0, w: W, h: 0.45, fontSize: 16, color: TH.accent, align: 'center' });
+    s.addShape('line', { x: W / 2 - 0.7, y: 4.6, w: 1.4, h: 0, line: { color: TH.accent, width: 1.5 } });
+    s.addText('Elaborado por CM Soluções Financeiras · ' + U.dt(Date.now()), { x: 0, y: H - 0.7, w: W, h: 0.3, fontSize: 11, color: 'D9C6BC', align: 'center' });
+
+    /* ---------- Resultado do mês ---------- */
+    s = newSlide('Resultado do mês', U.monthLabel(ym) + ' · ' + subScope + (proj ? ' · realizado + projeção' : ' · realizado'));
+    const variacao = U.r2(st.res - pv.res);
+    const saldoCaixa = U.sum(st.saldos.filter(b => b.cash), b => b.calc);
+    kpiRow(s, 1.4, [
+      { label: 'Recebido', value: U.money(st.rec), note: U.monthLabel(ym), bar: TH.pos },
+      { label: 'Pago', value: U.money(st.desp), note: U.monthLabel(ym), bar: TH.neg },
+      { label: 'Resultado', value: U.money(st.res), note: (variacao >= 0 ? '+' : '') + U.money(variacao) + ' vs. ' + U.monthLabel(prevYm), bar: TH.accent },
+      { label: 'Saldo em caixa', value: U.money(saldoCaixa), note: 'consolidado', bar: TH.brand },
+    ]);
+    const wfImg = await chartToPng(waterfall(wfStepsBalanco(st, proj), { w: 1040, h: 300 }));
+    if (wfImg) { const w = W - 2.6; const h = Math.min(4.0, w * wfImg.h / wfImg.w); s.addImage({ data: wfImg.dataUrl, x: (W - w) / 2, y: 3.05, w, h }); }
+    footer(s);
+
+    /* ---------- Evolução ---------- */
+    const series6 = monthSeries(data().all, S.settings, ym, 6, cnpj);
+    await chartSlide('Evolução do resultado de caixa', 'Últimos 6 meses · ' + subScope, flowChart([
+      { name: 'Receita', cls: 'lnrec', points: series6.map(x => ({ l: U.monthLabel(x.ym), v: x.rec })) },
+      { name: 'Despesa', cls: 'lndesp', points: series6.map(x => ({ l: U.monthLabel(x.ym), v: x.desp })) },
+      { name: 'Resultado', cls: 'lnres', points: series6.map(x => ({ l: U.monthLabel(x.ym), v: x.res })) },
+    ], { h: 260 }), { caption: 'Evita julgar o mês isolado: mostra se o resultado deste mês é uma oscilação ou uma tendência.' });
+
+    const chartOpt = { valueWidth: 170, w: 1040, labelWidth: 260, rowH: 42 };
+
+    /* ---------- Receitas ---------- */
+    divider('Receitas', U.monthLabel(ym) + ' · ' + subScope);
+    await chartSlide('Receitas por categoria', U.monthLabel(ym) + ' · realizado', st.porCatReceita.length ? hbar2(st.porCatReceita.slice(0, 10).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wfpos' })), chartOpt) : null);
+    tableSlide('Receitas por categoria · detalhado', U.monthLabel(ym) + ' × ' + U.monthLabel(prevYm), [
+      { l: 'Categoria', f: r => r.k },
+      { l: 'Este mês', n: true, f: r => U.money(r.cur) },
+      { l: 'Mês anterior', n: true, f: r => U.money(r.prev) },
+      { l: 'Variação', n: true, f: r => U.money(r.cur - r.prev, { sign: 1 }), color: r => r.cur - r.prev < 0 ? TH.neg : TH.pos },
+    ], compareCat(st.porCatReceita, pv.porCatReceita).slice(0, 12), { colW: [5.5, 2.2, 2.2, 2.2] });
+    const porObraRec = groupSum(st.real.filter(x => x.k === 'receita'), x => x.centroCusto || '(sem obra/centro)');
+    await chartSlide('Receitas por obra / centro de custo', U.monthLabel(ym), porObraRec.length ? hbar2(porObraRec.slice(0, 10).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wfpos' })), chartOpt) : null);
+    const porCliente = porPessoa(st.real, 'receita');
+    await chartSlide('Receitas por cliente', U.monthLabel(ym), porCliente.length ? hbar2(porCliente.slice(0, 10).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wfpos' })), chartOpt) : null);
+    tableSlide('Receitas por cliente · detalhado', U.monthLabel(ym), [
+      { l: 'Cliente', f: r => r.k },
+      { l: 'Lanç.', n: true, f: r => String(r.n) },
+      { l: 'Valor', n: true, f: r => U.money(r.v) },
+      { l: '%', n: true, f: r => U.pct(st.rec ? r.v / st.rec : 0) },
+    ], porCliente.slice(0, 14), { colW: [6, 2, 2.3, 1.8] });
+
+    /* ---------- Despesas ---------- */
+    divider('Despesas', U.monthLabel(ym) + ' · ' + subScope);
+    await chartSlide('Despesas por categoria', U.monthLabel(ym) + ' · realizado', st.porCat.length ? hbar2(st.porCat.slice(0, 10).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wfneg' })), chartOpt) : null);
+    tableSlide('Despesas por categoria · detalhado', U.monthLabel(ym) + ' × ' + U.monthLabel(prevYm), [
+      { l: 'Categoria', f: r => r.k },
+      { l: 'Este mês', n: true, f: r => U.money(r.cur) },
+      { l: 'Mês anterior', n: true, f: r => U.money(r.prev) },
+      { l: 'Variação', n: true, f: r => U.money(r.cur - r.prev, { sign: 1 }), color: r => r.cur - r.prev > 0 ? TH.neg : TH.pos },
+    ], compareCat(st.porCat, pv.porCat).slice(0, 12), { colW: [5.5, 2.2, 2.2, 2.2] });
+    const porGrupoDesp = groupSum(st.real.filter(x => x.k === 'despesa'), costGroup);
+    await chartSlide('Despesas por grupo de custo', U.monthLabel(ym), porGrupoDesp.length ? hbar2(porGrupoDesp.map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wfneg' })), chartOpt) : null, { caption: 'Materiais, mão de obra, terceiros e tributos — mesma classificação usada em Obras e contratos.' });
+    const porForn = porPessoa(st.real, 'despesa');
+    await chartSlide('Despesas por fornecedor', U.monthLabel(ym), porForn.length ? hbar2(porForn.slice(0, 10).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wfneg' })), chartOpt) : null);
+    tableSlide('Despesas por fornecedor · detalhado', U.monthLabel(ym), [
+      { l: 'Fornecedor', f: r => r.k },
+      { l: 'Lanç.', n: true, f: r => String(r.n) },
+      { l: 'Valor', n: true, f: r => U.money(r.v) },
+      { l: '%', n: true, f: r => U.pct(st.desp ? r.v / st.desp : 0) },
+    ], porForn.slice(0, 14), { colW: [6, 2, 2.3, 1.8] });
+
+    /* ---------- Pessoal ---------- */
+    const folhaReal = r => r.folha && r.folha !== 'Não é folha';
+    const porPessoaFolha = groupSum(st.real.filter(r => r.k === 'despesa' && folhaReal(r)), r => r.pessoa || '(sem identificação)');
+    if (porPessoaFolha.length) {
+      divider('Pessoal', U.monthLabel(ym) + ' · ' + subScope);
+      const totalPessoal = U.sum(porPessoaFolha, x => x.v);
+      const adiant = st.real.filter(r => r.k === 'despesa' && r.folha === 'Adiantamentos');
+      kpiSlide('Custo de pessoal no mês', U.monthLabel(ym), [
+        { label: 'Total de pessoal', value: U.money(totalPessoal), note: porPessoaFolha.length + ' pessoa(s)', bar: TH.neg },
+        { label: 'Custo médio por pessoa', value: U.money(porPessoaFolha.length ? U.r2(totalPessoal / porPessoaFolha.length) : 0), note: 'média simples', bar: TH.brand },
+        { label: 'Adiantamentos no mês', value: U.money(U.sum(adiant, r => r.valor)), note: adiant.length + ' lançamento(s)', bar: TH.accent },
+        { label: '% das despesas do mês', value: st.desp ? U.pct(totalPessoal / st.desp) : '—', note: 'total de pessoal / despesas', bar: TH.ink3 },
+      ]);
+      await chartSlide('Comparação entre pessoas', U.monthLabel(ym) + ' · custo total', hbar2(porPessoaFolha.slice(0, 10).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wfneg' })), chartOpt));
+      tableSlide('Pessoas · detalhado', U.monthLabel(ym), [
+        { l: 'Pessoa', f: r => r.k },
+        { l: 'Lanç.', n: true, f: r => String(r.n) },
+        { l: 'Valor', n: true, f: r => U.money(r.v) },
+        { l: '%', n: true, f: r => U.pct(totalPessoal ? r.v / totalPessoal : 0) },
+      ], porPessoaFolha.slice(0, 14), { colW: [6, 2, 2.3, 1.8] });
+      const porClasse = groupSum(st.real.filter(x => x.k === 'despesa' && folhaReal(x)), x => x.folha);
+      await chartSlide('Por classe', U.monthLabel(ym) + ' · salário, encargos, benefícios, adiantamentos...', porClasse.length ? hbar2(porClasse.map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wfneg' })), chartOpt) : null);
+      const adiantSeries = series6.map(x => ({ ym: x.ym, v: U.sum(x.real.filter(r => r.k === 'despesa' && r.folha === 'Adiantamentos'), r => r.valor) }));
+      await chartSlide('Adiantamentos — impacto no caixa', 'Últimos 6 meses · ' + subScope, flowChart([{ name: 'Adiantamentos', cls: 'lndesp', points: adiantSeries.map(x => ({ l: U.monthLabel(x.ym), v: x.v })) }], { h: 260, legend: false }), { caption: adiant.length + ' lançamento(s) de adiantamento neste mês, total ' + U.money(U.sum(adiant, r => r.valor)) + '. Mostra o ritmo (semanal/quinzenal) do impacto no caixa.' });
     }
 
-    s = pptx.addSlide();
-    addTitle(s, 'Comparativo', U.monthLabel(ym) + ' × ' + U.monthLabel(prevYm));
-    const cmpImg = await chartToPng(hbar2([
+    /* ---------- Obras (detalhamento é prioridade) ---------- */
+    const mObras = obraMonthStats(data().all, S.settings, ym, cnpj);
+    if (mObras.length) {
+      divider('Obras', U.monthLabel(ym) + ' · ' + subScope);
+      const recMes = U.sum(mObras, o => o.rec), despMes = U.sum(mObras, o => o.desp);
+      kpiSlide('Obras no mês', U.monthLabel(ym), [
+        { label: 'Obras com lançamento', value: String(mObras.length), note: U.monthLabel(ym), bar: TH.brand },
+        { label: 'Receita do mês', value: U.money(recMes), note: 'lançado nas obras', bar: TH.pos },
+        { label: 'Despesa do mês', value: U.money(despMes), note: 'custo lançado nas obras', bar: TH.neg },
+        { label: 'Resultado do mês', value: U.money(U.r2(recMes - despMes)), note: 'receita − despesa', bar: TH.accent },
+      ]);
+      await twoChartSlide('Comparação entre obras', U.monthLabel(ym),
+        { title: 'Receita do mês', html: hbar2(mObras.slice(0, 10).map(o => ({ label: o.centro, value: o.rec, extra: o.n + ' lanç.', cls: 'wfpos' })), { valueWidth: 120, w: 700, labelWidth: 230, rowH: 34 }) },
+        { title: 'Resultado do mês', html: hbar2(mObras.slice(0, 10).map(o => ({ label: o.centro, value: o.res, cls: o.res < 0 ? 'wfneg' : 'wfpos' })), { valueWidth: 120, w: 700, labelWidth: 230, rowH: 34 }) });
+      tableSlide('Obras · detalhado', U.monthLabel(ym), [
+        { l: 'Obra', f: o => o.centro },
+        { l: 'Lanç.', n: true, f: o => String(o.n) },
+        { l: 'Receita', n: true, f: o => U.money(o.rec) },
+        { l: 'Despesa', n: true, f: o => U.money(o.desp) },
+        { l: 'Resultado', n: true, f: o => U.money(o.res), color: o => o.res < 0 ? TH.neg : TH.pos },
+      ], mObras.slice(0, 14), { colW: [4.6, 1.5, 2.0, 2.0, 2.033] });
+      const gAgg = {}; mObras.forEach(o => Object.entries(o.grupos).forEach(([g, v]) => gAgg[g] = U.r2((gAgg[g] || 0) + v)));
+      const gRows = Object.entries(gAgg).map(([k, v]) => ({ k, v })).sort((a, b) => b.v - a.v);
+      if (gRows.length) await chartSlide('Despesas das obras por grupo de custo', U.monthLabel(ym), hbar2(gRows.map(x => ({ label: x.k, value: x.v, cls: 'wfneg' })), chartOpt));
+
+      /* detalhe individual das obras com maior movimento no mês: o pedido mais importante do cliente */
+      const topObras = [...mObras].sort((a, b) => (b.rec + b.desp) - (a.rec + a.desp)).slice(0, 6);
+      for (const o of topObras) {
+        const porCatO = groupSum(o.l.filter(r => r.k === 'despesa'), r => r.categoria || '(sem categoria)');
+        const porFornO = groupSum(o.l.filter(r => r.k === 'despesa'), r => r.pessoa || '(sem identificação)');
+        const sl = newSlide(o.centro, 'Detalhamento da obra · ' + U.monthLabel(ym));
+        kpiRow(sl, 1.4, [
+          { label: 'Receita no mês', value: U.money(o.rec), bar: TH.pos },
+          { label: 'Despesa no mês', value: U.money(o.desp), bar: TH.neg },
+          { label: 'Resultado', value: U.money(o.res), note: o.rec ? U.pct(o.res / o.rec) + ' margem' : '—', bar: TH.accent },
+          { label: 'Lançamentos', value: String(o.n), note: U.monthLabel(ym), bar: TH.brand },
+        ]);
+        const halfW = (W - 1.2 - 0.4) / 2;
+        sl.addText('Despesas por categoria', { x: 0.6, y: 3.05, w: halfW, h: 0.3, fontSize: 13, bold: true, color: TH.ink2 });
+        sl.addText('Despesas por fornecedor', { x: 0.6 + halfW + 0.4, y: 3.05, w: halfW, h: 0.3, fontSize: 13, bold: true, color: TH.ink2 });
+        const smallOpt = { valueWidth: 110, w: 700, labelWidth: 230, rowH: 30 };
+        const [imgCat, imgForn] = await Promise.all([
+          porCatO.length ? chartToPng(hbar2(porCatO.slice(0, 8).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wfneg' })), smallOpt)) : null,
+          porFornO.length ? chartToPng(hbar2(porFornO.slice(0, 8).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wfneg' })), smallOpt)) : null,
+        ]);
+        if (imgCat) sl.addImage({ data: imgCat.dataUrl, x: 0.6, y: 3.4, w: halfW, h: Math.min(3.5, halfW * imgCat.h / imgCat.w) });
+        else sl.addText('Sem despesas no mês.', { x: 0.6, y: 3.4, fontSize: 12, color: TH.ink3 });
+        if (imgForn) sl.addImage({ data: imgForn.dataUrl, x: 0.6 + halfW + 0.4, y: 3.4, w: halfW, h: Math.min(3.5, halfW * imgForn.h / imgForn.w) });
+        else sl.addText('Sem despesas no mês.', { x: 0.6 + halfW + 0.4, y: 3.4, fontSize: 12, color: TH.ink3 });
+        footer(sl);
+      }
+      if (mObras.length > topObras.length) {
+        const outras = mObras.filter(o => !topObras.includes(o));
+        tableSlide('Outras obras do mês', U.monthLabel(ym) + ' · ' + outras.length + ' obra(s) adicionais', [
+          { l: 'Obra', f: o => o.centro },
+          { l: 'Lanç.', n: true, f: o => String(o.n) },
+          { l: 'Receita', n: true, f: o => U.money(o.rec) },
+          { l: 'Despesa', n: true, f: o => U.money(o.desp) },
+          { l: 'Resultado', n: true, f: o => U.money(o.res), color: o => o.res < 0 ? TH.neg : TH.pos },
+        ], outras, { colW: [4.6, 1.5, 2.0, 2.0, 2.033] });
+      }
+      const O = obraStats(recs(), S.settings), Lobras = O.obras;
+      if (Lobras.length) tableSlide('Rentabilidade acumulada por obra', 'Desde o início de cada contrato (lançado = recebido + a receber)', [
+        { l: 'Obra', f: o => o.centro },
+        { l: 'Lançado', n: true, f: o => U.money(o.lancado) },
+        { l: 'Custo', n: true, f: o => U.money(o.custo) },
+        { l: 'Resultado', n: true, f: o => U.money(o.resultado), color: o => o.resultado < 0 ? TH.neg : TH.pos },
+        { l: 'Margem', n: true, f: o => o.margem == null ? '—' : U.pct(o.margem) + (o.provisorio.length ? ' (provisória)' : '') },
+      ], Lobras.slice(0, 14), { colW: [4.0, 2.0, 2.0, 2.0, 2.133] });
+    }
+
+    /* ---------- Comparativo ---------- */
+    divider('Comparativo', U.monthLabel(ym) + ' × ' + U.monthLabel(prevYm));
+    await chartSlide('Receitas × Despesas', U.monthLabel(ym) + ' × ' + U.monthLabel(prevYm), hbar2([
       { label: 'Receitas ' + U.monthLabel(ym), value: st.rec, cls: 'wfpos' },
       { label: 'Receitas ' + U.monthLabel(prevYm), value: pv.rec, cls: 'wftot' },
       { label: 'Despesas ' + U.monthLabel(ym), value: st.desp, cls: 'wfneg' },
       { label: 'Despesas ' + U.monthLabel(prevYm), value: pv.desp, cls: 'wftot' },
-    ], { valueWidth: 132 }));
-    if (cmpImg) s.addImage({ data: cmpImg.dataUrl, x: 0.4, y: 1.2, w: 6.2, h: 6.2 * cmpImg.h / cmpImg.w });
+    ], { valueWidth: 150, w: 1040 }));
 
-    s = pptx.addSlide();
-    addTitle(s, 'Pontos de atenção', U.monthLabel(ym));
+    /* ---------- Pontos de atenção ---------- */
     const inM = r => { const d = r.effDate || r.dueDate; return d && d.slice(0, 7) === ym; };
     const pendN = data().all.filter(r => (cnpj === 'C' || r.cnpj === cnpj) && inM(r) && r.pend.some(p => !/Sem centro de custo/.test(p))).length;
     const saldosCash = st.saldos.filter(b => b.cash);
     const saldosOk = saldosCash.filter(b => b.banco != null).length;
-    s.addTable([
-      ['Pendências de validação', String(pendN)],
-      ['Em aberto (vencidos até o fim do mês)', st.nAbertosVenc + ' · a receber ' + U.money(st.abertosRec) + ' · a pagar ' + U.money(st.abertosDesp)],
-      ['Saldos bancários conferidos', saldosOk + ' de ' + saldosCash.length],
-    ], { x: 0.4, y: 1.3, w: 9.0, fontSize: 13, border: { type: 'solid', color: line, pt: 0.5 }, color: ink });
+    tableSlide('Pontos de atenção', U.monthLabel(ym), [
+      { l: 'Indicador', f: r => r.k },
+      { l: 'Situação', f: r => r.v },
+    ], [
+      { k: 'Pendências de validação', v: String(pendN) },
+      { k: 'Em aberto (vencidos até o fim do mês)', v: st.nAbertosVenc + ' · a receber ' + U.money(st.abertosRec) + ' · a pagar ' + U.money(st.abertosDesp) },
+      { k: 'Saldos bancários conferidos', v: saldosOk + ' de ' + saldosCash.length },
+    ], { colW: [6, 6.1] });
+
+    /* ---------- Encerramento ---------- */
+    s = pptx.addSlide(); s.background = { color: TH.brand };
+    if (logoData) s.addImage({ data: logoData, x: W / 2 - 1.1, y: H / 2 - 2.0, w: 2.2, h: 2.2, transparency: 10 });
+    s.addText('Obrigado', { x: 0, y: H / 2 + 0.4, w: W, h: 0.7, fontSize: 30, bold: true, color: 'FFFFFF', fontFace: 'Georgia', align: 'center' });
+    s.addText('CM Soluções Financeiras · Gestão de caixa', { x: 0, y: H / 2 + 1.05, w: W, h: 0.4, fontSize: 13, color: 'EAD9CE', align: 'center' });
 
     const fileName = 'fechamento_premium_' + cnpj + '_' + ym + '.pptx';
     const blob = await pptx.write({ outputType: 'blob' });
