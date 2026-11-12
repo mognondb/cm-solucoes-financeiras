@@ -31,9 +31,18 @@ h1{font-size:22px;margin:0}h2{font-size:15px;margin:22px 0 10px;color:var(--ink2
 .pos{color:var(--pos)}.neg{color:var(--neg)}
 code{background:var(--line2);padding:1px 4px;border-radius:4px}
 /* layout */
-.shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+.shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh;transition:grid-template-columns .15s}
 .shell>div{min-width:0}
+body.navcollapsed .shell{grid-template-columns:60px 1fr}
 aside{background:linear-gradient(160deg,var(--side1),var(--side2));color:#fff;position:sticky;top:0;height:100vh;overflow:auto;padding:14px 10px}
+body.navcollapsed aside{padding:14px 6px;overflow:visible}
+#navtoggle{position:absolute;top:10px;right:8px;background:rgba(255,255,255,.12);border:0;color:#fff;width:22px;height:22px;border-radius:6px;cursor:pointer;font-size:13px;line-height:1;padding:0}
+#navtoggle:hover{background:rgba(255,255,255,.25)}
+body.navcollapsed #navtoggle{position:static;display:block;margin:0 auto 8px}
+body.navcollapsed .logo-row img{width:34px;height:34px}
+body.navcollapsed .logo-row span{display:none}
+body.navcollapsed #nav a{justify-content:center;padding:9px 0}
+body.navcollapsed #nav a span,body.navcollapsed #nav b,body.navcollapsed .cm-by{display:none}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) aside{border-right:1px solid var(--line)}}
 .logo-row{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:6px 8px 18px;border-bottom:1px solid rgba(232,180,76,.25);margin-bottom:10px}.logo-row img{width:96px;height:96px;border-radius:50%;box-shadow:0 0 0 2px rgba(232,180,76,.55)}
 .logo-row b{display:block;font-size:14px;letter-spacing:.02em}.logo-row span{font-size:11px;color:#e8b44c}
@@ -111,6 +120,10 @@ table.t{border-collapse:collapse;width:100%;font-size:12.5px}
 .t tfoot td{font-weight:700;border-top:2px solid var(--line)}.t .none{text-align:center;color:var(--ink3);padding:16px}
 .t tr.rowbad td{background:var(--badbg)}
 .t tr.sel td{background:var(--accentbg)}
+.ctwrap .ct-full{display:none}
+.ctwrap.open .ct-short{display:none}
+.ctwrap.open .ct-full{display:block}
+.ctwrap .ct-toggle{margin-top:8px}
 .tbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}.tbar input{min-width:220px}.tinfo{font-size:12px;color:var(--ink2);flex:1}
 .pager{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px}
 .bar{width:90px;height:7px;background:var(--line2);border-radius:4px;overflow:hidden}.bar i{display:block;height:100%;background:var(--ink3)}.bar i.pos{background:var(--pos)}.bar i.neg{background:var(--neg)}
@@ -171,7 +184,7 @@ ul.alerts li.bad{border-left-color:var(--neg);background:var(--badbg)}ul.alerts 
 </head>
 <body>
 <div class="shell">
-  <aside><div class="logo-row"><img src="../../assets/img/clientes/premium-pinturas.png" alt="Premium Pinturas Prediais"><span>Gestão de caixa</span></div><nav id="nav"></nav><p class="cm-by">Gestão financeira por<br><b>CM Soluções Financeiras</b></p></aside>
+  <aside><button class="btn sm" id="navtoggle" title="Recolher menu">‹</button><div class="logo-row"><img src="../../assets/img/clientes/premium-pinturas.png" alt="Premium Pinturas Prediais"><span>Gestão de caixa</span></div><nav id="nav"></nav><p class="cm-by">Gestão financeira por<br><b>CM Soluções Financeiras</b></p></aside>
   <div>
     <div class="top">
       <button class="btn" id="menu">☰</button>
@@ -1295,6 +1308,7 @@ async function saveVersions() { S.cache = null; await Store.set('versions', S.ve
 /* ---------- navegação ---------- */
 const NAV = [
   ['painel', 'Painel', 'M3 13h8V3H3zm0 8h8v-6H3zm10 0h8V11h-8zm0-18v6h8V3z'],
+  ['fechamento', 'Fechamento mensal', 'M7 3v3M17 3v3M4 8h16M5 5h14v15H5zM9 14l2 2 4-4'],
   ['fluxo', 'Fluxo de caixa', 'M3 17l6-6 4 4 8-8M14 7h7v7'],
   ['calendario', 'Calendário', 'M7 3v3M17 3v3M4 8h16M5 5h14v15H5z'],
   ['receber', 'A receber', 'M12 19V5M5 12l7 7 7-7'],
@@ -1305,7 +1319,6 @@ const NAV = [
   ['empreitas', 'Empreitas', 'M14 7l3-3 3 3-3 3zM4 20l9-9M3 21l2-2'],
   ['folha', 'Folha e pessoal', 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0'],
   ['rotina', 'Rotina semanal', 'M9 11l3 3 8-8M4 6h4M4 12h2M4 18h12'],
-  ['fechamento', 'Fechamento mensal', 'M7 3v3M17 3v3M4 8h16M5 5h14v15H5zM9 14l2 2 4-4'],
   ['alertas', 'Alertas', 'M12 3l10 18H2zM12 10v4M12 17v.5'],
   ['lancamentos', 'Lançamentos', 'M4 6h16M4 10h16M4 14h16M4 18h16'],
   ['relatorio', 'Relatório executivo', 'M6 2h9l5 5v15H6zM14 2v6h6'],
@@ -1313,8 +1326,12 @@ const NAV = [
   ['config', 'Configurações', 'M12 15a3 3 0 100-6 3 3 0 000 6zM19 12l2-1-2-4-2 1-2-1V5h-4v2l-2 1-2-1-2 4 2 1v0l-2 1 2 4 2-1 2 1v2h4v-2l2-1 2 1 2-4z'],
   ['backup', 'Backup', 'M5 4h11l3 3v13H5zM8 4v5h7V4M8 20v-6h8v6'],
 ];
+function applyNavCollapsed(v) {
+  document.body.classList.toggle('navcollapsed', v);
+  const b = $('#navtoggle'); if (b) { b.textContent = v ? '›' : '‹'; b.title = v ? 'Expandir menu' : 'Recolher menu'; }
+}
 function renderNav() {
-  $('#nav').innerHTML = NAV.map(([id, label, d]) => `<a href="#${id}" data-v="${id}" class="${S.ui.view === id ? 'on' : ''}"><svg viewBox="0 0 24 24"><path d="${d}"/></svg><span>${label}</span>${id === 'alertas' ? '<b id="nav-alerts"></b>' : ''}${id === 'importacao' ? '<b id="nav-pend"></b>' : ''}</a>`).join('');
+  $('#nav').innerHTML = NAV.map(([id, label, d]) => `<a href="#${id}" data-v="${id}" title="${U.esc(label)}" class="${S.ui.view === id ? 'on' : ''}"><svg viewBox="0 0 24 24"><path d="${d}"/></svg><span>${label}</span>${id === 'alertas' ? '<b id="nav-alerts"></b>' : ''}${id === 'importacao' ? '<b id="nav-pend"></b>' : ''}</a>`).join('');
 }
 function go(view) { S.ui.view = view; render(); window.scrollTo(0, 0); }
 window.addEventListener('hashchange', () => { const v = location.hash.slice(1); if (NAV.some(n => n[0] === v)) go(v); });
@@ -1519,6 +1536,28 @@ function stable(cols, rows, opt) {
   return `<div class="twrap"><table class="t ${opt.cls || ''}"><thead><tr>${cols.map(c => `<th class="${c.n ? 'n' : ''}">${c.l}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr class="${r._cls || ''}" ${r._drill ? `data-drill="${r._drill}"` : ''}>${cols.map(c => `<td class="${c.n ? 'n' : ''}">${c.f ? c.f(r) : U.esc(r[c.k])}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${cols.length}" class="none">Sem dados</td></tr>`}</tbody>${opt.foot ? `<tfoot><tr>${opt.foot.map((x, i) => `<td class="${cols[i] && cols[i].n ? 'n' : ''}">${x}</td>`).join('')}</tr></tfoot>` : ''}</table></div>`;
 }
 function drillId(title, list, cols) { const id = 'd' + (++drillSeq); DRILL[id] = { title, list, cols }; return id; }
+/* bloco recolhível inline (sem modal): mostra o resumo e, clicando, expande o conteúdo completo na própria página */
+let ctSeq = 0;
+function toggleCT(id) {
+  const w = document.getElementById(id); if (!w) return;
+  const open = w.classList.toggle('open');
+  const btn = w.querySelector('.ct-toggle'); if (btn) btn.textContent = open ? (w.dataset.less || 'Ver menos') : w.dataset.more;
+}
+function collapsible(shortHtml, fullHtml, opt) {
+  opt = opt || {};
+  const id = 'ct' + (++ctSeq);
+  const moreLabel = opt.moreLabel || 'Ver mais', lessLabel = opt.lessLabel || 'Ver menos';
+  return `<div class="ctwrap" id="${id}" data-more="${U.esc(moreLabel)}" data-less="${U.esc(lessLabel)}">
+    <div class="ct-short">${shortHtml}</div><div class="ct-full">${fullHtml}</div>
+    <button class="btn sm ct-toggle" onclick="toggleCT('${id}')">${moreLabel}</button></div>`;
+}
+/* tabela com poucas linhas por padrão (acessória) + "ver todas" que expande na própria página */
+function collapsibleTable(cols, rows, opt) {
+  opt = opt || {};
+  const limit = opt.limit || 5;
+  if (rows.length <= limit) return stable(cols, rows, opt);
+  return collapsible(stable(cols, rows.slice(0, limit), opt), stable(cols, rows, opt), { moreLabel: 'Ver todas as ' + rows.length + ' linhas' });
+}
 function groupTable(list, keyFn, label, valFn, opt) {
   opt = opt || {};
   const g = [...U.groupBy(list, keyFn).entries()].map(([k, l]) => ({ k: k || '(sem ' + label.toLowerCase() + ')', n: l.length, v: U.sum(l, valFn), l }));
@@ -1717,21 +1756,17 @@ function catCompareBlock(titulo, cur, prev, cls, opt) {
   opt = opt || {};
   if (!cur.length) return `<p class="small muted-t">Nenhuma ${titulo.toLowerCase()} realizada no mês.</p>`;
   const cmp = compareCat(cur, prev);
-  const dCols = opt.cols || (cls === 'wfpos' ? COLS.receber() : COLS.pagar());
-  const dId = r => r.l && r.l.length ? drillId(titulo + ': ' + r.k, r.l, dCols) : null;
   const cols = [
-    { l: 'Categoria', f: r => { const id = dId(r); return id ? `<a data-drill="${id}">${U.esc(r.k)}</a>` : U.esc(r.k); } },
+    { l: 'Categoria', k: 'k' },
     { l: 'Lanç.', n: true, f: r => r.n },
     { l: 'Este mês', n: true, f: r => U.money(r.cur) },
     { l: 'Mês anterior', n: true, f: r => U.money(r.prev) },
     { l: 'Variação', n: true, f: r => U.money(r.cur - r.prev, { sign: 1 }) },
   ].concat(opt.extraCols || []);
-  return hbar2(cur.slice(0, 12).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls, drill: x.l && x.l.length ? drillId(titulo + ': ' + x.k, x.l, dCols) : null })), { valueWidth: 132 }) + stable(cols, cmp.slice(0, 15));
+  return hbar2(cur.slice(0, 12).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls })), { valueWidth: 132 }) + collapsibleTable(cols, cmp, { limit: opt.limit || 5 });
 }
 function abertoBlock(titulo, aberto) {
-  const dCols = titulo === 'Receitas' ? COLS.receber() : COLS.pagar();
-  const dId = x => x.l && x.l.length ? drillId(titulo + ' em aberto: ' + x.k, x.l, dCols) : null;
-  return `<div class="card"><h3>${titulo} em aberto (projeção)</h3>${aberto.length ? hbar2(aberto.slice(0, 12).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wftot', drill: dId(x) })), { valueWidth: 132 }) + stable([{ l: 'Categoria', f: x => { const id = dId(x); return id ? `<a data-drill="${id}">${U.esc(x.k)}</a>` : U.esc(x.k); } }, { l: 'Lanç.', n: true, f: x => x.n }, { l: 'Em aberto', n: true, f: x => U.money(x.v) }], aberto.slice(0, 15)) : '<p class="small muted-t">Nada em aberto.</p>'}</div>`;
+  return `<div class="card"><h3>${titulo} em aberto (projeção)</h3>${aberto.length ? hbar2(aberto.slice(0, 12).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wftot' })), { valueWidth: 132 }) + collapsibleTable([{ l: 'Categoria', k: 'k' }, { l: 'Lanç.', n: true, f: x => x.n }, { l: 'Em aberto', n: true, f: x => U.money(x.v) }], aberto, { limit: 5 }) : '<p class="small muted-t">Nada em aberto.</p>'}</div>`;
 }
 /* monthStats dos últimos n meses terminando em ym (inclusive), do mais antigo pro mais novo */
 function monthSeries(all, settings, ym, n, cnpj) {
@@ -2854,6 +2889,8 @@ async function init() {
   $('#base-today').onclick = () => { S.ui.base = U.today(); S.cache = null; render(); };
   $('#menu').onclick = () => document.body.classList.toggle('navopen');
   $('#nav').addEventListener('click', () => document.body.classList.remove('navopen'));
+  applyNavCollapsed(localStorage.getItem('cm_nav_collapsed') === '1');
+  $('#navtoggle').onclick = () => { const v = !document.body.classList.contains('navcollapsed'); localStorage.setItem('cm_nav_collapsed', v ? '1' : '0'); applyNavCollapsed(v); };
   bindChartTips();
   const h = location.hash.slice(1); if (NAV.some(n => n[0] === h)) S.ui.view = h; else if (!S.versions.length) S.ui.view = 'importacao';
   render();
@@ -3024,17 +3061,16 @@ function tabBalanco(st, pv, ym, prevYm, proj, series, trendN) {
   }
   return h;
 }
-/* tabela ranqueada (fornecedor/cliente) com cada linha e barra clicável pro detalhe dos lançamentos */
+/* tabela ranqueada (fornecedor/cliente): gráfico em destaque + tabela acessória recolhida */
 function rankTable(titulo, rows, total, cols) {
   if (!rows.length) return '<p class="small muted-t">Sem dados.</p>';
-  const dId = x => x.l && x.l.length ? drillId(titulo + ': ' + x.k, x.l, cols) : null;
-  const bars = hbar2(rows.slice(0, 12).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: titulo === 'Receitas' ? 'wfpos' : 'wfneg', drill: dId(x) })), { valueWidth: 132 });
-  const table = stable([
-    { l: titulo === 'Receitas' ? 'Cliente' : 'Fornecedor', f: x => { const id = dId(x); return id ? `<a data-drill="${id}">${U.esc(x.k)}</a>` : U.esc(x.k); } },
+  const bars = hbar2(rows.slice(0, 12).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: titulo === 'Receitas' ? 'wfpos' : 'wfneg' })), { valueWidth: 132 });
+  const table = collapsibleTable([
+    { l: titulo === 'Receitas' ? 'Cliente' : 'Fornecedor', k: 'k' },
     { l: 'Lanç.', n: true, f: x => x.n },
     { l: 'Valor', n: true, f: x => U.money(x.v) },
     { l: '%', n: true, f: x => U.pct(total ? x.v / total : 0) },
-  ], rows.slice(0, 15));
+  ], rows, { limit: 5 });
   return bars + table;
 }
 function tabReceitas(st, pv, ym, prevYm, proj) {
@@ -3061,23 +3097,13 @@ function tabDespesas(st, pv, ym, prevYm, proj) {
   if (proj) h += abertoBlock('Despesas', st.porCatAbertoDesp);
   return h;
 }
-/* detalhe de uma obra SÓ no mês selecionado: por categoria, por fornecedor, lançamentos */
-function openObraMes(centro, ym, cnpj) {
-  const mObras = obraMonthStats(data().all, S.settings, ym, cnpj);
-  const o = mObras.find(x => x.centro === centro);
-  if (!o) { toast('Sem lançamentos desta obra no mês', true); return; }
+/* detalhe de uma obra SÓ no mês selecionado: por categoria, por fornecedor, lançamentos — embutido na própria página */
+function obraMesDetalheHtml(o, ym) {
   const porCat = groupSum(o.l.filter(r => r.k === 'despesa'), r => r.categoria || '(sem categoria)');
   const porForn = groupSum(o.l.filter(r => r.k === 'despesa'), r => r.pessoa || '(sem identificação)');
-  const bars = rows => rows.length ? hbar2(rows.map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wfneg', drill: drillId(x.k + ': ' + centro, x.l, COLS.pagar()) })), { valueWidth: 132 }) : '<p class="small muted-t">Sem despesas no mês.</p>';
-  const html = `<div class="kpis">
-    ${kpi('Receita do mês', o.rec, U.monthLabel(ym))}
-    ${kpi('Despesa do mês', o.desp, U.monthLabel(ym))}
-    ${kpi('Resultado do mês', o.res, 'receita − despesa')}
-  </div>
-  <div class="grid2"><div><h4>Despesas por categoria</h4>${bars(porCat)}</div><div><h4>Despesas por fornecedor</h4>${bars(porForn)}</div></div>
-  <h4>Todos os lançamentos do mês</h4><div id="mlist-obra"></div>`;
-  const m = modal('Obra: ' + U.esc(centro) + ' · ' + U.monthLabel(ym), html, true);
-  mountTable($('#mlist-obra', m), { rows: o.l, cols: COLS.base(), id: 'obrames', total: true });
+  const bars = rows => rows.length ? hbar2(rows.map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wfneg' })), { valueWidth: 132 }) : '<p class="small muted-t">Sem despesas no mês.</p>';
+  return `<div class="grid2"><div><h4>Despesas por categoria</h4>${bars(porCat)}</div><div><h4>Despesas por fornecedor</h4>${bars(porForn)}</div></div>
+    <h4>Lançamentos do mês</h4>${collapsibleTable(COLS.base(), o.l, { limit: 5 })}`;
 }
 function tabObras(ym, cnpj) {
   const D = data();
@@ -3091,44 +3117,44 @@ function tabObras(ym, cnpj) {
   </div>`;
   if (!mObras.length) h += '<div class="card"><p class="small muted-t">Nenhuma obra com lançamento realizado no mês.</p></div>';
   else {
+    const sel = mObras.find(o => o.centro === S.ui.fechObraSel);
     h += `<div class="card"><h3>Comparação entre obras · ${U.monthLabel(ym)}</h3><div class="grid2">
       <div><h4>Receita do mês</h4>${hbar2(mObras.map(o => ({ label: o.centro, value: o.rec, extra: o.n + ' lanç.', cls: 'wfpos' })), { valueWidth: 132 })}</div>
       <div><h4>Resultado do mês</h4>${hbar2(mObras.map(o => ({ label: o.centro, value: o.res, extra: U.money(o.rec) + ' rec.', cls: o.res < 0 ? 'wfneg' : 'wfpos' })), { valueWidth: 132 })}</div>
-    </div>${stable([
+    </div>${collapsibleTable([
       { l: 'Obra', k: 'centro' },
       { l: 'Lanç.', n: true, f: o => o.n },
       { l: 'Receita', n: true, f: o => U.money(o.rec) },
       { l: 'Despesa', n: true, f: o => U.money(o.desp) },
       { l: 'Resultado', n: true, f: o => `<b class="${o.res < 0 ? 'neg' : 'pos'}">${U.money(o.res)}</b>` },
-      { l: '', f: o => `<button class="btn sm" data-obrames="${U.esc(o.centro)}">Detalhes do mês</button>` },
-    ], mObras)}<p class="small hint">Clique em "Detalhes do mês" pra ver despesas por categoria e fornecedor dentro de cada obra.</p></div>`;
+      { l: '', f: o => `<button class="btn sm" data-obrames="${U.esc(o.centro)}">${S.ui.fechObraSel === o.centro ? 'Fechar detalhe' : 'Ver detalhe'}</button>` },
+    ], mObras, { limit: 8 })}<p class="small hint">Clique em "Ver detalhe" pra ver despesas por categoria e fornecedor dentro de cada obra.</p>
+    ${sel ? `<div class="card" style="margin:12px 0 0;background:var(--line2)"><h4>${U.esc(sel.centro)} · ${U.monthLabel(ym)}</h4>${obraMesDetalheHtml(sel, ym)}</div>` : ''}</div>`;
     const gAgg = {}; mObras.forEach(o => Object.entries(o.grupos).forEach(([g, v]) => gAgg[g] = U.r2((gAgg[g] || 0) + v)));
     const gRows = Object.entries(gAgg).map(([k, v]) => ({ k, v })).sort((a, b) => b.v - a.v);
     if (gRows.length) h += `<div class="card"><h3>Despesas das obras por grupo de custo · ${U.monthLabel(ym)}</h3>${hbar2(gRows.map(x => ({ label: x.k, value: x.v, cls: 'wfneg' })), { valueWidth: 132 })}</div>`;
   }
   const O = obraStats(recs(), S.settings); const L = O.obras;
-  if (L.length) h += `<div class="card"><h3>Rentabilidade acumulada por obra</h3><p class="small hint">Desde o início de cada contrato (não só o mês selecionado). Lançado = recebido + a receber.</p>${stable([
+  if (L.length) h += `<div class="card"><div class="ch"><h3>Rentabilidade acumulada por obra</h3><a href="#obras">Ver e editar em Obras e contratos ›</a></div><p class="small hint">Desde o início de cada contrato (não só o mês selecionado). Lançado = recebido + a receber.</p>${collapsibleTable([
     { l: 'Obra', f: o => U.esc(o.centro) },
     { l: 'Lançado', n: true, f: o => U.money(o.lancado) },
     { l: 'Custo', n: true, f: o => U.money(o.custo) },
     { l: 'Resultado', n: true, f: o => `<b class="${o.resultado < 0 ? 'neg' : 'pos'}">${U.money(o.resultado)}</b>` },
     { l: 'Margem', n: true, f: o => o.margem == null ? '—' : U.pct(o.margem) + (o.provisorio.length ? ' <span class="conf estimado">provisória</span>' : '') },
-    { l: '', f: o => `<button class="btn sm" data-obradet="${U.esc(o.centro)}">Detalhes</button>` },
-  ], L)}</div>`;
+  ], L, { limit: 5 })}</div>`;
   return h;
 }
 /* detalhe de uma pessoa (folha) SÓ no mês selecionado: por classe (salário, encargos, benefícios...) */
-function openPessoaMes(pessoa, ym, cnpj) {
+/* detalhe de uma pessoa (folha) SÓ no mês selecionado, embutido na própria página (sem modal) */
+function pessoaMesDetalheHtml(pessoa, ym, cnpj) {
   const st = monthStats(data().all, S.settings, ym, cnpj);
   const l = st.real.filter(r => r.k === 'despesa' && r.pessoa === pessoa && r.folha && r.folha !== 'Não é folha');
-  if (!l.length) { toast('Sem lançamentos desta pessoa no mês', true); return; }
+  if (!l.length) return '<p class="small muted-t">Sem lançamentos desta pessoa no mês.</p>';
   const porClasse = groupSum(l, r => r.folha);
   const total = U.sum(l, r => r.valor);
-  const html = `<div class="kpis">${kpi('Total no mês', total, U.monthLabel(ym))}${kpi('Lançamentos', String(l.length), U.monthLabel(ym))}</div>
-    <h4>Por classe</h4>${hbar2(porClasse.map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wfneg', drill: drillId(x.k + ': ' + pessoa, x.l, COLS.pagar()) })), { valueWidth: 132 })}
-    <h4>Lançamentos do mês</h4><div id="mlist-pessoa"></div>`;
-  const m = modal('Pessoal: ' + U.esc(pessoa) + ' · ' + U.monthLabel(ym), html, true);
-  mountTable($('#mlist-pessoa', m), { rows: l, cols: COLS.pagar(), id: 'pessoames', total: true });
+  return `<div class="kpis">${kpi('Total no mês', total, U.monthLabel(ym))}${kpi('Lançamentos', String(l.length), U.monthLabel(ym))}</div>
+    <h4>Por classe</h4>${hbar2(porClasse.map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wfneg' })), { valueWidth: 132 })}
+    <h4>Lançamentos do mês</h4>${collapsibleTable(COLS.pagar(), l, { limit: 5 })}`;
 }
 function tabPessoal(st, pv, series, trendN, ym, prevYm) {
   const folhaReal = r => r.folha && r.folha !== 'Não é folha';
@@ -3146,19 +3172,21 @@ function tabPessoal(st, pv, series, trendN, ym, prevYm) {
   </div>`;
   if (!porPessoaFolha.length) { h += '<div class="card"><p class="small muted-t">Nenhum lançamento classificado como folha no mês. Classifique em Folha e pessoal ou em Configurações.</p></div>'; return h; }
 
-  h += `<div class="card"><h3>Comparação entre pessoas · ${U.monthLabel(ym)}</h3>${hbar2(porPessoaFolha.slice(0, 12).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wfneg' })), { valueWidth: 132 })}${stable([
+  const selPessoa = porPessoaFolha.find(x => x.k === S.ui.fechPessoaSel);
+  h += `<div class="card"><h3>Comparação entre pessoas · ${U.monthLabel(ym)}</h3>${hbar2(porPessoaFolha.slice(0, 12).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wfneg' })), { valueWidth: 132 })}${collapsibleTable([
     { l: 'Pessoa', k: 'k' },
     { l: 'Lanç.', n: true, f: x => x.n },
     { l: 'Valor', n: true, f: x => U.money(x.v) },
     { l: '%', n: true, f: x => U.pct(totalPessoal ? x.v / totalPessoal : 0) },
-    { l: '', f: x => `<button class="btn sm" data-pessoames="${U.esc(x.k)}">Detalhes</button>` },
-  ], porPessoaFolha.slice(0, 20))}<p class="small hint">Clique em "Detalhes" pra ver com o que exatamente se gasta com cada pessoa (salário, encargos, benefícios, adiantamentos...).</p></div>`;
+    { l: '', f: x => `<button class="btn sm" data-pessoames="${U.esc(x.k)}">${S.ui.fechPessoaSel === x.k ? 'Fechar detalhe' : 'Ver detalhe'}</button>` },
+  ], porPessoaFolha, { limit: 8 })}<p class="small hint">Clique em "Ver detalhe" pra ver com o que exatamente se gasta com cada pessoa (salário, encargos, benefícios, adiantamentos...).</p>
+  ${selPessoa ? `<div class="card" style="margin:12px 0 0;background:var(--line2)"><h4>${U.esc(selPessoa.k)} · ${U.monthLabel(ym)}</h4>${pessoaMesDetalheHtml(selPessoa.k, ym, S.ui.cnpj)}</div>` : ''}</div>`;
 
   h += `<div class="card"><h3>Por classe (salário, encargos, benefícios, adiantamentos...)</h3>${catCompareBlock('Despesas', porClasse(st), porClasse(pv), 'wfneg')}</div>`;
 
   h += `<div class="card"><h3>Adiantamentos — impacto no caixa</h3>${trendTabs(trendN)}${flowChart([{ name: 'Adiantamentos', cls: 'lndesp', points: adiantSeries.map(s => ({ l: U.monthLabel(s.ym), v: s.v })) }], { h: 200, legend: false })}
     <p class="small hint">${adiant.length} lançamento(s) de adiantamento neste mês, total ${U.money(U.sum(adiant, r => r.valor))}. As datas abaixo mostram o ritmo (semanal/quinzenal).</p>
-    ${adiant.length ? stable([{ l: 'Data', f: r => U.br(r.effDate || r.dueDate) }, { l: 'Pessoa', f: r => U.esc(r.pessoa) }, { l: 'Valor', n: true, f: r => U.money(r.valor) }], [...adiant].sort((a, b) => (b.effDate || b.dueDate || '') < (a.effDate || a.dueDate || '') ? -1 : 1)) : '<p class="small muted-t">Nenhum adiantamento no mês.</p>'}</div>`;
+    ${adiant.length ? collapsibleTable([{ l: 'Data', f: r => U.br(r.effDate || r.dueDate) }, { l: 'Pessoa', f: r => U.esc(r.pessoa) }, { l: 'Valor', n: true, f: r => U.money(r.valor) }], [...adiant].sort((a, b) => (b.effDate || b.dueDate || '') < (a.effDate || a.dueDate || '') ? -1 : 1), { limit: 5 }) : '<p class="small muted-t">Nenhum adiantamento no mês.</p>'}</div>`;
   return h;
 }
 function tabComparativo(st, pv, ym, prevYm) {
@@ -3230,9 +3258,8 @@ VIEWS.fechamento = function (main) {
   $$('[data-ftrend]').forEach(b => b.onclick = () => { S.ui.fechTrend = +b.dataset.ftrend; render(); });
   $('#fch-proj').onchange = e => { S.ui.fechProj = e.target.checked; render(); };
   $('#fch-ppt').onclick = () => exportFechamentoPpt(ym, prevYm, st, pv, proj, c);
-  $$('[data-obrames]').forEach(b => b.onclick = () => openObraMes(b.dataset.obrames, ym, c));
-  $$('[data-obradet]').forEach(b => b.onclick = () => { const o = obraStats(recs(), S.settings).obras.find(x => x.centro === b.dataset.obradet); if (o) openObraDetalhes(o, COST_GROUP_ORDER); });
-  $$('[data-pessoames]').forEach(b => b.onclick = () => openPessoaMes(b.dataset.pessoames, ym, c));
+  $$('[data-obrames]').forEach(b => b.onclick = () => { S.ui.fechObraSel = S.ui.fechObraSel === b.dataset.obrames ? null : b.dataset.obrames; render(); });
+  $$('[data-pessoames]').forEach(b => b.onclick = () => { S.ui.fechPessoaSel = S.ui.fechPessoaSel === b.dataset.pessoames ? null : b.dataset.pessoames; render(); });
 };
 
 /* ---------- exportação para PPT ---------- */
