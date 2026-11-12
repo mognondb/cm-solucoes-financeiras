@@ -32,7 +32,7 @@
 html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
 a{color:var(--brand2);cursor:pointer;text-decoration:none}a:hover{text-decoration:underline}
 h1{font-size:22px;margin:0}h2{font-size:15px;margin:22px 0 10px;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em}h3{font-size:15px;margin:0 0 10px}h4{font-size:13px;margin:16px 0 6px;color:var(--ink2)}
-.small{font-size:12px;color:var(--ink2)}.muted-t{color:var(--ink3)}.ok-t{color:var(--pos)}.bad-t{color:var(--neg)}.warn-t{color:var(--warn)}
+.small{font-size:12px;color:var(--ink2)}.muted-t{color:var(--ink3)}.ok-t{color:var(--pos)}.bad-t{color:var(--neg)}.warn-t{color:var(--warn)}.hint{color:var(--ink3)}
 .pos{color:var(--pos)}.neg{color:var(--neg)}
 code{background:var(--line2);padding:1px 4px;border-radius:4px}
 /* layout */
@@ -72,7 +72,7 @@ textarea{width:100%;font-family:ui-monospace,Menlo,monospace;font-size:12px}
 .banner{background:var(--infobg);border-radius:8px;padding:10px 12px;margin:0 0 12px;font-size:13px}.banner.warn{background:var(--warnbg)}.banner.bad{background:var(--badbg)}.banner.ok{background:var(--okbg)}.banner .btns{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap}
 .formula{font-size:14px}
 .tag{display:inline-block;font-size:11px;font-weight:700;border-radius:9px;padding:1px 7px;background:var(--line2);color:var(--ink2)}
-.tag.warn{background:var(--warnbg);color:var(--warn)}.tag.bad{background:var(--badbg);color:var(--neg)}.tag.ok{background:var(--okbg);color:var(--pos)}
+.tag.warn{background:var(--warnbg);color:var(--warn)}.tag.bad{background:var(--badbg);color:var(--neg)}.tag.ok{background:var(--okbg);color:var(--pos)}.tag.muted{background:var(--line2);color:var(--ink3)}
 .st{font-size:11.5px;font-weight:600;border-radius:10px;padding:1px 8px;white-space:nowrap}
 .st.ok{background:var(--okbg);color:var(--pos)}.st.open{background:var(--infobg);color:var(--ink2)}.st.bad{background:var(--badbg);color:var(--neg)}.st.part,.st.warn{background:var(--warnbg);color:var(--warn)}.st.muted{background:var(--line2);color:var(--ink3)}
 label.col{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--ink2);margin-top:8px}label.col textarea{font-family:inherit;font-size:13px}
@@ -375,6 +375,15 @@ function guessTipo(v) {
   if (/despesa|saida|pagamento|debito|a pagar/.test(k)) return 'despesa';
   return 'indefinido';
 }
+/* sugestão de classificação gerencial da categoria de despesa (editável em Configurações):
+   fixo = se repete todo mês independente do volume de atendimento; direto = custo do atendimento em si (varia com a receita) */
+function guessCatClass(cat) {
+  const k = U.key(cat);
+  const fixo = /aluguel|software|licenca|assinatura|contabil|contador|internet|telefone|\bsistema\b|mensalidade|seguro|condomin|energia|\bagua\b|\blabore\b/.test(k);
+  const operacional = /aluguel|software|licenca|assinatura|contabil|contador|internet|telefone|\bsistema\b|materiais? de escritorio|limpeza|energia|\bagua\b|bancari|juros|tarifa|marketing|publicidade|emprestimo|honorari|\blabore\b|movei|instalac|\bcopa\b|cozinha|certificado/.test(k);
+  return { fixo, direto: !operacional };
+}
+function catClass(settings, cat) { return Object.assign(guessCatClass(cat), settings.catClass[cat] || {}); }
 /* tipo do lançamento: a origem identifica transferências e saldos iniciais (o campo Tipo só traz Receita/Despesa) */
 function classifyKind(r, settings) {
   const o = U.key(r.origem), c = U.key(r.categoria);
@@ -404,6 +413,7 @@ function defaultSettings() {
     accountAlias: {},      // nome antigo da conta no Conta Azul -> nome novo (renomeação confirmada pela CM)
     statusMap: {},         // valor bruto de Situação -> realizado|aberto|parcial|cancelado|indefinido
     tipoMap: {},           // valor bruto de Tipo -> receita|despesa|transferencia|saldo|indefinido
+    catClass: {},          // categoria de despesa -> { fixo?:bool, direto?:bool } (sobrepõe guessCatClass)
     mappingValidated: false,
     openingBalances: {},   // conta -> { valor, data, fonte, nota }
     overduePolicy: { pagar: 'hoje', receber: 'hoje' },
@@ -1599,8 +1609,8 @@ function wfStepsBalanco(st, proj) {
 /* mescla duas listas {k,v,n} (categoria atual x mês anterior) pra tabela/gráfico comparativo */
 function compareCat(curList, prevList) {
   const map = new Map();
-  (curList || []).forEach(x => map.set(x.k, { k: x.k, cur: x.v, prev: 0 }));
-  (prevList || []).forEach(x => { const e = map.get(x.k) || { k: x.k, cur: 0, prev: 0 }; e.prev = x.v; map.set(x.k, e); });
+  (curList || []).forEach(x => map.set(x.k, { k: x.k, cur: x.v, prev: 0, n: x.n || 0 }));
+  (prevList || []).forEach(x => { const e = map.get(x.k) || { k: x.k, cur: 0, prev: 0, n: 0 }; e.prev = x.v; map.set(x.k, e); });
   return [...map.values()].sort((a, b) => Math.abs(b.cur) - Math.abs(a.cur));
 }
 
@@ -2472,6 +2482,12 @@ VIEWS.config = function (main) {
   const tips = D ? [...new Set(D.all.map(r => r.tipo))] : Object.keys(st.tipoMap);
   html += `<div class="grid2"><div class="card"><h3>Interpretação da Situação</h3>${stable([{ l: 'Situação no relatório', f: s => U.esc(s || '(vazio)') }, { l: 'Significado', f: s => `<select data-sm="${U.esc(s)}">${[['realizado', 'Realizado'], ['aberto', 'Em aberto'], ['parcial', 'Parcial'], ['cancelado', 'Cancelado'], ['indefinido', 'Indefinido']].map(([x, l]) => `<option value="${x}" ${(st.statusMap[s] || guessStatus(s)) === x ? 'selected' : ''}>${l}</option>`).join('')}</select>` }], sits)}</div>
     <div class="card"><h3>Interpretação do Tipo</h3>${stable([{ l: 'Tipo no relatório', f: s => U.esc(s || '(vazio)') }, { l: 'Significado', f: s => `<select data-tm="${U.esc(s)}">${[['receita', 'Receita'], ['despesa', 'Despesa'], ['transferencia', 'Transferência'], ['saldo', 'Saldo inicial'], ['indefinido', 'Indefinido']].map(([x, l]) => `<option value="${x}" ${(st.tipoMap[s] || guessTipo(s)) === x ? 'selected' : ''}>${l}</option>`).join('')}</select>` }], tips)}<p class="small">Transferências e saldos iniciais são reconhecidos pela coluna "Origem do lançamento".</p></div></div>`;
+  const despCats = D ? [...new Set(D.all.filter(r => r.k === 'despesa').map(r => r.categoria).filter(Boolean))].sort() : Object.keys(st.catClass);
+  html += `<div class="card"><h3>Classificação gerencial das categorias de despesa</h3><p class="small">Sugestão automática por palavra-chave na categoria; corrija conforme a realidade da cliente. Usada no Fechamento mensal (fixo × variável, custo × despesa).</p>${stable([
+    { l: 'Categoria', f: c => U.esc(c) },
+    { l: 'Natureza', f: c => `<select data-ccf="${U.esc(c)}">${[['fixo', 'Fixo'], ['variavel', 'Variável']].map(([x, l]) => `<option value="${x}" ${(catClass(st, c).fixo ? 'fixo' : 'variavel') === x ? 'selected' : ''}>${l}</option>`).join('')}</select>` },
+    { l: 'Tipo', f: c => `<select data-ccd="${U.esc(c)}">${[['direto', 'Custo direto (varia com o atendimento)'], ['indireto', 'Despesa operacional']].map(([x, l]) => `<option value="${x}" ${(catClass(st, c).direto ? 'direto' : 'indireto') === x ? 'selected' : ''}>${l}</option>`).join('')}</select>` },
+  ], despCats)}</div>`;
   html += `<div class="card"><h3>Parâmetros</h3><div class="form-row">
     <label>Saldo mínimo de segurança (R$) <input type="number" step="any" id="riskmin" value="${st.riskMin || 0}"></label></div>
     <h4>Regras de classificação da folha</h4><p class="small">Uma regra por linha: <code>Classe = termo1 | termo2</code>. Procura na categoria + descrição.</p>
@@ -2488,13 +2504,15 @@ VIEWS.config = function (main) {
   $$('[data-obclear]').forEach(el => el.onclick = async () => { delete st.openingBalances[el.dataset.obclear]; await upd(); });
   $$('[data-sm]').forEach(el => el.onchange = async () => { st.statusMap[el.dataset.sm] = el.value; await upd(); });
   $$('[data-tm]').forEach(el => el.onchange = async () => { st.tipoMap[el.dataset.tm] = el.value; await upd(); });
+  $$('[data-ccf]').forEach(el => el.onchange = async () => { const c = el.dataset.ccf; st.catClass[c] = Object.assign({}, st.catClass[c], { fixo: el.value === 'fixo' }); await upd(); });
+  $$('[data-ccd]').forEach(el => el.onchange = async () => { const c = el.dataset.ccd; st.catClass[c] = Object.assign({}, st.catClass[c], { direto: el.value === 'direto' }); await upd(); });
   $('#val-all') && ($('#val-all').onclick = async () => { if (!confirm('Marcar todas as contas como validadas? Confira antes se o tipo de cada conta está certo.')) return; Object.values(st.accounts).forEach(a => { if (!a.validated) a.validatedAt = Date.now(); a.validated = true; }); st.mappingValidated = true; await upd(); toast('Contas validadas'); });
   $('#save-params').onclick = async () => {
     st.riskMin = +$('#riskmin').value || 0;
     st.payrollRules = $('#prules').value.split('\n').map(l => l.split('=')).filter(x => x.length >= 2 && x[0].trim()).map(([c, ...t]) => ({ cls: c.trim(), re: t.join('=').split('|').map(s => s.trim()).filter(Boolean).join('|') }));
     await upd(); toast('Parâmetros salvos');
   };
-  $('#reset-settings').onclick = async () => { if (!confirm('Restaurar as configurações padrão? Ajustes manuais, contas validadas, saldos do banco, cenários, rotinas e revisões serão apagados (as versões importadas e os fechamentos registrados ficam). Faça um backup antes.')) return; const keep = { fechamentos: S.settings.fechamentos, accountAlias: S.settings.accountAlias || {} }; S.settings = Object.assign(defaultSettings(), keep); for (const v of S.versions) for (const r of v.records) { const c = aliasOf(r.conta, S.settings); if (c && !S.settings.accounts[c]) S.settings.accounts[c] = { type: guessAcctType(c), validated: false }; } await upd(); };
+  $('#reset-settings').onclick = async () => { if (!confirm('Restaurar as configurações padrão? Ajustes manuais, contas validadas, saldos do banco, cenários, rotinas e revisões serão apagados (as versões importadas e os fechamentos registrados ficam). Faça um backup antes.')) return; const keep = { fechamentos: S.settings.fechamentos, accountAlias: S.settings.accountAlias || {}, catClass: S.settings.catClass || {} }; S.settings = Object.assign(defaultSettings(), keep); for (const v of S.versions) for (const r of v.records) { const c = aliasOf(r.conta, S.settings); if (c && !S.settings.accounts[c]) S.settings.accounts[c] = { type: guessAcctType(c), validated: false }; } await upd(); };
 };
 
 /* ---------- relatório executivo ---------- */
@@ -2747,9 +2765,67 @@ function tabBalanco(st, pv, ym, prevYm, proj) {
   ], st.saldos.filter(b => b.cash))}</div>`;
   return h;
 }
-function tabCategoria(titulo, real, aberto, proj, cls) {
-  let h = `<div class="card"><h3>${titulo} por categoria</h3>${real.length ? hbar2(real.slice(0, 12).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls })), { valueWidth: 132 }) + stable([{ l: 'Categoria', k: 'k' }, { l: 'Lanç.', n: true, f: x => x.n }, { l: 'Valor', n: true, f: x => U.money(x.v) }], real.slice(0, 15)) : `<p class="small muted-t">Nenhuma ${titulo.toLowerCase()} realizada no mês.</p>`}</div>`;
-  if (proj) h += `<div class="card"><h3>${titulo} em aberto (projeção)</h3>${aberto.length ? hbar2(aberto.slice(0, 12).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wftot' })), { valueWidth: 132 }) + stable([{ l: 'Categoria', k: 'k' }, { l: 'Lanç.', n: true, f: x => x.n }, { l: 'Em aberto', n: true, f: x => U.money(x.v) }], aberto.slice(0, 15)) : '<p class="small muted-t">Nada em aberto.</p>'}</div>`;
+function porPessoa(real, kind) {
+  return [...U.groupBy(real.filter(r => r.k === kind), r => r.pessoa || '(sem identificação)').entries()].map(([k, l]) => ({ k, v: U.sum(l, r => r.valor), n: l.length })).sort((a, b) => b.v - a.v);
+}
+function abertoBlock(titulo, aberto) {
+  return `<div class="card"><h3>${titulo} em aberto (projeção)</h3>${aberto.length ? hbar2(aberto.slice(0, 12).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wftot' })), { valueWidth: 132 }) + stable([{ l: 'Categoria', k: 'k' }, { l: 'Lanç.', n: true, f: x => x.n }, { l: 'Em aberto', n: true, f: x => U.money(x.v) }], aberto.slice(0, 15)) : '<p class="small muted-t">Nada em aberto.</p>'}</div>`;
+}
+/* gráfico (só este mês) + tabela com comparativo (este mês x mês anterior) e colunas extras opcionais */
+function catCompareBlock(titulo, cur, prev, cls, opt) {
+  opt = opt || {};
+  if (!cur.length) return `<p class="small muted-t">Nenhuma ${titulo.toLowerCase()} realizada no mês.</p>`;
+  const cmp = compareCat(cur, prev);
+  const cols = [
+    { l: 'Categoria', k: 'k' },
+    { l: 'Lanç.', n: true, f: r => r.n },
+    { l: 'Este mês', n: true, f: r => U.money(r.cur) },
+    { l: 'Mês anterior', n: true, f: r => U.money(r.prev) },
+    { l: 'Variação', n: true, f: r => U.money(r.cur - r.prev, { sign: 1 }) },
+  ].concat(opt.extraCols || []);
+  return hbar2(cur.slice(0, 12).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls })), { valueWidth: 132 }) + stable(cols, cmp.slice(0, 15));
+}
+function tabReceitas(st, pv, ym, prevYm, proj) {
+  const porPac = porPessoa(st.real, 'receita');
+  const topPac = porPac[0], conc = topPac && st.rec ? topPac.v / st.rec : 0;
+  const repasseR = st.real.filter(r => r.k === 'despesa' && /repasse/i.test(r.categoria || ''));
+  const repasseTotal = U.sum(repasseR, r => r.valor);
+
+  let h = `<div class="card"><h3>Receitas por categoria</h3>${catCompareBlock('Receitas', st.porCatReceita, pv.porCatReceita, 'wfpos')}</div>`;
+  h += `<div class="grid2">
+    <div class="card"><h3>Receitas por paciente</h3>${porPac.length ? hbar2(porPac.slice(0, 12).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wfpos' })), { valueWidth: 132 }) + stable([{ l: 'Paciente', k: 'k' }, { l: 'Lanç.', n: true, f: x => x.n }, { l: 'Valor', n: true, f: x => U.money(x.v) }, { l: '%', n: true, f: x => U.pct(st.rec ? x.v / st.rec : 0) }], porPac.slice(0, 15)) : '<p class="small muted-t">Sem dados.</p>'}${conc > 0.3 ? `<p class="small hint">${U.esc(topPac.k)} responde por ${U.pct(conc)} da receita do mês — concentração a observar.</p>` : ''}</div>
+    <div class="card"><h3>Repasse e margem</h3>${stable([{ l: 'Item', k: 'l' }, { l: 'Valor', n: true, f: r => r.b ? `<b class="${r.v < 0 ? 'neg' : 'pos'}">${U.money(r.v)}</b>` : U.money(r.v) }], [
+    { l: 'Receita realizada', v: st.rec },
+    { l: 'Repasse a profissionais', v: repasseTotal },
+    { l: 'Retido pela clínica', v: U.r2(st.rec - repasseTotal), b: true },
+  ])}<p class="small hint">Repasse representa ${U.pct(st.rec ? repasseTotal / st.rec : 0)} da receita do mês. Detalhamento por profissional na aba Despesas.</p></div>
+  </div>`;
+  if (proj) h += abertoBlock('Receitas', st.porCatAbertoRec);
+  return h;
+}
+function tabDespesas(st, pv, ym, prevYm, proj) {
+  const porForn = porPessoa(st.real, 'despesa');
+  const topForn = porForn[0], conc = topForn && st.desp ? topForn.v / st.desp : 0;
+  const cc = k => catClass(S.settings, k);
+  const fixoTotal = U.sum(st.porCat.filter(x => cc(x.k).fixo), x => x.v);
+  const diretoTotal = U.sum(st.porCat.filter(x => cc(x.k).direto), x => x.v);
+  const pctFixo = st.desp ? fixoTotal / st.desp : 0, pctDireto = st.desp ? diretoTotal / st.desp : 0;
+  const extraCols = [
+    { l: 'Natureza', f: r => cc(r.k).fixo ? '<span class="tag">Fixo</span>' : '<span class="tag warn">Variável</span>' },
+    { l: 'Tipo', f: r => cc(r.k).direto ? '<span class="tag">Custo direto</span>' : '<span class="tag muted">Operacional</span>' },
+  ];
+  const repasseR = [...U.groupBy(st.real.filter(r => r.k === 'despesa' && /repasse/i.test(r.categoria || '')), r => r.pessoa || '(sem identificação)').entries()].map(([k, l]) => ({ k, v: U.sum(l, r => r.valor), n: l.length })).sort((a, b) => b.v - a.v);
+
+  let h = `<div class="card"><h3>Despesas por categoria</h3>${catCompareBlock('Despesas', st.porCat, pv.porCat, 'wfneg', { extraCols })}<p class="small hint">Natureza e tipo são sugestões automáticas; corrija em Configurações se não refletir a realidade.</p></div>`;
+  h += `<div class="grid2">
+    <div class="card"><h3>Fixo × variável</h3><p class="small">Fixo ${U.money(fixoTotal)} (${U.pct(pctFixo)}) · Variável ${U.money(U.r2(st.desp - fixoTotal))} (${U.pct(1 - pctFixo)})</p><div class="pbar"><i class="rec" style="width:${(pctFixo * 100).toFixed(1)}%"></i></div></div>
+    <div class="card"><h3>Custo direto × despesa operacional</h3><p class="small">Custo direto ${U.money(diretoTotal)} (${U.pct(pctDireto)}) · Operacional ${U.money(U.r2(st.desp - diretoTotal))} (${U.pct(1 - pctDireto)})</p><div class="pbar"><i class="desp" style="width:${(pctDireto * 100).toFixed(1)}%"></i></div></div>
+  </div>`;
+  h += `<div class="grid2">
+    <div class="card"><h3>Despesas por fornecedor</h3>${porForn.length ? hbar2(porForn.slice(0, 12).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wfneg' })), { valueWidth: 132 }) + stable([{ l: 'Fornecedor', k: 'k' }, { l: 'Lanç.', n: true, f: x => x.n }, { l: 'Valor', n: true, f: x => U.money(x.v) }, { l: '%', n: true, f: x => U.pct(st.desp ? x.v / st.desp : 0) }], porForn.slice(0, 15)) : '<p class="small muted-t">Sem dados.</p>'}${conc > 0.3 ? `<p class="small hint">${U.esc(topForn.k)} responde por ${U.pct(conc)} das despesas do mês — concentração a observar.</p>` : ''}</div>
+    <div class="card"><h3>Repasse por profissional</h3>${repasseR.length ? hbar2(repasseR.slice(0, 12).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wftot' })), { valueWidth: 132 }) + stable([{ l: 'Profissional', k: 'k' }, { l: 'Lanç.', n: true, f: x => x.n }, { l: 'Repasse', n: true, f: x => U.money(x.v) }], repasseR.slice(0, 15)) : '<p class="small muted-t">Nenhum repasse no mês.</p>'}</div>
+  </div>`;
+  if (proj) h += abertoBlock('Despesas', st.porCatAbertoDesp);
   return h;
 }
 function tabComparativo(st, pv, ym, prevYm) {
@@ -2804,8 +2880,8 @@ VIEWS.fechamento = function (main) {
 
   html += `<div class="tabs">${FECH_TABS.map(([k, l]) => `<button class="tabbtn ${tab === k ? 'on' : ''}" data-ftab="${k}">${l}</button>`).join('')}</div>`;
   if (tab === 'balanco') html += tabBalanco(st, pv, ym, prevYm, proj);
-  else if (tab === 'receitas') html += tabCategoria('Receitas', st.porCatReceita, st.porCatAbertoRec, proj, 'wfpos');
-  else if (tab === 'despesas') html += tabCategoria('Despesas', st.porCat, st.porCatAbertoDesp, proj, 'wfneg');
+  else if (tab === 'receitas') html += tabReceitas(st, pv, ym, prevYm, proj);
+  else if (tab === 'despesas') html += tabDespesas(st, pv, ym, prevYm, proj);
   else html += tabComparativo(st, pv, ym, prevYm);
 
   main.innerHTML = html;
