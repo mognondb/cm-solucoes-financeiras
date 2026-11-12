@@ -3320,6 +3320,24 @@ async function imgDataUrl(path) {
     return await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(blob); });
   } catch (e) { console.warn('logo', e); return null; }
 }
+/* funde uma imagem (possivelmente com transparência) numa cor de fundo sólida, gerando um PNG opaco.
+   Evita depender da opção "transparency" do pptx, que alguns apps (principalmente visualizadores
+   mobile) não respeitam direito e acabam mostrando a imagem como se não tivesse carregado. */
+function flattenImg(dataUrl, bgHex, alpha) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#' + bgHex; ctx.fillRect(0, 0, c.width, c.height);
+      ctx.globalAlpha = alpha == null ? 1 : alpha;
+      ctx.drawImage(img, 0, 0);
+      resolve(c.toDataURL('image/png'));
+    };
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
 async function exportFechamentoPpt(ym, prevYm, st, pv, proj, cnpj) {
   const btn = $('#fch-ppt'); const prevLabel = btn ? btn.textContent : '';
   if (btn) { btn.disabled = true; btn.textContent = 'Gerando PPT…'; }
@@ -3328,21 +3346,25 @@ async function exportFechamentoPpt(ym, prevYm, st, pv, proj, cnpj) {
     pptx.layout = 'LAYOUT_WIDE';
     const W = 13.333, H = 7.5;
     const TH = { ink: '241614', ink2: '5B4743', ink3: '8C7A75', line: 'E8DFD9', brand: '3B1716', accent: 'D4A03F', pos: '5F8268', neg: 'A8655A' };
+    const SANS = 'Calibri';
     const CLIENT = 'Premium Pinturas Prediais';
-    const logoData = await imgDataUrl('../../assets/img/clientes/premium-pinturas.png');
+    const logoRaw = await imgDataUrl('../../assets/img/clientes/premium-pinturas.png');
+    const logoFull = logoRaw ? await flattenImg(logoRaw, TH.brand) : null;
+    const logoDividerImg = logoRaw ? await flattenImg(logoRaw, TH.brand, 0.3) : null;
     const subScope = cnpjName(cnpj);
     let pageNum = 1;
+    const BAND_TOP = 1.35, BAND_BOT = H - 0.65;
 
     const header = (slide, title, subtitle) => {
       slide.addShape('rect', { x: 0, y: 0, w: W, h: 0.09, fill: { color: TH.accent }, line: { type: 'none' } });
       slide.addText(title, { x: 0.6, y: 0.3, w: W - 1.2, h: 0.6, fontSize: 26, bold: true, color: TH.brand, fontFace: 'Georgia' });
-      if (subtitle) slide.addText(subtitle, { x: 0.6, y: 0.84, w: W - 1.2, h: 0.32, fontSize: 13, color: TH.ink2 });
+      if (subtitle) slide.addText(subtitle, { x: 0.6, y: 0.84, w: W - 1.2, h: 0.32, fontSize: 13, color: TH.ink2, fontFace: SANS });
       slide.addShape('line', { x: 0.6, y: 1.2, w: W - 1.2, h: 0, line: { color: TH.line, width: 1 } });
     };
     const footer = slide => {
       slide.addShape('line', { x: 0.6, y: H - 0.5, w: W - 1.2, h: 0, line: { color: TH.line, width: 0.75 } });
-      slide.addText(CLIENT + '   ·   CM Soluções Financeiras   ·   Confidencial', { x: 0.6, y: H - 0.42, w: W - 2, h: 0.3, fontSize: 9, color: TH.ink3 });
-      slide.addText(String(pageNum), { x: W - 1.1, y: H - 0.42, w: 0.5, h: 0.3, fontSize: 9, color: TH.ink3, align: 'right' });
+      slide.addText(CLIENT + '   ·   CM Soluções Financeiras   ·   Confidencial', { x: 0.6, y: H - 0.42, w: W - 2, h: 0.3, fontSize: 9, color: TH.ink3, fontFace: SANS });
+      slide.addText(String(pageNum), { x: W - 1.1, y: H - 0.42, w: 0.5, h: 0.3, fontSize: 9, color: TH.ink3, fontFace: SANS, align: 'right' });
       pageNum++;
     };
     const newSlide = (title, subtitle) => { const s = pptx.addSlide(); s.background = { color: 'FFFFFF' }; header(s, title, subtitle); return s; };
@@ -3350,41 +3372,45 @@ async function exportFechamentoPpt(ym, prevYm, st, pv, proj, cnpj) {
       const gap = 0.18, x0 = 0.6, totalW = W - 1.2, n = items.length, cw = (totalW - gap * (n - 1)) / n, h = 1.35;
       items.forEach((it, i) => {
         const x = x0 + i * (cw + gap);
-        slide.addShape('roundRect', { x, y, w: cw, h, rectRadius: 0.06, fill: { color: 'FFFFFF' }, line: { color: TH.line, width: 1 } });
-        slide.addShape('rect', { x, y, w: 0.07, h, fill: { color: it.bar || TH.accent }, line: { type: 'none' } });
-        slide.addText(it.label.toUpperCase(), { x: x + 0.22, y: y + 0.13, w: cw - 0.4, h: 0.28, fontSize: 9.5, bold: true, color: TH.ink2, charSpacing: 1 });
-        slide.addText(it.value, { x: x + 0.2, y: y + 0.4, w: cw - 0.4, h: 0.55, fontSize: 19, bold: true, color: TH.ink, fontFace: 'Georgia', fit: 'shrink' });
-        if (it.note) slide.addText(it.note, { x: x + 0.22, y: y + h - 0.32, w: cw - 0.4, h: 0.28, fontSize: 8.5, color: TH.ink3 });
+        slide.addShape('roundRect', { x, y, w: cw, h, rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: TH.line, width: 1 } });
+        slide.addShape('roundRect', { x: x + 0.14, y: y + 0.12, w: cw - 0.28, h: 0.07, rectRadius: 0.035, fill: { color: it.bar || TH.accent }, line: { type: 'none' } });
+        slide.addText(it.label.toUpperCase(), { x: x + 0.22, y: y + 0.3, w: cw - 0.4, h: 0.28, fontSize: 9.5, bold: true, color: TH.ink2, fontFace: SANS, charSpacing: 1 });
+        slide.addText(it.value, { x: x + 0.2, y: y + 0.56, w: cw - 0.4, h: 0.5, fontSize: 19, bold: true, color: TH.ink, fontFace: 'Georgia', fit: 'shrink' });
+        if (it.note) slide.addText(it.note, { x: x + 0.22, y: y + h - 0.3, w: cw - 0.4, h: 0.26, fontSize: 8.5, color: TH.ink3, fontFace: SANS });
       });
     };
     const divider = (title, subtitle) => {
       const s = pptx.addSlide(); s.background = { color: TH.brand };
-      if (logoData) s.addImage({ data: logoData, x: W - 2.3, y: H - 2.2, w: 1.6, h: 1.6, transparency: 25 });
+      if (logoDividerImg) s.addImage({ data: logoDividerImg, x: W - 2.3, y: H - 2.2, w: 1.6, h: 1.6 });
       s.addShape('rect', { x: 0.8, y: H / 2 - 0.62, w: 1.1, h: 0.055, fill: { color: TH.accent }, line: { type: 'none' } });
       s.addText(title, { x: 0.8, y: H / 2 - 0.5, w: W - 2, h: 1.0, fontSize: 40, bold: true, color: 'FFFFFF', fontFace: 'Georgia' });
-      if (subtitle) s.addText(subtitle, { x: 0.8, y: H / 2 + 0.35, w: W - 2, h: 0.5, fontSize: 15, color: 'EAD9CE' });
+      if (subtitle) s.addText(subtitle, { x: 0.8, y: H / 2 + 0.35, w: W - 2, h: 0.5, fontSize: 15, color: 'EAD9CE', fontFace: SANS });
       return s;
     };
     const chartSlide = async (title, subtitle, chartHtml, opt) => {
       opt = opt || {};
       const s = newSlide(title, subtitle);
+      const bandBot = opt.caption ? BAND_BOT - 0.4 : BAND_BOT;
       const img = chartHtml ? await chartToPng(chartHtml) : null;
-      if (img) { const w = opt.w || W - 2.0; let h = w * img.h / img.w; if (h > 4.7) h = 4.7; s.addImage({ data: img.dataUrl, x: (W - w) / 2, y: 1.5, w, h }); }
-      else s.addText('Sem dados no mês.', { x: 0.6, y: 1.5, fontSize: 14, color: TH.ink2 });
-      if (opt.caption) s.addText(opt.caption, { x: 0.6, y: H - 0.95, w: W - 1.2, h: 0.4, fontSize: 11, color: TH.ink2 });
+      if (img) {
+        const w = opt.w || W - 2.0; let h = w * img.h / img.w; if (h > 4.7) h = 4.7;
+        const y = BAND_TOP + Math.max(0, (bandBot - BAND_TOP - h) / 2);
+        s.addImage({ data: img.dataUrl, x: (W - w) / 2, y, w, h });
+      } else s.addText('Sem dados no mês.', { x: 0.6, y: BAND_TOP, fontSize: 14, color: TH.ink2, fontFace: SANS });
+      if (opt.caption) s.addText(opt.caption, { x: 0.6, y: H - 0.95, w: W - 1.2, h: 0.4, fontSize: 11, color: TH.ink2, fontFace: SANS });
       footer(s);
       return s;
     };
     const twoChartSlide = async (title, subtitle, l, r) => {
       const s = newSlide(title, subtitle);
       const halfW = (W - 1.2 - 0.4) / 2;
-      s.addText(l.title, { x: 0.6, y: 1.35, w: halfW, h: 0.3, fontSize: 13, bold: true, color: TH.ink2 });
-      s.addText(r.title, { x: 0.6 + halfW + 0.4, y: 1.35, w: halfW, h: 0.3, fontSize: 13, bold: true, color: TH.ink2 });
+      s.addText(l.title, { x: 0.6, y: 1.35, w: halfW, h: 0.3, fontSize: 13, bold: true, color: TH.ink2, fontFace: SANS });
+      s.addText(r.title, { x: 0.6 + halfW + 0.4, y: 1.35, w: halfW, h: 0.3, fontSize: 13, bold: true, color: TH.ink2, fontFace: SANS });
       const [imgL, imgR] = await Promise.all([l.html ? chartToPng(l.html) : null, r.html ? chartToPng(r.html) : null]);
       if (imgL) s.addImage({ data: imgL.dataUrl, x: 0.6, y: 1.7, w: halfW, h: Math.min(4.4, halfW * imgL.h / imgL.w) });
-      else s.addText('Sem dados.', { x: 0.6, y: 1.7, fontSize: 12, color: TH.ink3 });
+      else s.addText('Sem dados.', { x: 0.6, y: 1.7, fontSize: 12, color: TH.ink3, fontFace: SANS });
       if (imgR) s.addImage({ data: imgR.dataUrl, x: 0.6 + halfW + 0.4, y: 1.7, w: halfW, h: Math.min(4.4, halfW * imgR.h / imgR.w) });
-      else s.addText('Sem dados.', { x: 0.6 + halfW + 0.4, y: 1.7, fontSize: 12, color: TH.ink3 });
+      else s.addText('Sem dados.', { x: 0.6 + halfW + 0.4, y: 1.7, fontSize: 12, color: TH.ink3, fontFace: SANS });
       footer(s);
       return s;
     };
@@ -3393,20 +3419,27 @@ async function exportFechamentoPpt(ym, prevYm, st, pv, proj, cnpj) {
       const s = newSlide(title, subtitle);
       const head = cols.map(c => ({ text: c.l, options: { bold: true, color: 'FFFFFF', fill: { color: TH.brand }, align: c.n ? 'right' : 'left' } }));
       const body = rows.length ? rows.map(r => cols.map(c => ({ text: c.f(r), options: { align: c.n ? 'right' : 'left', color: c.color ? c.color(r) : TH.ink } }))) : [cols.map((c, i) => i === 0 ? { text: 'Sem dados no mês.', options: { color: TH.ink3 } } : { text: '' })];
-      s.addTable([head].concat(body), { x: 0.6, y: 1.4, w: W - 1.2, colW: opt.colW, fontSize: 11, color: TH.ink, border: { type: 'solid', color: TH.line, pt: 0.5 }, autoPage: false, rowH: 0.32 });
-      if (opt.caption) s.addText(opt.caption, { x: 0.6, y: H - 0.95, w: W - 1.2, h: 0.4, fontSize: 10, color: TH.ink3 });
+      const bandBot = opt.caption ? BAND_BOT - 0.4 : BAND_BOT;
+      const estH = Math.min(bandBot - BAND_TOP, (rows.length + 1) * 0.32);
+      const y = BAND_TOP + Math.max(0, (bandBot - BAND_TOP - estH) / 2);
+      s.addTable([head].concat(body), { x: 0.6, y, w: W - 1.2, colW: opt.colW, fontSize: 11, fontFace: SANS, color: TH.ink, border: { type: 'solid', color: TH.line, pt: 0.5 }, autoPage: false, rowH: 0.32 });
+      if (opt.caption) s.addText(opt.caption, { x: 0.6, y: H - 0.95, w: W - 1.2, h: 0.4, fontSize: 10, color: TH.ink3, fontFace: SANS });
       footer(s);
       return s;
     };
-    const kpiSlide = (title, subtitle, items) => { const s = newSlide(title, subtitle); kpiRow(s, 1.5, items); footer(s); return s; };
+    const kpiSlide = (title, subtitle, items) => {
+      const s = newSlide(title, subtitle);
+      const y = BAND_TOP + Math.max(0, (BAND_BOT - BAND_TOP - 1.35) / 2);
+      kpiRow(s, y, items); footer(s); return s;
+    };
 
     /* ---------- Capa (bloco maciço na cor da marca, logo é um selo circular) ---------- */
     let s = pptx.addSlide(); s.background = { color: TH.brand };
-    if (logoData) s.addImage({ data: logoData, x: W / 2 - 1.1, y: 0.85, w: 2.2, h: 2.2 });
+    if (logoFull) s.addImage({ data: logoFull, x: W / 2 - 1.1, y: 0.85, w: 2.2, h: 2.2 });
     s.addText('Fechamento mensal', { x: 0, y: 3.35, w: W, h: 0.7, fontSize: 32, bold: true, color: 'FFFFFF', fontFace: 'Georgia', align: 'center' });
-    s.addText(U.monthLabel(ym) + ' · ' + subScope, { x: 0, y: 4.0, w: W, h: 0.45, fontSize: 16, color: TH.accent, align: 'center' });
+    s.addText(U.monthLabel(ym) + ' · ' + subScope, { x: 0, y: 4.0, w: W, h: 0.45, fontSize: 16, color: TH.accent, fontFace: SANS, align: 'center' });
     s.addShape('line', { x: W / 2 - 0.7, y: 4.6, w: 1.4, h: 0, line: { color: TH.accent, width: 1.5 } });
-    s.addText('Elaborado por CM Soluções Financeiras · ' + U.dt(Date.now()), { x: 0, y: H - 0.7, w: W, h: 0.3, fontSize: 11, color: 'D9C6BC', align: 'center' });
+    s.addText('Elaborado por CM Soluções Financeiras · ' + U.dt(Date.now()), { x: 0, y: H - 0.7, w: W, h: 0.3, fontSize: 11, color: 'D9C6BC', fontFace: SANS, align: 'center' });
 
     /* ---------- Resultado do mês ---------- */
     s = newSlide('Resultado do mês', U.monthLabel(ym) + ' · ' + subScope + (proj ? ' · realizado + projeção' : ' · realizado'));
@@ -3536,17 +3569,17 @@ async function exportFechamentoPpt(ym, prevYm, st, pv, proj, cnpj) {
           { label: 'Lançamentos', value: String(o.n), note: U.monthLabel(ym), bar: TH.brand },
         ]);
         const halfW = (W - 1.2 - 0.4) / 2;
-        sl.addText('Despesas por categoria', { x: 0.6, y: 3.05, w: halfW, h: 0.3, fontSize: 13, bold: true, color: TH.ink2 });
-        sl.addText('Despesas por fornecedor', { x: 0.6 + halfW + 0.4, y: 3.05, w: halfW, h: 0.3, fontSize: 13, bold: true, color: TH.ink2 });
+        sl.addText('Despesas por categoria', { x: 0.6, y: 3.05, w: halfW, h: 0.3, fontSize: 13, bold: true, color: TH.ink2, fontFace: SANS });
+        sl.addText('Despesas por fornecedor', { x: 0.6 + halfW + 0.4, y: 3.05, w: halfW, h: 0.3, fontSize: 13, bold: true, color: TH.ink2, fontFace: SANS });
         const smallOpt = { valueWidth: 110, w: 700, labelWidth: 230, rowH: 30 };
         const [imgCat, imgForn] = await Promise.all([
           porCatO.length ? chartToPng(hbar2(porCatO.slice(0, 8).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wfneg' })), smallOpt)) : null,
           porFornO.length ? chartToPng(hbar2(porFornO.slice(0, 8).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wfneg' })), smallOpt)) : null,
         ]);
         if (imgCat) sl.addImage({ data: imgCat.dataUrl, x: 0.6, y: 3.4, w: halfW, h: Math.min(3.5, halfW * imgCat.h / imgCat.w) });
-        else sl.addText('Sem despesas no mês.', { x: 0.6, y: 3.4, fontSize: 12, color: TH.ink3 });
+        else sl.addText('Sem despesas no mês.', { x: 0.6, y: 3.4, fontSize: 12, color: TH.ink3, fontFace: SANS });
         if (imgForn) sl.addImage({ data: imgForn.dataUrl, x: 0.6 + halfW + 0.4, y: 3.4, w: halfW, h: Math.min(3.5, halfW * imgForn.h / imgForn.w) });
-        else sl.addText('Sem despesas no mês.', { x: 0.6 + halfW + 0.4, y: 3.4, fontSize: 12, color: TH.ink3 });
+        else sl.addText('Sem despesas no mês.', { x: 0.6 + halfW + 0.4, y: 3.4, fontSize: 12, color: TH.ink3, fontFace: SANS });
         footer(sl);
       }
       if (mObras.length > topObras.length) {
@@ -3594,9 +3627,9 @@ async function exportFechamentoPpt(ym, prevYm, st, pv, proj, cnpj) {
 
     /* ---------- Encerramento ---------- */
     s = pptx.addSlide(); s.background = { color: TH.brand };
-    if (logoData) s.addImage({ data: logoData, x: W / 2 - 1.1, y: H / 2 - 2.0, w: 2.2, h: 2.2, transparency: 10 });
+    if (logoFull) s.addImage({ data: logoFull, x: W / 2 - 1.1, y: H / 2 - 2.0, w: 2.2, h: 2.2 });
     s.addText('Obrigado', { x: 0, y: H / 2 + 0.4, w: W, h: 0.7, fontSize: 30, bold: true, color: 'FFFFFF', fontFace: 'Georgia', align: 'center' });
-    s.addText('CM Soluções Financeiras · Gestão de caixa', { x: 0, y: H / 2 + 1.05, w: W, h: 0.4, fontSize: 13, color: 'EAD9CE', align: 'center' });
+    s.addText('CM Soluções Financeiras · Gestão de caixa', { x: 0, y: H / 2 + 1.05, w: W, h: 0.4, fontSize: 13, color: 'EAD9CE', fontFace: SANS, align: 'center' });
 
     const fileName = 'fechamento_premium_' + cnpj + '_' + ym + '.pptx';
     const blob = await pptx.write({ outputType: 'blob' });
