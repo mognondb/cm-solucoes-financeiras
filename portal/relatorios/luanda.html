@@ -1136,6 +1136,7 @@ const Store = {
    ========================================================================== */
 const S = {
   settings: null, versions: [], activeId: null,
+  atendVersions: [], atendActiveId: null,
   ui: { view: 'painel', cnpj: 'C', base: U.today(), scenario: 'base' },
   cache: null,
 };
@@ -1183,6 +1184,8 @@ function accountProjection(cnpj, scen, maxContas) {
 S.settingsRev = 0;
 async function saveSettings() { S.settingsRev++; S.cache = null; await Store.set('settings', S.settings); }
 async function saveVersions() { S.cache = null; await Store.set('versions', S.versions); await Store.set('activeId', S.activeId); }
+async function saveAtendVersions() { S.cache = null; await Store.set('atendVersions', S.atendVersions); await Store.set('atendActiveId', S.atendActiveId); }
+function activeAtend() { return S.atendVersions.find(v => v.id === S.atendActiveId) || null; }
 
 /* ---------- navegação ---------- */
 const NAV = [
@@ -2307,6 +2310,108 @@ function exportProcessed(L) {
 
 /* ---------- importação ---------- */
 S.imp = null;
+/* ---------- planilha de atendimentos (CADASTRO/ATENDIMENTOS/PAGAMENTOS) ----------
+   Fonte separada do extrato Conta Azul: liga sessão a profissional e serviço (especialidade),
+   o que o extrato bancário sozinho não traz. O Conta Azul continua sendo a fonte do caixa
+   (já reconciliado com o banco); esta planilha só aprofunda a análise. */
+function parseCompetencia(s) { const m = String(s || '').trim().match(/^(\d{1,2})\/(\d{4})$/); return m ? m[2] + '-' + m[1].padStart(2, '0') : null; }
+function sheetObjects(wb, sheetName, hdrCell) {
+  const ws = wb.Sheets[sheetName]; if (!ws) return null;
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
+  const hdrIdx = rows.findIndex(r => P.text(r[0]) === hdrCell);
+  if (hdrIdx < 0) return null;
+  const header = rows[hdrIdx].map(h => P.text(h));
+  return rows.slice(hdrIdx + 1).filter(r => P.text(r[0])).map(r => { const o = {}; header.forEach((h, i) => { if (h) o[h] = r[i]; }); return o; });
+}
+function parseAtendXlsx(wb) {
+  const missing = [];
+  const cad = sheetObjects(wb, 'CADASTRO', 'Contrato'); if (!cad) missing.push('CADASTRO');
+  const at = sheetObjects(wb, 'ATENDIMENTOS', 'Data'); if (!at) missing.push('ATENDIMENTOS');
+  const pag = sheetObjects(wb, 'PAGAMENTOS', 'Data do recebimento'); if (!pag) missing.push('PAGAMENTOS');
+  if (missing.length) return { error: 'Não encontrei a(s) aba(s) ' + missing.join(', ') + ' com o cabeçalho esperado. É a planilha "Controle Contas a Receber"?' };
+  const contratos = cad.map(r => ({
+    contrato: P.text(r['Contrato']), vigenteDe: P.date(r['Vigente a partir de']), situacao: P.text(r['Situação']),
+    paciente: P.text(r['Paciente']), profissional: P.text(r['Profissional']), servico: P.text(r['Serviço']),
+    valorSessao: P.number(r['Valor por sessão']), tipoCobranca: P.text(r['Tipo de cobrança']), chave: P.text(r['Contrato - Paciente']),
+  })).filter(c => c.contrato);
+  const porChave = new Map(contratos.map(c => [c.chave, c]));
+  const sessoes = at.map(r => {
+    const chave = P.text(r['Contrato - Paciente']); const c = porChave.get(chave);
+    return {
+      data: P.date(r['Data']), chave, paciente: c ? c.paciente : chave.replace(/^[^-]*-\s*/, ''),
+      situacao: P.text(r['Situação da sessão']), profissional: P.text(r['Profissional']) || (c ? c.profissional : ''),
+      servico: c ? c.servico : '', tipo: P.text(r['Tipo']), valor: P.number(r['Valor da sessão']),
+      competencia: parseCompetencia(r['Competência']), statusCobranca: P.text(r['Status da cobrança']),
+      repasse: P.number(r['Repasse da sessão']), situacaoRepasse: P.text(r['Situação do repasse']),
+    };
+  }).filter(s => s.data && !s.situacao); // "Situação em branco = realizada" (regra da própria planilha)
+  const pagamentos = pag.map(r => ({
+    data: P.date(r['Data do recebimento']), chave: P.text(r['Contrato - Paciente']), quemPagou: P.text(r['Quem pagou']),
+    valor: P.number(r['Valor recebido']), desconto: P.number(r['Desconto concedido']), forma: P.text(r['Forma de pagamento']),
+    conta: P.text(r['Conta']), profissional: P.text(r['Profissional']),
+  })).filter(p => p.data);
+  return { contratos, sessoes, pagamentos };
+}
+async function readAtendFile(file) {
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(new Uint8Array(buf), { type: 'array', cellDates: true, raw: false, dense: false });
+  return parseAtendXlsx(wb);
+}
+function atendStats(sessoes, pagamentos, ym) {
+  const sMes = sessoes.filter(s => s.competencia === ym);
+  const pMes = pagamentos.filter(p => p.data && p.data.slice(0, 7) === ym);
+  const porProf = [...U.groupBy(sMes, s => s.profissional || '(sem profissional)').entries()].map(([k, l]) => ({ k, n: l.length, valor: U.sum(l, s => s.valor), repasse: U.sum(l, s => s.repasse) })).sort((a, b) => b.valor - a.valor);
+  const porServico = [...U.groupBy(sMes, s => s.servico || '(sem serviço)').entries()].map(([k, l]) => ({ k, n: l.length, valor: U.sum(l, s => s.valor), repasse: U.sum(l, s => s.repasse) })).sort((a, b) => b.valor - a.valor);
+  return { ym, nSessoes: sMes.length, valorGerado: U.sum(sMes, s => s.valor), repasseDevido: U.sum(sMes, s => s.repasse), recebido: U.sum(pMes, p => p.valor), porProf, porServico };
+}
+async function loadAtendFile(file) {
+  if (!file) return;
+  $('#atend-msg').innerHTML = '<p>Lendo arquivo…</p>';
+  try {
+    const parsed = await readAtendFile(file);
+    S.impAtend = { fileName: file.name, size: file.size, parsed, label: 'Atualização de ' + U.br(U.today()) };
+  } catch (e) { S.impAtend = { fileName: file.name, parsed: { error: 'Erro de leitura: ' + e.message } }; }
+  render();
+}
+function atendImportPreviewHtml() {
+  const I = S.impAtend, p = I.parsed;
+  if (p.error) return `<div class="card"><div class="banner bad">${U.esc(p.error)}</div></div>`;
+  const comps = [...new Set(p.sessoes.map(s => s.competencia).filter(Boolean))].sort();
+  const profs = [...new Set(p.sessoes.map(s => s.profissional).filter(Boolean))].sort();
+  const servs = [...new Set(p.contratos.map(c => c.servico).filter(Boolean))].sort();
+  return `<div class="card"><h3>Prévia</h3>
+    <div class="kpis">${kpi('Contratos', String(p.contratos.length), 'pacientes cadastrados')}${kpi('Sessões realizadas', String(p.sessoes.length), comps.length ? U.monthLabel(comps[0]) + ' a ' + U.monthLabel(comps[comps.length - 1]) : '—')}${kpi('Pagamentos', String(p.pagamentos.length), 'lançamentos de recebimento')}</div>
+    <p class="small">Profissionais: ${profs.map(U.esc).join(', ') || '—'}. Especialidades: ${servs.map(U.esc).join(', ') || '—'}.</p>
+    <div class="form-row"><label class="grow">Nome desta atualização <input id="atend-label" value="${U.esc(I.label)}"></label>
+    <button class="btn primary" id="atend-ok">Salvar como nova versão</button><button class="btn" id="atend-cancel">Descartar</button></div>
+    <p class="small">A versão anterior não é apagada: fica no histórico.</p></div>`;
+}
+async function confirmAtendImport() {
+  const I = S.impAtend; if (!I || I.parsed.error) return;
+  const at = Date.now();
+  const v = { id: U.uid(), at, label: I.label || 'Atualização ' + U.dt(at), fileName: I.fileName, size: I.size, ...I.parsed };
+  S.atendVersions.push(v); S.atendActiveId = v.id; S.impAtend = null;
+  await saveAtendVersions();
+  toast('Versão de atendimentos salva: ' + v.sessoes.length + ' sessões');
+  render();
+}
+function atendVersionsHtml() {
+  if (!S.atendVersions.length) return '<p class="small">Nenhuma versão importada.</p>';
+  return stable([
+    { l: 'Versão', f: v => `<b>${U.esc(v.label)}</b>${v.id === S.atendActiveId ? ' <span class="tag ok">ativa</span>' : ''}` },
+    { l: 'Importada em', f: v => U.dt(v.at) },
+    { l: 'Arquivo', f: v => U.esc(v.fileName || '') },
+    { l: 'Contratos', n: true, f: v => v.contratos.length },
+    { l: 'Sessões', n: true, f: v => v.sessoes.length },
+    { l: 'Pagamentos', n: true, f: v => v.pagamentos.length },
+    { l: '', f: v => v.id === S.atendActiveId ? '' : `<button class="btn sm" data-atend-act="${v.id}">Ativar</button>` },
+  ], [...S.atendVersions].reverse());
+}
+function bindAtendImport() {
+  const ok = $('#atend-ok'); if (ok) ok.onclick = confirmAtendImport;
+  const cc = $('#atend-cancel'); if (cc) cc.onclick = () => { S.impAtend = null; render(); };
+  $$('[data-atend-act]').forEach(b => b.onclick = async () => { S.atendActiveId = b.dataset.atendAct; await saveAtendVersions(); render(); });
+}
 VIEWS.importacao = function (main) {
   let html = head('Importação e pendências', 'Relatório "Extrato financeiro" do Conta Azul (XLS, XLSX ou CSV). Processamento local, nada é enviado para a internet.');
   html += sysMsg();
@@ -2317,11 +2422,21 @@ VIEWS.importacao = function (main) {
   if (S.imp) html += importPreviewHtml();
   html += `<div class="card"><h3>Histórico de atualizações</h3>${versionsHtml()}</div>`;
   if (activeVersion()) html += `<div id="pend-wrap"></div>`;
+  html += `<h2 style="margin:28px 0 4px">Planilha de Atendimentos (opcional)</h2><p class="small">Controle de contratos, sessões e pagamentos (fora do Conta Azul). Liga cada sessão a profissional e especialidade, usado no Fechamento mensal pra aprofundar receitas/despesas. O Conta Azul continua sendo a fonte dos números de caixa.</p>
+    <div class="card"><h3>Selecionar arquivo</h3><p class="small">No Google Sheets: Arquivo → Baixar → Microsoft Excel (.xlsx). Selecione o arquivo baixado.</p>
+    <label class="drop" id="dropAtend"><input type="file" id="fileAtend" accept=".xlsx,.xls"><span>Clique para escolher ou arraste o arquivo aqui</span></label>
+    <div id="atend-msg"></div></div>`;
+  if (S.impAtend) html += atendImportPreviewHtml();
+  html += `<div class="card"><h3>Histórico de atualizações (Atendimentos)</h3>${atendVersionsHtml()}</div>`;
   main.innerHTML = html;
   const inp = $('#files'); inp.onchange = () => loadFiles([...inp.files]);
   const dz = $('#drop'); dz.ondragover = e => { e.preventDefault(); dz.classList.add('over'); }; dz.ondragleave = () => dz.classList.remove('over');
   dz.ondrop = e => { e.preventDefault(); dz.classList.remove('over'); loadFiles([...e.dataTransfer.files]); };
   bindImport();
+  const inpA = $('#fileAtend'); inpA.onchange = () => loadAtendFile(inpA.files[0]);
+  const dzA = $('#dropAtend'); dzA.ondragover = e => { e.preventDefault(); dzA.classList.add('over'); }; dzA.ondragleave = () => dzA.classList.remove('over');
+  dzA.ondrop = e => { e.preventDefault(); dzA.classList.remove('over'); loadAtendFile(e.dataTransfer.files[0]); };
+  bindAtendImport();
   const pendWrap = $('#pend-wrap'); if (pendWrap) renderPendencias(pendWrap);
 };
 async function loadFiles(files) {
@@ -2650,7 +2765,8 @@ VIEWS.backup = async function (main) {
         if (!confirm('Substituir todos os dados deste navegador pelo backup de ' + U.dt(Date.parse(obj.exportedAt)) + '? Esta ação não pode ser desfeita sem outro backup.')) return;
         const st = Object.assign(defaultSettings(), obj.settings); st.schema = obj.settings.schema; const notes = migrateSettings(st);
         S.settings = st; S.versions = obj.versions; S.activeId = obj.activeId || (obj.versions.length ? obj.versions[obj.versions.length - 1].id : null);
-        await saveSettings(); await saveVersions(); toast('Backup restaurado' + (notes.length ? ' (' + notes.length + ' ajuste(s) de versão)' : '')); go('painel');
+        S.atendVersions = obj.atendVersions || []; S.atendActiveId = obj.atendActiveId || (S.atendVersions.length ? S.atendVersions[S.atendVersions.length - 1].id : null);
+        await saveSettings(); await saveVersions(); await saveAtendVersions(); toast('Backup restaurado' + (notes.length ? ' (' + notes.length + ' ajuste(s) de versão)' : '')); go('painel');
       };
     } catch (err) { $('#bk-msg').innerHTML = `<div class="banner bad">Não foi possível ler: ${U.esc(err.message)}. Os dados atuais não foram alterados.</div>`; }
   };
@@ -2658,7 +2774,7 @@ VIEWS.backup = async function (main) {
 };
 
 async function doBackup() {
-  const obj = { app: 'luanda-caixa-cm', appVersion: APP_VERSION, exportedAt: new Date().toISOString(), settings: S.settings, versions: S.versions, activeId: S.activeId };
+  const obj = { app: 'luanda-caixa-cm', appVersion: APP_VERSION, exportedAt: new Date().toISOString(), settings: S.settings, versions: S.versions, activeId: S.activeId, atendVersions: S.atendVersions, atendActiveId: S.atendActiveId };
   download('backup_luanda_caixa_' + U.today() + '.json', new Blob([JSON.stringify(obj)], { type: 'application/json' }));
   S.settings.lastBackupAt = Date.now(); await Store.set('settings', S.settings); toast('Backup gerado');
 }
@@ -2672,6 +2788,8 @@ async function loadState() {
   if (notes.length) { await Store.set('settings', S.settings); setTimeout(() => toast('Configurações atualizadas para a versão ' + APP_VERSION + ': ' + notes.length + ' ajuste(s) (ver Cenários)'), 600); }
   S.versions = (await Store.get('versions')) || [];
   S.activeId = (await Store.get('activeId')) || (S.versions.length ? S.versions[S.versions.length - 1].id : null);
+  S.atendVersions = (await Store.get('atendVersions')) || [];
+  S.atendActiveId = (await Store.get('atendActiveId')) || (S.atendVersions.length ? S.atendVersions[S.atendVersions.length - 1].id : null);
   S.cache = null;
 }
 async function init() {
@@ -2844,12 +2962,29 @@ function margemEspecialidadeCard(st) {
     { l: 'Margem aprox.', n: true, f: r => U.money(U.r2(r.receita - r.repasse)) },
   ], rows)}</div>`;
 }
-function tabReceitas(st, pv, ym, prevYm, proj, series, trendN) {
+/* planilha de Atendimentos: profissional e especialidade reais da sessão (o extrato bancário só traz o paciente) */
+function atendReceitaCard(atend, ym, caixaRec) {
+  const a = atendStats(atend.sessoes, atend.pagamentos, ym);
+  if (!a.nSessoes) return '';
+  const diffPct = a.recebido ? Math.abs(a.recebido - caixaRec) / Math.max(a.recebido, caixaRec, 1) : 0;
+  const bars = rows => hbar2(rows.map(x => ({ label: x.k, value: x.valor, extra: x.n + ' sessões', cls: 'wfpos' })), { valueWidth: 132 });
+  return `<div class="card"><h3>Atendimentos (planilha) · ${U.monthLabel(ym)}</h3><p class="small">${a.nSessoes} sessões realizadas · ${U.money(a.valorGerado)} gerados · ${U.money(a.repasseDevido)} de repasse devido no mês.</p>
+    <div class="grid2">
+      <div><h4>Por profissional</h4>${bars(a.porProf)}</div>
+      <div><h4>Por especialidade</h4>${bars(a.porServico)}</div>
+    </div>${diffPct > 0.15 ? `<p class="small hint">Recebido pela planilha: ${U.money(a.recebido)} · pelo Conta Azul: ${U.money(caixaRec)}. Divergência a conferir (lançamento em atraso, taxas ou período diferente).</p>` : ''}</div>`;
+}
+function tabReceitas(st, pv, ym, prevYm, proj, series, trendN, atend) {
   const porPac = porPessoa(st.real, 'receita');
   const topPac = porPac[0], conc = topPac && st.rec ? topPac.v / st.rec : 0;
   const repasseR = st.real.filter(r => r.k === 'despesa' && /repasse/i.test(r.categoria || ''));
   const repasseTotal = U.sum(repasseR, r => r.valor);
-  const ticketRows = series.map(s => { const n = s.real.filter(r => r.k === 'receita').length; return { ym: s.ym, n, rec: s.rec, tm: n ? s.rec / n : 0 }; });
+  const ticketRows = series.map(s => {
+    const a = atend ? atendStats(atend.sessoes, atend.pagamentos, s.ym) : { nSessoes: 0 };
+    if (a.nSessoes) return { ym: s.ym, n: a.nSessoes, rec: a.valorGerado, tm: a.valorGerado / a.nSessoes, real: true };
+    const n = s.real.filter(r => r.k === 'receita').length;
+    return { ym: s.ym, n, rec: s.rec, tm: n ? s.rec / n : 0, real: false };
+  });
   const maxTicket = Math.max(...ticketRows.map(r => r.tm), 1);
 
   let h = `<div class="card"><h3>Receitas por categoria</h3>${catCompareBlock('Receitas', st.porCatReceita, pv.porCatReceita, 'wfpos')}</div>`;
@@ -2858,8 +2993,9 @@ function tabReceitas(st, pv, ym, prevYm, proj, series, trendN) {
     { l: 'Atendimentos', n: true, f: r => r.n },
     { l: 'Receita', n: true, f: r => U.money(r.rec) },
     { l: 'Ticket médio', n: true, f: r => U.money(r.tm) },
+    { l: '', f: r => r.real ? '<span class="tag ok">planilha</span>' : '' },
     { l: '', f: r => `<div class="bar"><i style="width:${maxTicket ? Math.min(100, r.tm / maxTicket * 100) : 0}%"></i></div>` },
-  ], ticketRows)}<p class="small hint">Atendimentos = lançamentos de receita realizados no mês (proxy de volume, não de sessões exatas).</p></div>`;
+  ], ticketRows)}<p class="small hint">${atend ? 'Marcado "planilha": sessões reais da planilha de Atendimentos. Sem marca: proxy por lançamentos de receita.' : 'Atendimentos = lançamentos de receita realizados no mês (proxy de volume; importe a planilha de Atendimentos para sessões reais).'}</p></div>`;
   h += `<div class="grid2">
     <div class="card"><h3>Receitas por paciente</h3>${porPac.length ? hbar2(porPac.slice(0, 12).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wfpos' })), { valueWidth: 132 }) + stable([{ l: 'Paciente', k: 'k' }, { l: 'Lanç.', n: true, f: x => x.n }, { l: 'Valor', n: true, f: x => U.money(x.v) }, { l: '%', n: true, f: x => U.pct(st.rec ? x.v / st.rec : 0) }], porPac.slice(0, 15)) : '<p class="small muted-t">Sem dados.</p>'}${conc > 0.3 ? `<p class="small hint">${U.esc(topPac.k)} responde por ${U.pct(conc)} da receita do mês — concentração a observar.</p>` : ''}</div>
     <div class="card"><h3>Repasse e margem</h3>${stable([{ l: 'Item', k: 'l' }, { l: 'Valor', n: true, f: r => r.b ? `<b class="${r.v < 0 ? 'neg' : 'pos'}">${U.money(r.v)}</b>` : U.money(r.v) }], [
@@ -2868,11 +3004,12 @@ function tabReceitas(st, pv, ym, prevYm, proj, series, trendN) {
     { l: 'Retido pela clínica', v: U.r2(st.rec - repasseTotal), b: true },
   ])}<p class="small hint">Repasse representa ${U.pct(st.rec ? repasseTotal / st.rec : 0)} da receita do mês. Detalhamento por profissional na aba Despesas.</p></div>
   </div>`;
-  h += margemEspecialidadeCard(st);
+  const atendCard = atend ? atendReceitaCard(atend, ym, st.rec) : '';
+  h += atendCard || margemEspecialidadeCard(st);
   if (proj) h += abertoBlock('Receitas', st.porCatAbertoRec);
   return h;
 }
-function tabDespesas(st, pv, ym, prevYm, proj) {
+function tabDespesas(st, pv, ym, prevYm, proj, atend) {
   const porForn = porPessoa(st.real, 'despesa');
   const topForn = porForn[0], conc = topForn && st.desp ? topForn.v / st.desp : 0;
   const cc = k => catClass(S.settings, k);
@@ -2884,6 +3021,8 @@ function tabDespesas(st, pv, ym, prevYm, proj) {
     { l: 'Tipo', f: r => cc(r.k).direto ? '<span class="tag">Custo direto</span>' : '<span class="tag muted">Operacional</span>' },
   ];
   const repasseR = [...U.groupBy(st.real.filter(r => r.k === 'despesa' && /repasse/i.test(r.categoria || '')), r => r.pessoa || '(sem identificação)').entries()].map(([k, l]) => ({ k, v: U.sum(l, r => r.valor), n: l.length })).sort((a, b) => b.v - a.v);
+  const aStats = atend ? atendStats(atend.sessoes, atend.pagamentos, ym) : null;
+  const porProfDevido = aStats ? aStats.porProf.filter(x => x.repasse) : [];
 
   let h = `<div class="card"><h3>Despesas por categoria</h3>${catCompareBlock('Despesas', st.porCat, pv.porCat, 'wfneg', { extraCols })}<p class="small hint">Natureza e tipo são sugestões automáticas; corrija em Configurações se não refletir a realidade.</p></div>`;
   h += `<div class="grid2">
@@ -2892,8 +3031,9 @@ function tabDespesas(st, pv, ym, prevYm, proj) {
   </div>`;
   h += `<div class="grid2">
     <div class="card"><h3>Despesas por fornecedor</h3>${porForn.length ? hbar2(porForn.slice(0, 12).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wfneg' })), { valueWidth: 132 }) + stable([{ l: 'Fornecedor', k: 'k' }, { l: 'Lanç.', n: true, f: x => x.n }, { l: 'Valor', n: true, f: x => U.money(x.v) }, { l: '%', n: true, f: x => U.pct(st.desp ? x.v / st.desp : 0) }], porForn.slice(0, 15)) : '<p class="small muted-t">Sem dados.</p>'}${conc > 0.3 ? `<p class="small hint">${U.esc(topForn.k)} responde por ${U.pct(conc)} das despesas do mês — concentração a observar.</p>` : ''}</div>
-    <div class="card"><h3>Repasse por profissional</h3>${repasseR.length ? hbar2(repasseR.slice(0, 12).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wftot' })), { valueWidth: 132 }) + stable([{ l: 'Profissional', k: 'k' }, { l: 'Lanç.', n: true, f: x => x.n }, { l: 'Repasse', n: true, f: x => U.money(x.v) }], repasseR.slice(0, 15)) : '<p class="small muted-t">Nenhum repasse no mês.</p>'}</div>
+    <div class="card"><h3>Repasse por profissional${atend ? ' (pago via Conta Azul)' : ''}</h3>${repasseR.length ? hbar2(repasseR.slice(0, 12).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wftot' })), { valueWidth: 132 }) + stable([{ l: 'Profissional', k: 'k' }, { l: 'Lanç.', n: true, f: x => x.n }, { l: 'Repasse', n: true, f: x => U.money(x.v) }], repasseR.slice(0, 15)) : '<p class="small muted-t">Nenhum repasse pago no mês.</p>'}</div>
   </div>`;
+  if (porProfDevido.length) h += `<div class="card"><h3>Repasse devido (planilha de Atendimentos) · ${U.monthLabel(ym)}</h3><p class="small hint">Calculado sessão a sessão na planilha; pode diferir do que já foi pago via Conta Azul por atraso no repasse ou sessões de meses anteriores sendo pagas agora.</p>${hbar2(porProfDevido.map(x => ({ label: x.k, value: x.repasse, extra: x.n + ' sessões', cls: 'wfneg' })), { valueWidth: 132 })}${stable([{ l: 'Profissional', k: 'k' }, { l: 'Sessões', n: true, f: x => x.n }, { l: 'Repasse devido', n: true, f: x => U.money(x.repasse) }], porProfDevido)}</div>`;
   if (proj) h += abertoBlock('Despesas', st.porCatAbertoDesp);
   return h;
 }
@@ -2955,9 +3095,10 @@ VIEWS.fechamento = function (main) {
   </div>`;
 
   html += `<div class="tabs">${FECH_TABS.map(([k, l]) => `<button class="tabbtn ${tab === k ? 'on' : ''}" data-ftab="${k}">${l}</button>`).join('')}</div>`;
+  const atend = activeAtend();
   if (tab === 'balanco') html += tabBalanco(st, pv, ym, prevYm, proj, series, trendN);
-  else if (tab === 'receitas') html += tabReceitas(st, pv, ym, prevYm, proj, series, trendN);
-  else if (tab === 'despesas') html += tabDespesas(st, pv, ym, prevYm, proj);
+  else if (tab === 'receitas') html += tabReceitas(st, pv, ym, prevYm, proj, series, trendN, atend);
+  else if (tab === 'despesas') html += tabDespesas(st, pv, ym, prevYm, proj, atend);
   else html += tabComparativo(st, pv, ym, prevYm);
 
   main.innerHTML = html;
