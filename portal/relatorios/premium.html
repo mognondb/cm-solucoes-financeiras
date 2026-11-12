@@ -61,6 +61,22 @@ textarea{width:100%;font-family:ui-monospace,Menlo,monospace;font-size:12px}
 .kpi{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--ink3);border-radius:9px;padding:10px 12px;box-shadow:var(--shadow)}
 .kpi.click{cursor:pointer}.kpi.click:hover{border-color:var(--brand2)}.kpi.sel{outline:2px solid var(--brand2)}
 .kpi.receita{border-left-color:var(--pos)}
+.hero{display:flex;gap:28px;align-items:center;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin:0 0 14px;box-shadow:var(--shadow)}
+.hero-main{min-width:170px}
+.hero-main .hl{font-size:12px;color:var(--ink2);font-weight:600}
+.hero-main .hv{font-family:var(--serif);font-size:38px;font-weight:700;line-height:1;margin:4px 0;white-space:nowrap}
+.hero-main .hv.pos{color:var(--pos)}.hero-main .hv.neg{color:var(--neg)}
+.hero-main .hs{font-size:12px;color:var(--ink2)}
+.hero-grid{display:flex;gap:22px;flex-wrap:wrap;border-left:1px solid var(--line);padding-left:26px}
+.hero-grid .hi{min-width:100px}
+.hero-grid .hi .hl{font-size:11px;color:var(--ink2);font-weight:600}
+.hero-grid .hi .hv{font-size:18px;font-weight:700;margin:2px 0 0;white-space:nowrap}
+.pbar{height:8px;border-radius:4px;background:var(--line2);overflow:hidden;margin-top:5px}
+.pbar i{display:block;height:100%;border-radius:4px}
+.pbar i.rec{background:var(--pos)}.pbar i.desp{background:var(--accent)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}
+.tabbtn{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:7px 16px;font-size:13px;font-weight:600;color:var(--ink2);cursor:pointer}
+.tabbtn.on{background:var(--brand);border-color:var(--brand);color:#fff}
 .kpi.bad,.kpi.pendente{border-left-color:var(--neg)}.kpi.warn,.kpi.estimado{border-left-color:var(--warn)}.kpi.ok,.kpi.confirmado{border-left-color:var(--pos)}
 .kl{font-size:12px;color:var(--ink2);font-weight:600}.kv{font-size:20px;font-weight:700;margin:2px 0;font-variant-numeric:tabular-nums}.kp{font-size:11.5px;color:var(--ink3)}.kn{margin-top:4px}
 .banner{background:var(--infobg);border-radius:8px;padding:10px 12px;margin:0 0 12px;font-size:13px}.banner.warn{background:var(--warnbg)}.banner.bad{background:var(--badbg)}.banner.ok{background:var(--okbg)}.banner .btns{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap}
@@ -94,6 +110,7 @@ table.t{border-collapse:collapse;width:100%;font-size:12.5px}
 .t tbody tr[data-rec]:hover,.t.click tbody tr:hover{background:var(--accentbg);cursor:pointer}
 .t tfoot td{font-weight:700;border-top:2px solid var(--line)}.t .none{text-align:center;color:var(--ink3);padding:16px}
 .t tr.rowbad td{background:var(--badbg)}
+.t tr.sel td{background:var(--accentbg)}
 .tbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}.tbar input{min-width:220px}.tinfo{font-size:12px;color:var(--ink2);flex:1}
 .pager{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px}
 .bar{width:90px;height:7px;background:var(--line2);border-radius:4px;overflow:hidden}.bar i{display:block;height:100%;background:var(--ink3)}.bar i.pos{background:var(--pos)}.bar i.neg{background:var(--neg)}
@@ -104,9 +121,16 @@ table.t{border-collapse:collapse;width:100%;font-size:12.5px}
 .chart .ax{font-size:11px;fill:var(--ink3)}.chart .line{fill:none;stroke-width:2.2}.chart .s0{stroke:var(--brand2);fill:var(--brand2)}.chart .s1{stroke:var(--accent);fill:var(--accent)}.chart .s2{stroke:var(--ink3);fill:var(--ink3)}
 .chart path.line{fill:none}.chart .bin{fill:var(--pos);opacity:.45}.chart .bout{fill:var(--neg);opacity:.45}.chart .negpt{fill:var(--neg)}
 .chart .a1{fill:var(--a1)}.chart .a2{fill:var(--a2)}.chart .a3{fill:var(--a3)}.chart .a4{fill:var(--a4)}.chart .a5{fill:var(--a5)}.chart .aOther{fill:var(--ink3)}
+.chart .wfpos{fill:var(--pos)}.chart .wfneg{fill:var(--neg)}.chart .wftot{fill:var(--brand2)}.chart .wfconn{stroke:var(--ink3);stroke-dasharray:3 3}
+.chart .val{font-size:11px;font-weight:700;fill:var(--ink)}.chart .lbl{font-size:11px;fill:var(--ink2)}
+.chart .lnrec{stroke:var(--pos);fill:var(--pos)}.chart .lndesp{stroke:var(--neg);fill:var(--neg)}.chart .lnres{stroke:var(--ink3);fill:var(--ink3)}
 .legend{display:flex;gap:16px;font-size:12px;color:var(--ink2);margin-top:6px;flex-wrap:wrap}.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.legend button.lgbtn{display:inline-flex;align-items:center;border:0;background:none;padding:0;margin:0;font:inherit;color:inherit;cursor:pointer}.legend button.lgbtn.off{opacity:.35}
+#tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--panel);padding:7px 10px;border-radius:7px;font-size:12px;line-height:1.4;z-index:9999;max-width:280px;box-shadow:var(--shadow);display:none}
+#tip b{font-weight:700}
 .lg.s0{background:var(--brand2)}.lg.s1{background:var(--accent)}.lg.s2{background:var(--ink3)}.lg.bin{background:var(--pos);opacity:.5}.lg.bout{background:var(--neg);opacity:.5}
 .lg.a1{background:var(--a1)}.lg.a2{background:var(--a2)}.lg.a3{background:var(--a3)}.lg.a4{background:var(--a4)}.lg.a5{background:var(--a5)}.lg.aOther{background:var(--ink3)}
+.lg.lnrec{background:var(--pos)}.lg.lndesp{background:var(--neg)}.lg.lnres{background:var(--ink3)}
 /* calendário */
 .cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}.cdh{font-size:11px;color:var(--ink3);text-align:center;text-transform:uppercase}
 .cd{min-height:92px;border:1px solid var(--line2);border-radius:7px;padding:5px;font-size:12px;background:var(--panel);display:flex;flex-direction:column}.cd.off{background:transparent;border:0}
@@ -160,7 +184,9 @@ ul.alerts li.bad{border-left-color:var(--neg);background:var(--badbg)}ul.alerts 
 </div>
 <div id="modal" onclick="if(event.target===this)closeModal()"></div>
 <div id="toast"></div>
+<div id="tip"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@4.0.1/dist/pptxgen.bundle.js"></script>
 <script>const LOGO = '../../assets/img/clientes/premium-pinturas.png';</script>
 <script>/* ==========================================================================
    Premium Caixa: núcleo (utilitários, leitura, normalização e cálculos)
@@ -1084,6 +1110,25 @@ function obraStats(recs, settings) {
   }
   return { obras, naoAloc, naoAlocDesp };
 }
+/* atividade das obras SÓ no mês (receita/despesa/resultado realizados), pra comparar obras entre si mês a mês.
+   obraStats() acima é acumulado da vida do contrato; esta função é o recorte mensal do Fechamento. */
+function obraMonthStats(all, settings, ym, cnpj) {
+  const R = byCnpj(all, cnpj).filter(r => r.st !== 'cancelado');
+  const first = ym + '-01', last = U.endOfMonth(first);
+  const inM = d => d && d >= first && d <= last;
+  const real = R.filter(r => r.st === 'realizado' && inM(r.effDate) && !r.futReal && (r.k === 'receita' || r.k === 'despesa'));
+  const by = U.groupBy(real, r => r.centroCusto || '');
+  const obras = [];
+  for (const [centro, l] of by) {
+    const nat = centroNatureza(centro, settings);
+    if (nat.nat !== 'obra') continue;
+    const rec = U.sum(l.filter(r => r.k === 'receita'), r => r.valor), desp = U.sum(l.filter(r => r.k === 'despesa'), r => r.valor);
+    const grupos = {}; for (const r of l) if (r.k === 'despesa') { const g = costGroup(r); grupos[g] = U.r2((grupos[g] || 0) + r.valor); }
+    obras.push({ centro, rec, desp, res: U.r2(rec - desp), n: l.length, grupos });
+  }
+  obras.sort((a, b) => (b.rec + b.desp) - (a.rec + a.desp));
+  return obras;
+}
 function obrasResumoCard() {
   const O = obraStats(recs(), S.settings); const L = O.obras;
   if (!L.length) return '';
@@ -1142,9 +1187,13 @@ function monthStats(all, settings, ym, cnpj) {
   const abertosVenc = op.filter(r => r.open && r.dueDate && r.dueDate <= last);
   const bals = accountBalances(all, settings, last).filter(b => cnpj === 'C' || b.cnpj === cnpj);
   const porCat = [...U.groupBy(real.filter(r => r.k === 'despesa'), r => r.categoria || '(sem categoria)').entries()].map(([k, l]) => ({ k, v: U.sum(l, r => r.valor), n: l.length })).sort((a, b) => b.v - a.v);
+  const porCatReceita = [...U.groupBy(real.filter(r => r.k === 'receita'), r => r.categoria || '(sem categoria)').entries()].map(([k, l]) => ({ k, v: U.sum(l, r => r.valor), n: l.length })).sort((a, b) => b.v - a.v);
+  const porCatAbertoRec = [...U.groupBy(abertosVenc.filter(r => r.k === 'receita'), r => r.categoria || '(sem categoria)').entries()].map(([k, l]) => ({ k, v: U.sum(l, r => r.openAmt), n: l.length })).sort((a, b) => b.v - a.v);
+  const porCatAbertoDesp = [...U.groupBy(abertosVenc.filter(r => r.k === 'despesa'), r => r.categoria || '(sem categoria)').entries()].map(([k, l]) => ({ k, v: U.sum(l, r => r.openAmt), n: l.length })).sort((a, b) => b.v - a.v);
   return { ym, first, last, rec, desp, res: U.r2(rec - desp), nReal: real.length, transf: U.sum(transf, r => r.sign * r.valor), nTransf: transf.length,
     prevRec, prevDesp, abertosRec: U.sum(abertosVenc.filter(r => r.k === 'receita'), r => r.openAmt), abertosDesp: U.sum(abertosVenc.filter(r => r.k === 'despesa'), r => r.openAmt),
-    nAbertosVenc: abertosVenc.length, saldos: bals.map(b => ({ conta: b.conta, cnpj: b.cnpj, type: b.type, calc: b.calc, banco: b.opening && b.opening.data === last ? +b.opening.valor : null, cash: b.cash })), porCat, real };
+    nAbertosVenc: abertosVenc.length, abertosVenc, saldos: bals.map(b => ({ conta: b.conta, cnpj: b.cnpj, type: b.type, calc: b.calc, banco: b.opening && b.opening.data === last ? +b.opening.valor : null, cash: b.cash })),
+    porCat, porCatReceita, porCatAbertoRec, porCatAbertoDesp, real };
 }
 
 /* ---------- persistência: base própria da CM (mesmo login do portal) ----------
@@ -1502,8 +1551,10 @@ function flowChart(series, opt) {
   let mn = Math.min(...all), mx = Math.max(...all); if (mn === mx) { mn -= 1; mx += 1; }
   const pad = (mx - mn) * 0.08; mn -= pad; mx += pad;
   const x = i => pl + (n === 1 ? 0 : i * (W - pl - pr) / (n - 1)), y = v => pt + (mx - v) * (H - pt - pb) / (mx - mn);
+  const axisFmt = opt.axisFmt || (v => (v / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 }) + ' mil');
+  const tipFmt = opt.tipFmt || U.money;
   const ticks = 5; let g = '';
-  for (let i = 0; i <= ticks; i++) { const v = mn + (mx - mn) * i / ticks; g += `<line x1="${pl}" x2="${W - pr}" y1="${y(v)}" y2="${y(v)}" class="grid"/><text x="${pl - 6}" y="${y(v) + 4}" class="ax" text-anchor="end">${(v / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })} mil</text>`; }
+  for (let i = 0; i <= ticks; i++) { const v = mn + (mx - mn) * i / ticks; g += `<line x1="${pl}" x2="${W - pr}" y1="${y(v)}" y2="${y(v)}" class="grid"/><text x="${pl - 6}" y="${y(v) + 4}" class="ax" text-anchor="end">${axisFmt(v)}</text>`; }
   g += `<line x1="${pl}" x2="${W - pr}" y1="${y(0)}" y2="${y(0)}" class="zero"/>`;
   if (opt.riskMin) g += `<line x1="${pl}" x2="${W - pr}" y1="${y(opt.riskMin)}" y2="${y(opt.riskMin)}" class="risk"/>`;
   const step = Math.max(1, Math.ceil(n / 12));
@@ -1518,9 +1569,9 @@ function flowChart(series, opt) {
   series.forEach((s, si) => {
     const d = s.points.map((p, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p.v).toFixed(1)).join('');
     g += `<path d="${d}" class="line s${si} ${s.cls || ''}"/>`;
-    s.points.forEach((p, i) => { if (p.v < (opt.riskMin || 0)) g += `<circle cx="${x(i)}" cy="${y(p.v)}" r="3" class="negpt"><title>${p.l}: ${U.money(p.v)}</title></circle>`; else if (n <= 40) g += `<circle cx="${x(i)}" cy="${y(p.v)}" r="2.5" class="pt s${si}"><title>${s.name ? s.name + ' · ' : ''}${p.l}: ${U.money(p.v)}</title></circle>`; });
+    s.points.forEach((p, i) => { if (p.v < (opt.riskMin || 0)) g += `<circle cx="${x(i)}" cy="${y(p.v)}" r="3" class="negpt"><title>${p.l}: ${tipFmt(p.v)}</title></circle>`; else if (n <= 40) g += `<circle cx="${x(i)}" cy="${y(p.v)}" r="2.5" class="pt s${si} ${s.cls || ''}"><title>${s.name ? s.name + ' · ' : ''}${p.l}: ${tipFmt(p.v)}</title></circle>`; });
   });
-  const legend = series.length > 1 || opt.bars ? `<div class="legend">${series.map((s, i) => `<span><i class="lg s${i}"></i>${s.name}</span>`).join('')}${opt.bars ? '<span><i class="lg bin"></i>Entradas</span><span><i class="lg bout"></i>Saídas</span>' : ''}</div>` : '';
+  const legend = opt.legend === false ? '' : (series.length > 1 || opt.bars ? `<div class="legend">${series.map((s, i) => `<span><i class="lg s${i} ${s.cls || ''}"></i>${s.name}</span>`).join('')}${opt.bars ? '<span><i class="lg bin"></i>Entradas</span><span><i class="lg bout"></i>Saídas</span>' : ''}</div>` : '');
   return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img">${g}</svg>${legend}</div>`;
 }
 function roundTopRect(x, y, w, h, r) { r = Math.min(r, w / 2, Math.max(0, h)); return `M${x} ${y + h} L${x} ${y + r} Q${x} ${y} ${x + r} ${y} L${x + w - r} ${y} Q${x + w} ${y} ${x + w} ${y + r} L${x + w} ${y + h} Z`; }
@@ -1565,6 +1616,155 @@ function stackChart(labels, series, opt) {
   }
   const legend = `<div class="legend">${series.map(s => `<span><i class="lg ${s.cls}"></i>${s.name}</span>`).join('')}</div>`;
   return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img">${g}</svg>${legend}</div>`;
+}
+/* escala de eixo com "números redondos" (1, 2, 5 × 10^n) */
+function niceTicks(min, max, n) {
+  if (min === max) max = min + 1;
+  const span = max - min; let step = Math.pow(10, Math.floor(Math.log10(span / n)));
+  const err = n / span * step;
+  if (err <= 0.15) step *= 10; else if (err <= 0.35) step *= 5; else if (err <= 0.75) step *= 2;
+  const lo = Math.floor(min / step) * step, hi = Math.ceil(max / step) * step, ticks = [];
+  for (let v = lo; v <= hi + step / 2; v += step) ticks.push(Math.round(v * 100) / 100);
+  return { lo, hi, ticks };
+}
+function shortNum(v) {
+  const a = Math.abs(v); let s;
+  if (a >= 1e6) s = (a / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mi';
+  else if (a >= 1e3) s = (a / 1e3).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mil';
+  else s = a.toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+  return (v < 0 ? '-' : '') + s;
+}
+/* gráfico de cascata (SVG): mostra como um resultado se forma passo a passo.
+   steps: [{label, value, total?}] — total:true fecha a barra em 0 (resultado final). */
+function waterfall(steps, opt) {
+  opt = opt || {};
+  const W = opt.w || Math.max(680, steps.length * 95), H = opt.h || 260, pl = 58, pr = 10, pt = 22, pb = 34;
+  let run = 0; const bars = [];
+  steps.forEach(st => {
+    if (st.total) { bars.push({ label: st.label, a: 0, b: st.value, v: st.value, total: true }); run = st.value; }
+    else { bars.push({ label: st.label, a: run, b: run + st.value, v: st.value }); run += st.value; }
+  });
+  if (!bars.length) return '<p class="small muted-t">Sem dados.</p>';
+  let vmin = 0, vmax = 0; bars.forEach(b => { vmin = Math.min(vmin, b.a, b.b); vmax = Math.max(vmax, b.a, b.b); });
+  if (vmax - vmin < 10) { vmin -= 5; vmax += 5; } // evita "nice ticks" fracionários quando os valores são quase todos zero
+  const sc = niceTicks(vmin, vmax, 5);
+  const iw = W - pl - pr, ih = H - pt - pb;
+  const y = v => pt + ih * (sc.hi - v) / (sc.hi - sc.lo);
+  let g = '';
+  sc.ticks.forEach(t => { g += `<line x1="${pl}" x2="${W - pr}" y1="${y(t)}" y2="${y(t)}" class="grid"/><text x="${pl - 6}" y="${y(t) + 4}" class="ax" text-anchor="end">${shortNum(t)}</text>`; });
+  g += `<line x1="${pl}" x2="${W - pr}" y1="${y(0)}" y2="${y(0)}" class="zero"/>`;
+  const band = iw / bars.length, bw = Math.min(64, band * 0.62);
+  const maxChars = Math.max(4, Math.floor(band / 6.2));
+  bars.forEach((b, i) => {
+    const x = pl + i * band + (band - bw) / 2, top = y(Math.max(b.a, b.b)), h = Math.max(1, Math.abs(y(b.a) - y(b.b)));
+    const cls = b.total ? 'wftot' : (b.v >= 0 ? 'wfpos' : 'wfneg');
+    const lbl = b.label.length > maxChars ? b.label.slice(0, maxChars - 1) + '…' : b.label;
+    g += `<rect x="${x}" y="${top}" width="${bw}" height="${h}" rx="3" class="${cls}"/>`;
+    if (i < bars.length - 1) g += `<line x1="${x + bw}" x2="${pl + (i + 1) * band + (band - bw) / 2}" y1="${y(b.b)}" y2="${y(b.b)}" class="wfconn"/>`;
+    g += `<text class="val" x="${x + bw / 2}" y="${top - 6}" text-anchor="middle">${shortNum(b.v)}</text>`;
+    g += `<text class="lbl" x="${x + bw / 2}" y="${H - 12}" text-anchor="middle">${U.esc(lbl)}</text>`;
+    g += `<rect x="${pl + i * band}" y="${pt}" width="${band}" height="${ih}" fill="transparent" data-tip="<b>${U.esc(b.label)}</b><br>${U.money(b.v)}${b.total ? '' : '<br>Acumulado: ' + U.money(b.b)}"/>`;
+  });
+  return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img">${g}</svg></div>`;
+}
+/* barras horizontais (SVG) com tooltip flutuante. items: [{label, value, color?, extra?, tip?}] */
+function hbar2(items, opt) {
+  opt = opt || {};
+  if (!items.length) return '<p class="small muted-t">Sem dados.</p>';
+  const W = opt.w || 640, lw = opt.labelWidth || 190, rowH = opt.rowH || 26, H = items.length * rowH + 8, vw = opt.valueWidth || 132;
+  const fmt = opt.fmt || U.money;
+  const max = Math.max(...items.map(i => Math.abs(i.value))) || 1;
+  let s = `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img">`;
+  items.forEach((it, i) => {
+    const y = i * rowH + 4, bw = Math.max(2, (W - lw - vw) * Math.abs(it.value) / max), h = rowH - 10, r = Math.min(4, h / 2, bw / 2);
+    const x0 = lw, y0 = y + 5;
+    const lbl = it.label.length > 32 ? it.label.slice(0, 31) + '…' : it.label;
+    s += `<text class="lbl" x="${lw - 8}" y="${y + rowH / 2 + 4}" text-anchor="end">${U.esc(lbl)}</text>`;
+    s += `<path d="M${x0},${y0}H${x0 + bw - r}Q${x0 + bw},${y0} ${x0 + bw},${y0 + r}V${y0 + h - r}Q${x0 + bw},${y0 + h} ${x0 + bw - r},${y0 + h}H${x0}z" class="${it.cls || 'wfneg'}"/>`;
+    s += `<text class="val" x="${lw + bw + 6}" y="${y + rowH / 2 + 4}">${fmt(it.value)}${it.extra ? ` <tspan class="lbl">${U.esc(it.extra)}</tspan>` : ''}</text>`;
+    s += `<rect x="0" y="${y}" width="${W}" height="${rowH}" fill="transparent" data-tip="<b>${U.esc(it.label)}</b><br>${fmt(it.value)}${it.tip ? '<br>' + U.esc(it.tip) : ''}"/>`;
+  });
+  return s + '</svg></div>';
+}
+/* tooltip flutuante dos gráficos novos (waterfall/hbar2): segue o mouse sobre [data-tip] */
+function bindChartTips() {
+  const tip = $('#tip');
+  document.addEventListener('mousemove', e => {
+    const t = e.target.closest && e.target.closest('[data-tip]');
+    if (!t) { tip.style.display = 'none'; return; }
+    tip.innerHTML = t.getAttribute('data-tip'); tip.style.display = 'block';
+    let x = e.clientX + 14, y = e.clientY + 14; const r = tip.getBoundingClientRect();
+    if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 14;
+    if (y + r.height > innerHeight - 8) y = e.clientY - r.height - 14;
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  });
+  document.addEventListener('mouseleave', () => { tip.style.display = 'none'; }, true);
+}
+function compareCat(curList, prevList) {
+  const map = new Map();
+  (curList || []).forEach(x => map.set(x.k, { k: x.k, cur: x.v, prev: 0, n: x.n || 0 }));
+  (prevList || []).forEach(x => { const e = map.get(x.k) || { k: x.k, cur: 0, prev: 0, n: 0 }; e.prev = x.v; map.set(x.k, e); });
+  return [...map.values()].sort((a, b) => Math.abs(b.cur) - Math.abs(a.cur));
+}
+function agingBuckets(list) {
+  const buckets = [
+    { k: 'A vencer', test: d => d <= 0 },
+    { k: '1-30 dias', test: d => d >= 1 && d <= 30 },
+    { k: '31-60 dias', test: d => d >= 31 && d <= 60 },
+    { k: '61-90 dias', test: d => d >= 61 && d <= 90 },
+    { k: '90+ dias', test: d => d > 90 },
+  ];
+  return buckets.map(b => { const l = list.filter(r => b.test(r.diasAtraso || 0)); return { k: b.k, v: U.sum(l, r => r.openAmt), n: l.length }; });
+}
+function porPessoa(real, kind) {
+  return [...U.groupBy(real.filter(r => r.k === kind), r => r.pessoa || '(sem identificação)').entries()].map(([k, l]) => ({ k, v: U.sum(l, r => r.valor), n: l.length })).sort((a, b) => b.v - a.v);
+}
+function trendTabs(trendN) { return `<div class="tabs" style="margin:0 0 10px">${[3, 6, 12].map(n => `<button class="tabbtn ${trendN === n ? 'on' : ''}" data-ftrend="${n}">${n} meses</button>`).join('')}</div>`; }
+/* gráfico (só este mês) + tabela com comparativo (este mês x mês anterior) e colunas extras opcionais */
+function catCompareBlock(titulo, cur, prev, cls, opt) {
+  opt = opt || {};
+  if (!cur.length) return `<p class="small muted-t">Nenhuma ${titulo.toLowerCase()} realizada no mês.</p>`;
+  const cmp = compareCat(cur, prev);
+  const cols = [
+    { l: 'Categoria', k: 'k' },
+    { l: 'Lanç.', n: true, f: r => r.n },
+    { l: 'Este mês', n: true, f: r => U.money(r.cur) },
+    { l: 'Mês anterior', n: true, f: r => U.money(r.prev) },
+    { l: 'Variação', n: true, f: r => U.money(r.cur - r.prev, { sign: 1 }) },
+  ].concat(opt.extraCols || []);
+  return hbar2(cur.slice(0, 12).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls })), { valueWidth: 132 }) + stable(cols, cmp.slice(0, 15));
+}
+function abertoBlock(titulo, aberto) {
+  return `<div class="card"><h3>${titulo} em aberto (projeção)</h3>${aberto.length ? hbar2(aberto.slice(0, 12).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wftot' })), { valueWidth: 132 }) + stable([{ l: 'Categoria', k: 'k' }, { l: 'Lanç.', n: true, f: x => x.n }, { l: 'Em aberto', n: true, f: x => U.money(x.v) }], aberto.slice(0, 15)) : '<p class="small muted-t">Nada em aberto.</p>'}</div>`;
+}
+/* monthStats dos últimos n meses terminando em ym (inclusive), do mais antigo pro mais novo */
+function monthSeries(all, settings, ym, n, cnpj) {
+  const months = []; let cur = ym;
+  for (let i = 0; i < n; i++) { months.unshift(cur); cur = U.month(U.addDays(cur + '-01', -1)); }
+  return months.map(m => monthStats(all, settings, m, cnpj));
+}
+/* cascata "formação do resultado de caixa" a partir de um monthStats(). Usa a mesma classificação de folha do resto do sistema. */
+function wfStepsCaixa(st) {
+  if (!st.nReal) return [];
+  const desps = (st.real || []).filter(r => r.k === 'despesa');
+  const despFolha = U.r2(U.sum(desps.filter(r => r.folha && r.folha !== 'Não é folha'), r => r.valor));
+  const despOutras = U.r2(st.desp - despFolha);
+  const steps = [{ label: 'Recebido', value: st.rec }];
+  if (despFolha) steps.push({ label: 'Folha e pessoal', value: -despFolha });
+  if (despOutras) steps.push({ label: 'Outras despesas', value: -despOutras });
+  steps.push({ label: 'Resultado de caixa', value: st.res, total: true });
+  return steps;
+}
+/* cascata do fechamento: cai pro caixa realizado e, se proj=true, continua com o que ainda está em aberto */
+function wfStepsBalanco(st, proj) {
+  const base = wfStepsCaixa(st);
+  if (!proj || !base.length) return base;
+  const steps = base.slice(0, -1);
+  steps.push({ label: 'Resultado de caixa', value: st.res, total: true });
+  if (st.abertosRec) steps.push({ label: 'A receber em aberto', value: st.abertosRec });
+  if (st.abertosDesp) steps.push({ label: 'A pagar em aberto', value: -st.abertosDesp });
+  steps.push({ label: 'Resultado projetado', value: U.r2(st.res + st.abertosRec - st.abertosDesp), total: true });
+  return steps;
 }
 
 /* ==========================================================================
@@ -2658,6 +2858,7 @@ async function init() {
   $('#base-today').onclick = () => { S.ui.base = U.today(); S.cache = null; render(); };
   $('#menu').onclick = () => document.body.classList.toggle('navopen');
   $('#nav').addEventListener('click', () => document.body.classList.remove('navopen'));
+  bindChartTips();
   const h = location.hash.slice(1); if (NAV.some(n => n[0] === h)) S.ui.view = h; else if (!S.versions.length) S.ui.view = 'importacao';
   render();
 }
@@ -2803,13 +3004,151 @@ function fechSnapshot(ym, draft) {
     manual: Object.keys(S.settings.manual).length, premissas: Object.fromEntries(['conservador', 'base', 'otimista'].map(n => [n, scenarioText(S.settings.scenarios[n]).replace(/<[^>]+>/g, '')])),
     riskMin: S.settings.riskMin || 0, steps: JSON.parse(JSON.stringify(draft.steps || {})), notas: draft.notas || '', app: APP_VERSION };
 }
+/* ---------- fechamento mensal: dashboard interativo ----------
+   Mesma lógica do Fechamento do Instituto Luanda: cascata, tendência, comparativos por categoria,
+   adaptada ao modelo da Premium (múltiplos CNPJs via S.ui.cnpj, centro de custo = obra). */
+function trendTabs(trendN) { return `<div class="tabs" style="margin:0 0 10px">${[3, 6, 12].map(n => `<button class="tabbtn ${trendN === n ? 'on' : ''}" data-ftrend="${n}">${n} meses</button>`).join('')}</div>`; }
+function tabBalanco(st, pv, ym, prevYm, proj, series, trendN) {
+  const pctRec = st.prevRec ? Math.min(1, st.rec / st.prevRec) : (st.rec > 0 ? 1 : 0);
+  const pctDesp = st.prevDesp ? Math.min(1, st.desp / st.prevDesp) : (st.desp > 0 ? 1 : 0);
+  let h = `<div class="card"><h3>Evolução do resultado de caixa</h3>${trendTabs(trendN)}${flowChart([
+    { name: 'Receita', cls: 'lnrec', points: series.map(s => ({ l: U.monthLabel(s.ym), v: s.rec })) },
+    { name: 'Despesa', cls: 'lndesp', points: series.map(s => ({ l: U.monthLabel(s.ym), v: s.desp })) },
+    { name: 'Resultado', cls: 'lnres', points: series.map(s => ({ l: U.monthLabel(s.ym), v: s.res })) },
+  ], { h: 230 })}<p class="small hint">Evita julgar o mês isolado: mostra se ${U.money(st.res)} é uma oscilação ou uma tendência.</p></div>`;
+  h += `<div class="card"><h3>Formação do resultado${proj ? ' (realizado + projeção)' : ''}</h3><p class="small">Verde soma, vermelho subtrai${proj ? ', dourado é a camada projetada' : ''}, o total é o resultado.</p>${waterfall(wfStepsBalanco(st, proj))}</div>`;
+  h += `<div class="grid2">
+    <div class="card"><h3>Demonstrativo do mês</h3>${stable([{ l: 'Item', k: 'l' }, { l: 'Valor', n: true, f: r => r.b ? `<b class="${r.v < 0 ? 'neg' : 'pos'}">${U.money(r.v)}</b>` : U.money(r.v) }], [
+    { l: 'Receitas realizadas', v: st.rec },
+    { l: 'Despesas realizadas', v: st.desp },
+    { l: 'Resultado de caixa', v: st.res, b: true },
+  ].concat(proj ? [
+    { l: 'A receber em aberto', v: st.abertosRec },
+    { l: 'A pagar em aberto', v: st.abertosDesp },
+    { l: 'Resultado projetado', v: U.r2(st.res + st.abertosRec - st.abertosDesp), b: true },
+  ] : []))}</div>
+    <div class="card"><h3>Previsto × realizado</h3>
+      <p class="small">Receitas: ${U.money(st.rec)} de ${U.money(st.prevRec)} previstos (${U.pct(pctRec)})</p><div class="pbar"><i class="rec" style="width:${(pctRec * 100).toFixed(1)}%"></i></div>
+      <p class="small" style="margin-top:14px">Despesas: ${U.money(st.desp)} de ${U.money(st.prevDesp)} previstos (${U.pct(pctDesp)})</p><div class="pbar"><i class="desp" style="width:${(pctDesp * 100).toFixed(1)}%"></i></div>
+    </div></div>`;
+  h += `<div class="card"><h3>Saldos bancários</h3>${stable([
+    { l: 'Conta', f: b => U.esc(b.conta) + ' ' + cnpjTag(b.cnpj) },
+    { l: 'Calculado', n: true, f: b => U.money(b.calc) },
+    { l: 'Extrato', n: true, f: b => b.banco != null ? U.money(b.banco) : '<span class="warn-t">não informado</span>' },
+    { l: 'Base', f: b => confTag(b.banco != null ? 'confirmado' : 'calculado') },
+  ], st.saldos.filter(b => b.cash))}</div>`;
+  if (proj) {
+    const recAging = agingBuckets(st.abertosVenc.filter(r => r.k === 'receita'));
+    const despAging = agingBuckets(st.abertosVenc.filter(r => r.k === 'despesa'));
+    const agingBlock = rows => rows.some(x => x.n) ? hbar2(rows.filter(x => x.n).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: x.k === 'A vencer' ? 'wftot' : 'wfneg' })), { valueWidth: 132 }) + stable([{ l: 'Atraso', k: 'k' }, { l: 'Lanç.', n: true, f: x => x.n }, { l: 'Valor', n: true, f: x => U.money(x.v) }], rows.filter(x => x.n)) : '<p class="small muted-t">Nada em aberto.</p>';
+    h += `<div class="grid2">
+      <div class="card"><h3>A receber em aberto por atraso</h3>${agingBlock(recAging)}</div>
+      <div class="card"><h3>A pagar em aberto por atraso</h3>${agingBlock(despAging)}</div>
+    </div>`;
+  }
+  return h;
+}
+function tabReceitas(st, pv, ym, prevYm, proj) {
+  const porCliente = porPessoa(st.real, 'receita');
+  const topCliente = porCliente[0], conc = topCliente && st.rec ? topCliente.v / st.rec : 0;
+  const porObra = r => [...U.groupBy(r.real.filter(x => x.k === 'receita'), x => x.centroCusto || '(sem obra/centro)').entries()].map(([k, l]) => ({ k, v: U.sum(l, x => x.valor), n: l.length })).sort((a, b) => b.v - a.v);
+  let h = `<div class="card"><h3>Receitas por categoria</h3>${catCompareBlock('Receitas', st.porCatReceita, pv.porCatReceita, 'wfpos')}</div>`;
+  h += `<div class="card"><h3>Receitas por obra / centro de custo</h3>${catCompareBlock('Receitas', porObra(st), porObra(pv), 'wfpos')}</div>`;
+  h += `<div class="card"><h3>Receitas por cliente</h3>${porCliente.length ? hbar2(porCliente.slice(0, 12).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wfpos' })), { valueWidth: 132 }) + stable([{ l: 'Cliente', k: 'k' }, { l: 'Lanç.', n: true, f: x => x.n }, { l: 'Valor', n: true, f: x => U.money(x.v) }, { l: '%', n: true, f: x => U.pct(st.rec ? x.v / st.rec : 0) }], porCliente.slice(0, 15)) : '<p class="small muted-t">Sem dados.</p>'}${conc > 0.3 ? `<p class="small hint">${U.esc(topCliente.k)} responde por ${U.pct(conc)} da receita do mês — concentração a observar.</p>` : ''}</div>`;
+  if (proj) h += abertoBlock('Receitas', st.porCatAbertoRec);
+  return h;
+}
+function tabDespesas(st, pv, ym, prevYm, proj) {
+  const porForn = porPessoa(st.real, 'despesa');
+  const topForn = porForn[0], conc = topForn && st.desp ? topForn.v / st.desp : 0;
+  const porObra = r => [...U.groupBy(r.real.filter(x => x.k === 'despesa'), x => x.centroCusto || '(sem obra/centro)').entries()].map(([k, l]) => ({ k, v: U.sum(l, x => x.valor), n: l.length })).sort((a, b) => b.v - a.v);
+  const porGrupo = r => [...U.groupBy(r.real.filter(x => x.k === 'despesa'), costGroup).entries()].map(([k, l]) => ({ k, v: U.sum(l, x => x.valor), n: l.length })).sort((a, b) => b.v - a.v);
+  let h = `<div class="card"><h3>Despesas por categoria</h3>${catCompareBlock('Despesas', st.porCat, pv.porCat, 'wfneg')}</div>`;
+  h += `<div class="grid2">
+    <div class="card"><h3>Despesas por obra / centro de custo</h3>${catCompareBlock('Despesas', porObra(st), porObra(pv), 'wfneg')}</div>
+    <div class="card"><h3>Despesas por grupo de custo</h3>${catCompareBlock('Despesas', porGrupo(st), porGrupo(pv), 'wfneg')}<p class="small hint">Materiais, mão de obra, terceiros e tributos — mesma classificação usada em Obras e contratos.</p></div>
+  </div>`;
+  h += `<div class="card"><h3>Despesas por fornecedor</h3>${porForn.length ? hbar2(porForn.slice(0, 12).map(x => ({ label: x.k, value: x.v, extra: x.n + ' lanç.', cls: 'wfneg' })), { valueWidth: 132 }) + stable([{ l: 'Fornecedor', k: 'k' }, { l: 'Lanç.', n: true, f: x => x.n }, { l: 'Valor', n: true, f: x => U.money(x.v) }, { l: '%', n: true, f: x => U.pct(st.desp ? x.v / st.desp : 0) }], porForn.slice(0, 15)) : '<p class="small muted-t">Sem dados.</p>'}${conc > 0.3 ? `<p class="small hint">${U.esc(topForn.k)} responde por ${U.pct(conc)} das despesas do mês — concentração a observar.</p>` : ''}</div>`;
+  if (proj) h += abertoBlock('Despesas', st.porCatAbertoDesp);
+  return h;
+}
+function tabObras(ym, cnpj) {
+  const D = data();
+  const mObras = obraMonthStats(D.all, S.settings, ym, cnpj);
+  const recMes = U.sum(mObras, o => o.rec), despMes = U.sum(mObras, o => o.desp);
+  let h = `<div class="kpis">
+    ${kpi('Obras com lançamento', String(mObras.length), U.monthLabel(ym))}
+    ${kpi('Receita do mês (obras)', recMes, 'lançado nas obras')}
+    ${kpi('Despesa do mês (obras)', despMes, 'custo lançado nas obras')}
+    ${kpi('Resultado do mês (obras)', U.r2(recMes - despMes), 'receita − despesa')}
+  </div>`;
+  if (!mObras.length) h += '<div class="card"><p class="small muted-t">Nenhuma obra com lançamento realizado no mês.</p></div>';
+  else {
+    h += `<div class="card"><h3>Comparação entre obras · ${U.monthLabel(ym)}</h3><div class="grid2">
+      <div><h4>Receita do mês</h4>${hbar2(mObras.map(o => ({ label: o.centro, value: o.rec, extra: o.n + ' lanç.', cls: 'wfpos' })), { valueWidth: 132 })}</div>
+      <div><h4>Resultado do mês</h4>${hbar2(mObras.map(o => ({ label: o.centro, value: o.res, extra: U.money(o.rec) + ' rec.', cls: o.res < 0 ? 'wfneg' : 'wfpos' })), { valueWidth: 132 })}</div>
+    </div>${stable([
+      { l: 'Obra', k: 'centro' },
+      { l: 'Lanç.', n: true, f: o => o.n },
+      { l: 'Receita', n: true, f: o => U.money(o.rec) },
+      { l: 'Despesa', n: true, f: o => U.money(o.desp) },
+      { l: 'Resultado', n: true, f: o => `<b class="${o.res < 0 ? 'neg' : 'pos'}">${U.money(o.res)}</b>` },
+    ], mObras)}</div>`;
+    const gAgg = {}; mObras.forEach(o => Object.entries(o.grupos).forEach(([g, v]) => gAgg[g] = U.r2((gAgg[g] || 0) + v)));
+    const gRows = Object.entries(gAgg).map(([k, v]) => ({ k, v })).sort((a, b) => b.v - a.v);
+    if (gRows.length) h += `<div class="card"><h3>Despesas das obras por grupo de custo · ${U.monthLabel(ym)}</h3>${hbar2(gRows.map(x => ({ label: x.k, value: x.v, cls: 'wfneg' })), { valueWidth: 132 })}</div>`;
+  }
+  const O = obraStats(recs(), S.settings); const L = O.obras;
+  if (L.length) h += `<div class="card"><h3>Rentabilidade acumulada por obra</h3><p class="small hint">Desde o início de cada contrato (não só o mês selecionado). Lançado = recebido + a receber.</p>${stable([
+    { l: 'Obra', f: o => U.esc(o.centro) },
+    { l: 'Lançado', n: true, f: o => U.money(o.lancado) },
+    { l: 'Custo', n: true, f: o => U.money(o.custo) },
+    { l: 'Resultado', n: true, f: o => `<b class="${o.resultado < 0 ? 'neg' : 'pos'}">${U.money(o.resultado)}</b>` },
+    { l: 'Margem', n: true, f: o => o.margem == null ? '—' : U.pct(o.margem) + (o.provisorio.length ? ' <span class="conf estimado">provisória</span>' : '') },
+  ], L)}</div>`;
+  return h;
+}
+function tabComparativo(st, pv, ym, prevYm) {
+  const recRows = compareCat(st.porCatReceita, pv.porCatReceita);
+  const despRows = compareCat(st.porCat, pv.porCat);
+  const cmpTable = rows => stable([{ l: 'Categoria', k: 'k' }, { l: U.monthLabel(ym), n: true, f: r => U.money(r.cur) }, { l: U.monthLabel(prevYm), n: true, f: r => U.money(r.prev) }, { l: 'Variação', n: true, f: r => U.money(r.cur - r.prev, { sign: 1 }) }], rows.slice(0, 15));
+  let h = `<div class="grid2">
+    <div class="card"><h3>Receitas: ${U.monthLabel(ym)} × ${U.monthLabel(prevYm)}</h3>${hbar2([{ label: U.monthLabel(ym), value: st.rec, cls: 'wfpos' }, { label: U.monthLabel(prevYm), value: pv.rec, cls: 'wftot' }])}</div>
+    <div class="card"><h3>Despesas: ${U.monthLabel(ym)} × ${U.monthLabel(prevYm)}</h3>${hbar2([{ label: U.monthLabel(ym), value: st.desp, cls: 'wfneg' }, { label: U.monthLabel(prevYm), value: pv.desp, cls: 'wftot' }])}</div>
+  </div><div class="grid2">
+    <div class="card"><h3>Receitas por categoria</h3>${recRows.length ? cmpTable(recRows) : '<p class="small muted-t">Sem dados.</p>'}</div>
+    <div class="card"><h3>Despesas por categoria</h3>${despRows.length ? cmpTable(despRows) : '<p class="small muted-t">Sem dados.</p>'}</div>
+  </div>`;
+  return h;
+}
+const FECH_TABS = [['balanco', 'Balanço geral'], ['receitas', 'Receitas'], ['despesas', 'Despesas'], ['obras', 'Obras'], ['comparativo', 'Comparativo']];
 VIEWS.fechamento = function (main) {
   const F = S.settings.fechamentos;
   if (S.ui.fechShow) { const f = F.find(x => x.id === S.ui.fechShow); if (f) { main.innerHTML = fechReportHtml(f); bindFechReport(f); return; } S.ui.fechShow = null; }
+  const D = data();
+  const c = S.ui.cnpj;
   const ym = S.ui.fechMes || fechMonthDefault();
+  const prevYm = U.month(U.addDays(ym + '-01', -1));
+  const st = monthStats(D.all, S.settings, ym, c);
+  const pv = monthStats(D.all, S.settings, prevYm, c);
+  const proj = !!S.ui.fechProj;
+  const tab = FECH_TABS.some(([k]) => k === S.ui.fechTab) ? S.ui.fechTab : 'balanco';
+  const variacao = U.r2(st.res - pv.res);
+  const saldoCaixa = U.sum(st.saldos.filter(b => b.cash), b => b.calc);
+  const trendN = [3, 6, 12].includes(S.ui.fechTrend) ? S.ui.fechTrend : 6;
+  const series = monthSeries(D.all, S.settings, ym, trendN, c);
+  const last3 = trendN === 3 ? series : monthSeries(D.all, S.settings, ym, 3, c);
+  const dailyBurn = U.sum(last3, s => s.desp) / last3.length / 30.44;
+  let runwayLabel = '—', runwayCls = '';
+  if (dailyBurn > 0) { const d = saldoCaixa <= 0 ? 0 : Math.round(saldoCaixa / dailyBurn); runwayLabel = String(d); runwayCls = d < 30 ? 'bad' : d < 60 ? 'warn' : 'ok'; }
+  const inMonth = r => { const d = r.effDate || r.dueDate; return d && d.slice(0, 7) === ym; };
+  const pendR = D.all.filter(r => (c === 'C' || r.cnpj === c) && inMonth(r) && r.pend.some(p => !/Sem centro de custo/.test(p)));
+  const saldosCash = st.saldos.filter(b => b.cash);
+  const saldosOk = saldosCash.filter(b => b.banco != null).length;
+
   const draft = (S.settings.fechDraft = S.settings.fechDraft || {})[ym] = S.settings.fechDraft[ym] || { steps: {}, notas: '' };
   const snap = fechSnapshot(ym, draft);
-  const months = [...new Set(data().all.map(r => U.month(r.effDate)).filter(Boolean))].sort();
+  const months = [...new Set(D.all.map(r => U.month(r.effDate)).filter(Boolean))].sort();
   const C = snap.stats.C, Pm = snap.prev.C;
   const hints = {
     cobertura: `Arquivo da versão ativa cobre ${U.br(snap.cover.de)} a ${U.br(snap.cover.ate)} ${snap.cover.completo ? '(mês completo)' : '<span class="warn-t">(não cobre o mês inteiro)</span>'}; ${snap.cover.contas.length} conta(s).`,
@@ -2826,15 +3165,44 @@ VIEWS.fechamento = function (main) {
     premissas: `${snap.manual} ajuste(s) manual(is) salvos. Cenário base: ${U.esc(snap.premissas.base)}.`,
     relatorio: 'Ao registrar, o relatório do fechamento fica disponível no histórico abaixo (PDF e planilha).',
   };
-  let html = head('Fechamento mensal', 'Mês de ' + U.monthLabel(ym) + ' · data-base ' + U.br(S.ui.base), `<select onchange="S.ui.fechMes=this.value;render()">${[...new Set(months.concat([ym]))].sort().reverse().map(m => `<option value="${m}" ${m === ym ? 'selected' : ''}>${U.monthLabel(m)}</option>`).join('')}</select>`);
+  const monthSel = `<select onchange="S.ui.fechMes=this.value;render()">${[...new Set(months.concat([ym]))].sort().reverse().map(m => `<option value="${m}" ${m === ym ? 'selected' : ''}>${U.monthLabel(m)}</option>`).join('')}</select>`;
+  let html = head('Fechamento mensal', U.monthLabel(ym) + ' · ' + scopeNote(), `${monthSel}<label class="small" style="margin-left:12px"><input type="checkbox" id="fch-proj" ${proj ? 'checked' : ''}> Mostrar projeção (em aberto)</label><button class="btn" id="fch-ppt">Exportar PPT</button>`);
+  if (U.endOfMonth(ym + '-01') > S.ui.base) html += `<div class="banner warn small"><b>Mês em andamento:</b> a data-base (${U.br(S.ui.base)}) é anterior ao fim de ${U.monthLabel(ym)}. Os realizados vão só até a data-base.</div>`;
+
+  html += `<div class="hero">
+    <div class="hero-main"><div class="hl">Resultado de caixa · ${U.monthLabel(ym)}</div><div class="hv ${st.res >= 0 ? 'pos' : 'neg'}">${U.money(st.res)}</div><div class="hs">${variacao >= 0 ? '▲' : '▼'} ${U.money(Math.abs(variacao))} vs. ${U.monthLabel(prevYm)} (${U.money(pv.res)})</div></div>
+    <div class="hero-grid">
+      <div class="hi"><div class="hl">Recebido</div><div class="hv">${U.money(st.rec)}</div></div>
+      <div class="hi"><div class="hl">Pago</div><div class="hv">${U.money(st.desp)}</div></div>
+      <div class="hi"><div class="hl">Saldo em caixa</div><div class="hv">${U.money(saldoCaixa)}</div></div>
+      ${proj ? `<div class="hi"><div class="hl">Resultado projetado</div><div class="hv ${(st.res + st.abertosRec - st.abertosDesp) >= 0 ? 'pos' : 'neg'}">${U.money(U.r2(st.res + st.abertosRec - st.abertosDesp))}</div></div>` : ''}
+    </div></div>`;
+
+  html += `<div class="kpis">
+    ${kpi('Pendências de validação', String(pendR.length), 'lançamentos no mês', null, { cls: pendR.length ? 'warn' : 'ok' })}
+    ${kpi('Em aberto (vencidos)', String(st.nAbertosVenc), 'a receber ' + U.money(st.abertosRec) + ' · a pagar ' + U.money(st.abertosDesp), null, { cls: st.nAbertosVenc ? 'warn' : 'ok' })}
+    ${kpi('Saldos bancários conferidos', saldosOk + '/' + saldosCash.length, 'contas com saldo do extrato informado', null, { cls: saldosOk === saldosCash.length ? 'ok' : 'warn' })}
+    ${kpi('Fôlego de caixa', runwayLabel === '—' ? '—' : runwayLabel + ' dias', 'no ritmo de despesas dos últimos 3 meses', null, { cls: runwayCls })}
+  </div>`;
+
+  html += `<div class="tabs">${FECH_TABS.map(([k, l]) => `<button class="tabbtn ${tab === k ? 'on' : ''}" data-ftab="${k}">${l}</button>`).join('')}</div>`;
+  if (tab === 'balanco') html += tabBalanco(st, pv, ym, prevYm, proj, series, trendN);
+  else if (tab === 'receitas') html += tabReceitas(st, pv, ym, prevYm, proj);
+  else if (tab === 'despesas') html += tabDespesas(st, pv, ym, prevYm, proj);
+  else if (tab === 'obras') html += tabObras(ym, c);
+  else html += tabComparativo(st, pv, ym, prevYm);
+
+  html += `<h2 style="margin:28px 0 10px">Checklist e registro oficial do fechamento</h2>`;
   html += `<div class="banner small">Prazos no Notion da CM: documentos da cliente até o 2º dia útil, fechamento até o 7º dia útil, relatório e reunião entre o 8º e o 10º dia útil. <b>A validar:</b> a página da Premium fala em entrega do fechamento de outubro até 10/11/2026; as tarefas trazem 16/11 (10º dia útil).</div>`;
-  if (U.endOfMonth(ym + '-01') > S.ui.base) html += `<div class="banner warn small"><b>Mês em andamento:</b> a data-base (${U.br(S.ui.base)}) é anterior ao fim de ${U.monthLabel(ym)}. Os realizados vão só até a data-base; registre o fechamento depois que o mês terminar e as contas estiverem conciliadas.</div>`;
-  html += `<div class="card"><h3>Números do mês (caixa realizado)</h3>${stable([{ l: '', f: c => c === 'C' ? 'Consolidado' : 'CNPJ ' + c }, { l: 'Recebido', n: true, f: c => U.money(snap.stats[c].rec) }, { l: 'Pago', n: true, f: c => U.money(snap.stats[c].desp) }, { l: 'Resultado de caixa', n: true, f: c => `<b class="${snap.stats[c].res < 0 ? 'neg' : 'pos'}">${U.money(snap.stats[c].res)}</b>` }, { l: 'Transferências (líquido)', n: true, f: c => U.money(snap.stats[c].transf) }, { l: 'Previsto receber', n: true, f: c => U.money(snap.stats[c].prevRec) }, { l: 'Previsto pagar', n: true, f: c => U.money(snap.stats[c].prevDesp) }, { l: 'Mês anterior (resultado)', n: true, f: c => U.money(snap.prev[c].res) }], ['52', '20', 'C'])}<p class="small">Realizado pela data efetiva; previsto pelo vencimento original (valor original). Resultado de caixa não é resultado contábil (não considera competência).</p></div>`;
   html += `<div class="card"><h3>Checklist do fechamento</h3>${checklistHtml(FECH_STEPS, draft.steps, hints, 'fch')}
     <label class="col">Observações do fechamento<textarea id="fch-notas" rows="3">${U.esc(draft.notas || '')}</textarea></label>
     <div class="form-row"><button class="btn primary" id="fch-save">Registrar fechamento de ${U.monthLabel(ym)}</button><span class="small">Grava uma fotografia que não é alterada depois. Um novo registro do mesmo mês vira uma nova revisão; as anteriores continuam no histórico.</span></div></div>`;
   html += `<div class="card"><h3>Histórico de fechamentos</h3>${F.length ? stable([{ l: 'Mês', f: f => U.monthLabel(f.ym) }, { l: 'Revisão', n: true, f: f => f.rev }, { l: 'Registrado em', f: f => U.dt(f.at) }, { l: 'Base', f: f => U.esc(f.versao.label) }, { l: 'Pendências', n: true, f: f => f.nPend + ' lanç. · ' + FECH_STEPS.filter(([id]) => !['feito', 'na'].includes((f.steps[id] || {}).st)).length + ' etapa(s)' }, { l: 'Situação', f: f => F.some(x => x.ym === f.ym && x.rev > f.rev) ? '<span class="muted-t">substituído por revisão posterior</span>' : '<span class="st ok">vigente</span>' }, { l: '', f: f => `<button class="btn sm" data-fshow="${f.id}">Ver / PDF</button> <button class="btn sm" data-fxls="${f.id}">Planilha</button>` }], [...F].reverse()) : '<p class="small">Nenhum fechamento registrado.</p>'}</div>`;
   main.innerHTML = html;
+  $$('[data-ftab]').forEach(b => b.onclick = () => { S.ui.fechTab = b.dataset.ftab; render(); });
+  $$('[data-ftrend]').forEach(b => b.onclick = () => { S.ui.fechTrend = +b.dataset.ftrend; render(); });
+  $('#fch-proj').onchange = e => { S.ui.fechProj = e.target.checked; render(); };
+  $('#fch-ppt').onclick = () => exportFechamentoPpt(ym, prevYm, st, pv, proj, c);
   $$('[data-fch]').forEach(el => el.onchange = async () => { const s = draft.steps[el.dataset.fch] = draft.steps[el.dataset.fch] || {}; s[el.dataset.f] = el.value; s.at = Date.now(); await saveSettings(); if (el.dataset.f === 'st') render(); });
   $('#fch-notas').onchange = async e => { draft.notas = e.target.value; await saveSettings(); };
   $('#fch-save').onclick = async () => {
@@ -2846,6 +3214,135 @@ VIEWS.fechamento = function (main) {
   $$('[data-fshow]').forEach(b => b.onclick = () => { S.ui.fechShow = b.dataset.fshow; render(); });
   $$('[data-fxls]').forEach(b => b.onclick = () => fechXlsx(F.find(x => x.id === b.dataset.fxls)));
 };
+
+/* ---------- exportação para PPT ---------- */
+function svgInline(svgEl) {
+  const clone = svgEl.cloneNode(true);
+  const srcEls = svgEl.querySelectorAll('*'), dstEls = clone.querySelectorAll('*');
+  const copy = (src, dst) => { const cs = getComputedStyle(src); ['fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'font-size', 'font-weight', 'font-family', 'text-anchor'].forEach(p => { const v = cs.getPropertyValue(p); if (v) dst.style.setProperty(p, v); }); };
+  copy(svgEl, clone);
+  srcEls.forEach((src, i) => copy(src, dstEls[i]));
+  return clone;
+}
+function svgToPng(svgEl, scale) {
+  return new Promise((resolve, reject) => {
+    const clone = svgInline(svgEl);
+    const vb = svgEl.viewBox.baseVal;
+    const w = (vb && vb.width) || svgEl.clientWidth || 640, h = (vb && vb.height) || svgEl.clientHeight || 260;
+    clone.setAttribute('width', w); clone.setAttribute('height', h);
+    const xml = new XMLSerializer().serializeToString(clone);
+    const img = new Image();
+    img.onload = () => {
+      const s = scale || 2, canvas = document.createElement('canvas');
+      canvas.width = w * s; canvas.height = h * s;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.scale(s, s); ctx.drawImage(img, 0, 0, w, h);
+      resolve({ dataUrl: canvas.toDataURL('image/png'), w, h });
+    };
+    img.onerror = reject;
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(xml)));
+  });
+}
+async function chartToPng(chartHtml) {
+  const holder = document.createElement('div');
+  holder.style.cssText = 'position:fixed;left:-9999px;top:0;background:#fff';
+  holder.innerHTML = chartHtml;
+  document.body.appendChild(holder);
+  const svgEl = holder.querySelector('svg');
+  let out = null;
+  if (svgEl) { try { out = await svgToPng(svgEl); } catch (e) { console.warn(e); } }
+  document.body.removeChild(holder);
+  return out;
+}
+/* celular (principalmente iOS) não baixa blob de forma confiável por <a download>: usa a Web Share
+   nativa quando disponível (abre o leque de "salvar em Arquivos"/"compartilhar"); no desktop, cai
+   no download clássico de sempre. */
+async function saveOrShareFile(blob, fileName, mimeType) {
+  try {
+    const file = new File([blob], fileName, { type: mimeType });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: fileName }); return; }
+  } catch (e) { if (e && e.name === 'AbortError') return; /* usuário cancelou o compartilhamento */ }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+async function exportFechamentoPpt(ym, prevYm, st, pv, proj, cnpj) {
+  const btn = $('#fch-ppt'); const prevLabel = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Gerando PPT…'; }
+  try {
+    const pptx = new PptxGenJS();
+    pptx.layout = 'LAYOUT_16x9';
+    const brand = '3B1716', ink = '241614', ink2 = '5B4743', line = 'E8DFD9';
+    const addTitle = (s, title, sub) => { s.addText(title, { x: 0.4, y: 0.3, w: 9.2, h: 0.5, fontSize: 22, bold: true, color: brand, fontFace: 'Georgia' }); if (sub) s.addText(sub, { x: 0.4, y: 0.78, w: 9.2, h: 0.3, fontSize: 12, color: ink2 }); };
+
+    let s = pptx.addSlide();
+    s.background = { color: brand };
+    s.addText('Premium Pinturas Prediais', { x: 0.6, y: 2.0, w: 8.8, h: 0.7, fontSize: 30, bold: true, color: 'FFFFFF', fontFace: 'Georgia' });
+    s.addText('Fechamento mensal · ' + U.monthLabel(ym) + ' · ' + cnpjName(cnpj), { x: 0.6, y: 2.7, w: 8.8, h: 0.5, fontSize: 16, color: 'E8B44C' });
+    s.addText('Elaborado por CM Soluções Financeiras · ' + U.dt(Date.now()), { x: 0.6, y: 5.0, w: 8.8, h: 0.3, fontSize: 10, color: line });
+
+    s = pptx.addSlide();
+    addTitle(s, 'Resultado do mês', U.monthLabel(ym) + (proj ? ' · realizado + projeção' : ' · realizado'));
+    const variacao = U.r2(st.res - pv.res), resCor = st.res >= 0 ? '2F6B3F' : 'B5422C';
+    s.addText(U.money(st.res), { x: 0.4, y: 1.2, w: 5, h: 0.9, fontSize: 34, bold: true, color: resCor, fontFace: 'Georgia' });
+    s.addText((variacao >= 0 ? '+' : '') + U.money(variacao) + ' vs. ' + U.monthLabel(prevYm), { x: 0.4, y: 2.05, w: 5, h: 0.4, fontSize: 12, color: ink2 });
+    s.addTable([['Recebido', U.money(st.rec)], ['Pago', U.money(st.desp)], ['Saldo em caixa', U.money(U.sum(st.saldos.filter(b => b.cash), b => b.calc))]], { x: 0.4, y: 2.6, w: 5, fontSize: 12, border: { type: 'solid', color: line, pt: 0.5 }, color: ink });
+    const wf = await chartToPng(waterfall(wfStepsBalanco(st, proj)));
+    if (wf) s.addImage({ data: wf.dataUrl, x: 5.6, y: 1.2, w: 4.0, h: 4.0 * wf.h / wf.w });
+
+    const catSlide = (titulo, real, cls) => {
+      const sl = pptx.addSlide();
+      addTitle(sl, titulo, U.monthLabel(ym) + ' · realizado');
+      if (real.length) return chartToPng(hbar2(real.slice(0, 10).map(x => ({ label: x.k, value: x.v, cls })), { valueWidth: 132 })).then(img => {
+        if (img) sl.addImage({ data: img.dataUrl, x: 0.4, y: 1.2, w: 5.2, h: 5.2 * img.h / img.w });
+        sl.addTable([['Categoria', 'Lanç.', 'Valor']].concat(real.slice(0, 10).map(x => [x.k, String(x.n), U.money(x.v)])), { x: 5.8, y: 1.2, w: 3.8, fontSize: 10, border: { type: 'solid', color: line, pt: 0.5 }, color: ink });
+      });
+      sl.addText('Nenhum lançamento realizado no mês.', { x: 0.4, y: 1.2, fontSize: 14, color: ink2 });
+    };
+    await catSlide('Receitas', st.porCatReceita, 'wfpos');
+    await catSlide('Despesas', st.porCat, 'wfneg');
+
+    const mObras = obraMonthStats(data().all, S.settings, ym, cnpj);
+    if (mObras.length) {
+      s = pptx.addSlide();
+      addTitle(s, 'Obras', U.monthLabel(ym) + ' · comparação entre obras');
+      const obrasImg = await chartToPng(hbar2(mObras.slice(0, 10).map(o => ({ label: o.centro, value: o.res, cls: o.res < 0 ? 'wfneg' : 'wfpos' })), { valueWidth: 132 }));
+      if (obrasImg) s.addImage({ data: obrasImg.dataUrl, x: 0.4, y: 1.2, w: 5.2, h: 5.2 * obrasImg.h / obrasImg.w });
+      s.addTable([['Obra', 'Receita', 'Despesa', 'Resultado']].concat(mObras.slice(0, 10).map(o => [o.centro, U.money(o.rec), U.money(o.desp), U.money(o.res)])), { x: 5.8, y: 1.2, w: 3.8, fontSize: 10, border: { type: 'solid', color: line, pt: 0.5 }, color: ink });
+    }
+
+    s = pptx.addSlide();
+    addTitle(s, 'Comparativo', U.monthLabel(ym) + ' × ' + U.monthLabel(prevYm));
+    const cmpImg = await chartToPng(hbar2([
+      { label: 'Receitas ' + U.monthLabel(ym), value: st.rec, cls: 'wfpos' },
+      { label: 'Receitas ' + U.monthLabel(prevYm), value: pv.rec, cls: 'wftot' },
+      { label: 'Despesas ' + U.monthLabel(ym), value: st.desp, cls: 'wfneg' },
+      { label: 'Despesas ' + U.monthLabel(prevYm), value: pv.desp, cls: 'wftot' },
+    ], { valueWidth: 132 }));
+    if (cmpImg) s.addImage({ data: cmpImg.dataUrl, x: 0.4, y: 1.2, w: 6.2, h: 6.2 * cmpImg.h / cmpImg.w });
+
+    s = pptx.addSlide();
+    addTitle(s, 'Pontos de atenção', U.monthLabel(ym));
+    const inM = r => { const d = r.effDate || r.dueDate; return d && d.slice(0, 7) === ym; };
+    const pendN = data().all.filter(r => (cnpj === 'C' || r.cnpj === cnpj) && inM(r) && r.pend.some(p => !/Sem centro de custo/.test(p))).length;
+    const saldosCash = st.saldos.filter(b => b.cash);
+    const saldosOk = saldosCash.filter(b => b.banco != null).length;
+    s.addTable([
+      ['Pendências de validação', String(pendN)],
+      ['Em aberto (vencidos até o fim do mês)', st.nAbertosVenc + ' · a receber ' + U.money(st.abertosRec) + ' · a pagar ' + U.money(st.abertosDesp)],
+      ['Saldos bancários conferidos', saldosOk + ' de ' + saldosCash.length],
+    ], { x: 0.4, y: 1.3, w: 9.0, fontSize: 13, border: { type: 'solid', color: line, pt: 0.5 }, color: ink });
+
+    const fileName = 'fechamento_premium_' + cnpj + '_' + ym + '.pptx';
+    const blob = await pptx.write({ outputType: 'blob' });
+    await saveOrShareFile(blob, fileName, 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
+  } catch (e) {
+    console.error(e); toast('Não foi possível gerar o PPT: ' + (e.message || e), true);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = prevLabel; }
+  }
+}
+
 function fechReportHtml(f) {
   const st = f.stats, pv = f.prev; const cn = ['52', '20', 'C']; const nm = c => c === 'C' ? 'Consolidado' : cnpjName(c);
   const openSteps = FECH_STEPS.filter(([id]) => !['feito', 'na'].includes((f.steps[id] || {}).st));
