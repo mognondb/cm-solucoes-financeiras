@@ -773,6 +773,7 @@ img { max-width: 100%; display: block; }
   color: #9aa08c;
 }
 .footer-bottom p { margin: 0; }
+.footer-cnpj { margin-top: 4px !important; font-size: 0.78rem; opacity: 0.75; }
 
 @media (max-width: 720px) {
   .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px 20px; }
