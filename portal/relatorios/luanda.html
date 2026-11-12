@@ -100,6 +100,7 @@ table.t{border-collapse:collapse;width:100%;font-size:12.5px}
 .t tbody tr[data-rec]:hover,.t.click tbody tr:hover{background:var(--accentbg);cursor:pointer}
 .t tfoot td{font-weight:700;border-top:2px solid var(--line)}.t .none{text-align:center;color:var(--ink3);padding:16px}
 .t tr.rowbad td{background:var(--badbg)}
+.t tr.sel td{background:var(--accentbg)}
 .tbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}.tbar input{min-width:220px}.tinfo{font-size:12px;color:var(--ink2);flex:1}
 .pager{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px}
 .bar{width:90px;height:7px;background:var(--line2);border-radius:4px;overflow:hidden}.bar i{display:block;height:100%;background:var(--ink3)}.bar i.pos{background:var(--pos)}.bar i.neg{background:var(--neg)}
@@ -126,15 +127,18 @@ table.t{border-collapse:collapse;width:100%;font-size:12.5px}
 .chart .grid{stroke:var(--line2)}.chart .zero{stroke:var(--ink3);stroke-width:1}.chart .risk{stroke:var(--neg);stroke-dasharray:4 4}
 .chart .ax{font-size:11px;fill:var(--ink3)}.chart .line{fill:none;stroke-width:2.2}.chart .s0{stroke:var(--brand2);fill:var(--brand2)}.chart .s1{stroke:var(--accent);fill:var(--accent)}.chart .s2{stroke:var(--ink3);fill:var(--ink3)}
 .chart .lnrec{stroke:var(--pos);fill:var(--pos)}.chart .lndesp{stroke:var(--neg);fill:var(--neg)}.chart .lnres{stroke:var(--ink3);fill:var(--ink3)}
+.chart .pf1{stroke:var(--a1);fill:var(--a1)}.chart .pf2{stroke:var(--a2);fill:var(--a2)}.chart .pf3{stroke:var(--a3);fill:var(--a3)}.chart .pf4{stroke:var(--a4);fill:var(--a4)}.chart .pf5{stroke:var(--a5);fill:var(--a5)}.chart .pfOther{stroke:var(--ink3);fill:var(--ink3)}
 .chart path.line{fill:none}.chart .bin{fill:var(--pos);opacity:.45}.chart .bout{fill:var(--neg);opacity:.45}.chart .negpt{fill:var(--neg)}
 .chart .a1{fill:var(--a1)}.chart .a2{fill:var(--a2)}.chart .a3{fill:var(--a3)}.chart .a4{fill:var(--a4)}.chart .a5{fill:var(--a5)}.chart .aOther{fill:var(--ink3)}
 .chart .wfpos{fill:var(--pos)}.chart .wfneg{fill:var(--neg)}.chart .wftot{fill:var(--brand2)}.chart .wfconn{stroke:var(--ink3);stroke-dasharray:3 3}
 .chart .val{font-size:11px;font-weight:700;fill:var(--ink)}.chart .lbl{font-size:11px;fill:var(--ink2)}
 .legend{display:flex;gap:16px;font-size:12px;color:var(--ink2);margin-top:6px;flex-wrap:wrap}.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.legend button.lgbtn{display:inline-flex;align-items:center;border:0;background:none;padding:0;margin:0;font:inherit;color:inherit;cursor:pointer}.legend button.lgbtn.off{opacity:.35}
 #tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--panel);padding:7px 10px;border-radius:7px;font-size:12px;line-height:1.4;z-index:9999;max-width:280px;box-shadow:var(--shadow);display:none}
 #tip b{font-weight:700}
 .lg.s0{background:var(--brand2)}.lg.s1{background:var(--accent)}.lg.s2{background:var(--ink3)}.lg.bin{background:var(--pos);opacity:.5}.lg.bout{background:var(--neg);opacity:.5}
 .lg.lnrec{background:var(--pos)}.lg.lndesp{background:var(--neg)}.lg.lnres{background:var(--ink3)}
+.lg.pf1{background:var(--a1)}.lg.pf2{background:var(--a2)}.lg.pf3{background:var(--a3)}.lg.pf4{background:var(--a4)}.lg.pf5{background:var(--a5)}.lg.pfOther{background:var(--ink3)}
 .lg.a1{background:var(--a1)}.lg.a2{background:var(--a2)}.lg.a3{background:var(--a3)}.lg.a4{background:var(--a4)}.lg.a5{background:var(--a5)}.lg.aOther{background:var(--ink3)}
 /* calendário */
 .cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}.cdh{font-size:11px;color:var(--ink3);text-align:center;text-transform:uppercase}
@@ -1442,8 +1446,10 @@ function flowChart(series, opt) {
   let mn = Math.min(...all), mx = Math.max(...all); if (mn === mx) { mn -= 1; mx += 1; }
   const pad = (mx - mn) * 0.08; mn -= pad; mx += pad;
   const x = i => pl + (n === 1 ? 0 : i * (W - pl - pr) / (n - 1)), y = v => pt + (mx - v) * (H - pt - pb) / (mx - mn);
+  const axisFmt = opt.axisFmt || (v => (v / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 }) + ' mil');
+  const tipFmt = opt.tipFmt || U.money;
   const ticks = 5; let g = '';
-  for (let i = 0; i <= ticks; i++) { const v = mn + (mx - mn) * i / ticks; g += `<line x1="${pl}" x2="${W - pr}" y1="${y(v)}" y2="${y(v)}" class="grid"/><text x="${pl - 6}" y="${y(v) + 4}" class="ax" text-anchor="end">${(v / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })} mil</text>`; }
+  for (let i = 0; i <= ticks; i++) { const v = mn + (mx - mn) * i / ticks; g += `<line x1="${pl}" x2="${W - pr}" y1="${y(v)}" y2="${y(v)}" class="grid"/><text x="${pl - 6}" y="${y(v) + 4}" class="ax" text-anchor="end">${axisFmt(v)}</text>`; }
   g += `<line x1="${pl}" x2="${W - pr}" y1="${y(0)}" y2="${y(0)}" class="zero"/>`;
   if (opt.riskMin) g += `<line x1="${pl}" x2="${W - pr}" y1="${y(opt.riskMin)}" y2="${y(opt.riskMin)}" class="risk"/>`;
   const step = Math.max(1, Math.ceil(n / 12));
@@ -1459,9 +1465,9 @@ function flowChart(series, opt) {
     const d = s.points.map((p, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p.v).toFixed(1)).join('');
     const sc = s.cls || 's' + si;
     g += `<path d="${d}" class="line ${sc}"/>`;
-    s.points.forEach((p, i) => { if (p.v < (opt.riskMin || 0)) g += `<circle cx="${x(i)}" cy="${y(p.v)}" r="3" class="negpt"><title>${p.l}: ${U.money(p.v)}</title></circle>`; else if (n <= 40) g += `<circle cx="${x(i)}" cy="${y(p.v)}" r="2.5" class="pt ${sc}"><title>${s.name ? s.name + ' · ' : ''}${p.l}: ${U.money(p.v)}</title></circle>`; });
+    s.points.forEach((p, i) => { if (p.v < (opt.riskMin || 0)) g += `<circle cx="${x(i)}" cy="${y(p.v)}" r="3" class="negpt"><title>${p.l}: ${tipFmt(p.v)}</title></circle>`; else if (n <= 40) g += `<circle cx="${x(i)}" cy="${y(p.v)}" r="2.5" class="pt ${sc}"><title>${s.name ? s.name + ' · ' : ''}${p.l}: ${tipFmt(p.v)}</title></circle>`; });
   });
-  const legend = series.length > 1 || opt.bars ? `<div class="legend">${series.map((s, i) => `<span><i class="lg ${s.cls || 's' + i}"></i>${s.name}</span>`).join('')}${opt.bars ? '<span><i class="lg bin"></i>Entradas</span><span><i class="lg bout"></i>Saídas</span>' : ''}</div>` : '';
+  const legend = opt.legend === false ? '' : (series.length > 1 || opt.bars ? `<div class="legend">${series.map((s, i) => `<span><i class="lg ${s.cls || 's' + i}"></i>${s.name}</span>`).join('')}${opt.bars ? '<span><i class="lg bin"></i>Entradas</span><span><i class="lg bout"></i>Saídas</span>' : ''}</div>` : '');
   return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img">${g}</svg>${legend}</div>`;
 }
 function roundTopRect(x, y, w, h, r) { r = Math.min(r, w / 2, Math.max(0, h)); return `M${x} ${y + h} L${x} ${y + r} Q${x} ${y} ${x + r} ${y} L${x + w - r} ${y} Q${x + w} ${y} ${x + w} ${y + r} L${x + w} ${y + h} Z`; }
@@ -1562,6 +1568,7 @@ function hbar2(items, opt) {
   opt = opt || {};
   if (!items.length) return '<p class="small muted-t">Sem dados.</p>';
   const W = opt.w || 640, lw = opt.labelWidth || 190, rowH = opt.rowH || 26, H = items.length * rowH + 8, vw = opt.valueWidth || 132;
+  const fmt = opt.fmt || U.money;
   const max = Math.max(...items.map(i => Math.abs(i.value))) || 1;
   let s = `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img">`;
   items.forEach((it, i) => {
@@ -1570,8 +1577,8 @@ function hbar2(items, opt) {
     const lbl = it.label.length > 32 ? it.label.slice(0, 31) + '…' : it.label;
     s += `<text class="lbl" x="${lw - 8}" y="${y + rowH / 2 + 4}" text-anchor="end">${U.esc(lbl)}</text>`;
     s += `<path d="M${x0},${y0}H${x0 + bw - r}Q${x0 + bw},${y0} ${x0 + bw},${y0 + r}V${y0 + h - r}Q${x0 + bw},${y0 + h} ${x0 + bw - r},${y0 + h}H${x0}z" class="${it.cls || 'wfneg'}"/>`;
-    s += `<text class="val" x="${lw + bw + 6}" y="${y + rowH / 2 + 4}">${U.money(it.value)}${it.extra ? ` <tspan class="lbl">${U.esc(it.extra)}</tspan>` : ''}</text>`;
-    s += `<rect x="0" y="${y}" width="${W}" height="${rowH}" fill="transparent" data-tip="<b>${U.esc(it.label)}</b><br>${U.money(it.value)}${it.tip ? '<br>' + U.esc(it.tip) : ''}"/>`;
+    s += `<text class="val" x="${lw + bw + 6}" y="${y + rowH / 2 + 4}">${fmt(it.value)}${it.extra ? ` <tspan class="lbl">${U.esc(it.extra)}</tspan>` : ''}</text>`;
+    s += `<rect x="0" y="${y}" width="${W}" height="${rowH}" fill="transparent" data-tip="<b>${U.esc(it.label)}</b><br>${fmt(it.value)}${it.tip ? '<br>' + U.esc(it.tip) : ''}"/>`;
   });
   return s + '</svg></div>';
 }
@@ -2333,6 +2340,7 @@ function parseAtendXlsx(wb) {
     contrato: P.text(r['Contrato']), vigenteDe: P.date(r['Vigente a partir de']), situacao: P.text(r['Situação']),
     paciente: P.text(r['Paciente']), profissional: P.text(r['Profissional']), servico: P.text(r['Serviço']),
     valorSessao: P.number(r['Valor por sessão']), tipoCobranca: P.text(r['Tipo de cobrança']), chave: P.text(r['Contrato - Paciente']),
+    emAberto: P.number(r['Em aberto']), credito: P.number(r['Pago a mais (crédito)']),
   })).filter(c => c.contrato);
   const porChave = new Map(contratos.map(c => [c.chave, c]));
   const sessoes = at.map(r => {
@@ -2360,9 +2368,41 @@ async function readAtendFile(file) {
 function atendStats(sessoes, pagamentos, ym) {
   const sMes = sessoes.filter(s => s.competencia === ym);
   const pMes = pagamentos.filter(p => p.data && p.data.slice(0, 7) === ym);
-  const porProf = [...U.groupBy(sMes, s => s.profissional || '(sem profissional)').entries()].map(([k, l]) => ({ k, n: l.length, valor: U.sum(l, s => s.valor), repasse: U.sum(l, s => s.repasse) })).sort((a, b) => b.valor - a.valor);
-  const porServico = [...U.groupBy(sMes, s => s.servico || '(sem serviço)').entries()].map(([k, l]) => ({ k, n: l.length, valor: U.sum(l, s => s.valor), repasse: U.sum(l, s => s.repasse) })).sort((a, b) => b.valor - a.valor);
-  return { ym, nSessoes: sMes.length, valorGerado: U.sum(sMes, s => s.valor), repasseDevido: U.sum(sMes, s => s.repasse), recebido: U.sum(pMes, p => p.valor), porProf, porServico };
+  const porProf = [...U.groupBy(sMes, s => s.profissional || '(sem profissional)').entries()].map(([k, l]) => {
+    const valor = U.sum(l, s => s.valor), repasse = U.sum(l, s => s.repasse);
+    return { k, n: l.length, valor, repasse, margem: U.r2(valor - repasse), tm: l.length ? valor / l.length : 0 };
+  }).sort((a, b) => b.valor - a.valor);
+  const porServico = [...U.groupBy(sMes, s => s.servico || '(sem serviço)').entries()].map(([k, l]) => {
+    const valor = U.sum(l, s => s.valor), repasse = U.sum(l, s => s.repasse);
+    return { k, n: l.length, valor, repasse, margem: U.r2(valor - repasse) };
+  }).sort((a, b) => b.valor - a.valor);
+  const porTipo = [...U.groupBy(sMes, s => s.tipo || '(sem tipo)').entries()].map(([k, l]) => ({ k, n: l.length, valor: U.sum(l, s => s.valor) })).sort((a, b) => b.valor - a.valor);
+  const avulsas = sMes.filter(s => /avulso/i.test(s.tipo));
+  const cobrancaStatus = [...U.groupBy(avulsas, s => s.statusCobranca || '(sem status)').entries()].map(([k, l]) => ({ k, n: l.length, valor: U.sum(l, s => s.valor) })).sort((a, b) => b.valor - a.valor);
+  const repasseStatus = [...U.groupBy(sMes.filter(s => s.repasse), s => s.situacaoRepasse || '(sem situação)').entries()].map(([k, l]) => ({ k, n: l.length, valor: U.sum(l, s => s.repasse) })).sort((a, b) => b.valor - a.valor);
+  const valorGerado = U.sum(sMes, s => s.valor), repasseDevido = U.sum(sMes, s => s.repasse);
+  return { ym, nSessoes: sMes.length, valorGerado, repasseDevido, margem: U.r2(valorGerado - repasseDevido), recebido: U.sum(pMes, p => p.valor), porProf, porServico, porTipo, cobrancaStatus, repasseStatus };
+}
+/* últimos n meses de atendStats terminando em ym (inclusive), do mais antigo pro mais novo */
+function atendSeries(atend, ym, n) {
+  const months = []; let cur = ym;
+  for (let i = 0; i < n; i++) { months.unshift(cur); cur = U.month(U.addDays(cur + '-01', -1)); }
+  return months.map(m => atendStats(atend.sessoes, atend.pagamentos, m));
+}
+function atendProfissionais(atend) { return [...new Set(atend.sessoes.map(s => s.profissional).filter(Boolean))].sort(); }
+/* cor estável por profissional (mesma cor em todos os gráficos/meses, independente do ranking do mês) */
+function atendColorMap(profs) {
+  const palette = ['pf1', 'pf2', 'pf3', 'pf4', 'pf5', 'pfOther'];
+  const map = {}; profs.forEach((p, i) => map[p] = palette[i % palette.length]);
+  return map;
+}
+/* situação atual da carteira (contratos): não é filtrada pelo mês, é o estado da planilha na importação */
+function contratosStats(contratos) {
+  const ativos = contratos.filter(c => /ativo/i.test(c.situacao));
+  const encerrados = contratos.filter(c => /encerrado/i.test(c.situacao));
+  const abertos = contratos.filter(c => c.emAberto > 0).sort((a, b) => b.emAberto - a.emAberto);
+  const creditos = contratos.filter(c => c.credito > 0).sort((a, b) => b.credito - a.credito);
+  return { ativos, encerrados, abertos, creditos, totalAberto: U.sum(abertos, c => c.emAberto), totalCredito: U.sum(creditos, c => c.credito) };
 }
 async function loadAtendFile(file) {
   if (!file) return;
@@ -3050,7 +3090,88 @@ function tabComparativo(st, pv, ym, prevYm) {
   </div>`;
   return h;
 }
-const FECH_TABS = [['balanco', 'Balanço geral'], ['receitas', 'Receitas'], ['despesas', 'Despesas'], ['comparativo', 'Comparativo']];
+/* chips de filtro por profissional (afeta comparação e tendência da aba Atendimentos) */
+function profChips(profs, selected) {
+  return `<div class="tabs" style="margin:0 0 10px"><button class="tabbtn ${!selected ? 'on' : ''}" data-fatendprof="">Todas</button>${profs.map(p => `<button class="tabbtn ${selected === p ? 'on' : ''}" data-fatendprof="${U.esc(p)}">${U.esc(p)}</button>`).join('')}</div>`;
+}
+function profComparisonCard(aStats, selectedProf, colorMap) {
+  if (!aStats.porProf.length) return '<div class="card"><h3>Comparação entre profissionais</h3><p class="small muted-t">Sem sessões no mês.</p></div>';
+  const rows = selectedProf ? aStats.porProf.filter(x => x.k === selectedProf) : aStats.porProf;
+  const cls = k => colorMap[k] || 'pfOther';
+  return `<div class="card"><h3>Comparação entre profissionais${selectedProf ? ' · ' + U.esc(selectedProf) : ''}</h3>
+    <div class="grid2">
+      <div><h4>Receita gerada</h4>${hbar2(rows.map(x => ({ label: x.k, value: x.valor, extra: x.n + ' sessões', cls: cls(x.k) })), { valueWidth: 132 })}</div>
+      <div><h4>Margem sobre a receita</h4>${hbar2(rows.map(x => ({ label: x.k, value: x.valor ? x.margem / x.valor : 0, extra: U.money(x.margem), cls: cls(x.k) })), { valueWidth: 132, fmt: U.pct })}</div>
+    </div>${stable([
+    { l: 'Profissional', k: 'k' },
+    { l: 'Sessões', n: true, f: r => r.n },
+    { l: 'Receita', n: true, f: r => U.money(r.valor) },
+    { l: 'Repasse', n: true, f: r => U.money(r.repasse) },
+    { l: 'Margem', n: true, f: r => U.money(r.margem) },
+    { l: 'Margem %', n: true, f: r => U.pct(r.valor ? r.margem / r.valor : 0) },
+    { l: 'Ticket médio', n: true, f: r => U.money(r.tm) },
+  ], aStats.porProf.map(r => Object.assign({}, r, { _cls: r.k === selectedProf ? 'sel' : '' })))}</div>`;
+}
+/* tendência multi-linha por profissional: chips acima filtram p/ 1 profissional; legenda clicável oculta linhas quando "Todas" */
+function atendTrendCard(atend, ym, trendN, hidden, metric, colorMap, selectedProf) {
+  const series = atendSeries(atend, ym, trendN);
+  const profs = Object.keys(colorMap);
+  const visible = selectedProf ? [selectedProf] : profs.filter(p => !hidden.includes(p));
+  const metricFn = metric === 'sessoes' ? (p => p.n) : (p => p.valor);
+  const lines = visible.map(prof => ({
+    name: prof, cls: colorMap[prof],
+    points: series.map(s => { const row = s.porProf.find(x => x.k === prof); return { l: U.monthLabel(s.ym), v: row ? metricFn(row) : 0 }; }),
+  }));
+  const legendHtml = selectedProf ? '' : `<div class="legend">${profs.map(prof => `<button class="lgbtn ${hidden.includes(prof) ? 'off' : ''}" data-fatendhide="${U.esc(prof)}"><i class="lg ${colorMap[prof]}"></i>${U.esc(prof)}</button>`).join('')}</div>`;
+  const hint = selectedProf ? `Mostrando só ${U.esc(selectedProf)}; use "Todas" acima para comparar.` : 'Clique numa profissional na legenda para ocultar/mostrar a linha.';
+  const metricBtns = `<div class="tabs" style="margin:0 0 10px"><button class="tabbtn ${metric !== 'sessoes' ? 'on' : ''}" data-fatendmetric="receita">Receita</button><button class="tabbtn ${metric === 'sessoes' ? 'on' : ''}" data-fatendmetric="sessoes">Sessões</button></div>`;
+  const chartOpt = { h: 230, legend: false };
+  if (metric === 'sessoes') { chartOpt.axisFmt = v => Math.round(v).toLocaleString('pt-BR'); chartOpt.tipFmt = v => Math.round(v) + ' sessões'; }
+  return `<div class="card"><h3>Tendência por profissional</h3>${metricBtns}${trendTabs(trendN)}${lines.length ? flowChart(lines, chartOpt) : '<p class="small muted-t">Nenhuma linha visível.</p>'}${legendHtml}<p class="small hint">${hint}</p></div>`;
+}
+function tabAtendimentos(atend, ym, trendN) {
+  if (!atend) return `<div class="card"><h3>Atendimentos</h3><p class="small muted-t">Nenhuma planilha de Atendimentos importada ainda. Importe em <a onclick="go('importacao')">Importação e pendências</a> para ver sessões, profissionais e repasses reais por aqui.</p></div>`;
+  const a = atendStats(atend.sessoes, atend.pagamentos, ym);
+  const profs = atendProfissionais(atend);
+  const colorMap = atendColorMap(profs);
+  const selectedProf = S.ui.fechAtendProf && profs.includes(S.ui.fechAtendProf) ? S.ui.fechAtendProf : '';
+  const hidden = S.ui.fechAtendHidden || [];
+  const metric = S.ui.fechAtendMetric === 'sessoes' ? 'sessoes' : 'receita';
+  const cs = contratosStats(atend.contratos);
+
+  let h = profChips(profs, selectedProf);
+  h += `<div class="kpis">
+    ${kpi('Sessões realizadas', String(a.nSessoes), U.monthLabel(ym))}
+    ${kpi('Receita gerada', a.valorGerado, 'planilha de Atendimentos')}
+    ${kpi('Repasse devido', a.repasseDevido, 'a profissionais no mês')}
+    ${kpi('Margem', a.margem, a.valorGerado ? U.pct(a.margem / a.valorGerado) + ' da receita' : '—')}
+  </div>`;
+
+  if (!a.nSessoes) h += `<div class="card"><p class="small muted-t">Nenhuma sessão registrada para ${U.monthLabel(ym)} na planilha.</p></div>`;
+  else {
+    h += profComparisonCard(a, selectedProf, colorMap);
+    h += atendTrendCard(atend, ym, trendN, hidden, metric, colorMap, selectedProf);
+    h += `<div class="grid2">
+      <div class="card"><h3>Situação do repasse</h3>${a.repasseStatus.length ? hbar2(a.repasseStatus.map(x => ({ label: x.k, value: x.valor, extra: x.n + ' sessões', cls: /liberad/i.test(x.k) ? 'wfpos' : /aguardando/i.test(x.k) ? 'wftot' : 'wfneg' })), { valueWidth: 132 }) : '<p class="small muted-t">Sem repasses no mês.</p>'}</div>
+      <div class="card"><h3>Status da cobrança (avulso)</h3>${a.cobrancaStatus.length ? hbar2(a.cobrancaStatus.map(x => ({ label: x.k, value: x.valor, extra: x.n + ' sessões', cls: /pago/i.test(x.k) ? 'wfpos' : /atraso/i.test(x.k) ? 'wfneg' : 'wftot' })), { valueWidth: 132 }) : '<p class="small muted-t">Nenhuma sessão avulsa no mês.</p>'}</div>
+    </div>`;
+    h += `<div class="card"><h3>Pacote × Avulso</h3>${hbar2(a.porTipo.map(x => ({ label: x.k, value: x.valor, extra: x.n + ' sessões', cls: 'wftot' })), { valueWidth: 132 })}</div>`;
+  }
+
+  h += `<div class="card"><h3>Contratos e carteira</h3><div class="kpis">
+    ${kpi('Contratos ativos', String(cs.ativos.length), 'na planilha')}
+    ${kpi('Contratos encerrados', String(cs.encerrados.length), 'na planilha')}
+    ${kpi('Em aberto (carteira)', cs.totalAberto, cs.abertos.length + ' paciente(s)')}
+    ${kpi('Crédito (carteira)', cs.totalCredito, cs.creditos.length + ' paciente(s)')}
+  </div>${cs.abertos.length ? stable([
+    { l: 'Paciente', f: c => U.esc(c.paciente) },
+    { l: 'Profissional', f: c => U.esc(c.profissional) },
+    { l: 'Situação', f: c => U.esc(c.situacao) },
+    { l: 'Em aberto', n: true, f: c => U.money(c.emAberto) },
+  ], cs.abertos.slice(0, 15)) : '<p class="small muted-t">Nenhum paciente com saldo em aberto na planilha.</p>'}<p class="small hint">Saldo da carteira é o estado atual da planilha, não é filtrado pelo mês selecionado.</p></div>`;
+  return h;
+}
+const FECH_TABS = [['balanco', 'Balanço geral'], ['receitas', 'Receitas'], ['despesas', 'Despesas'], ['atend', 'Atendimentos'], ['comparativo', 'Comparativo']];
 VIEWS.fechamento = function (main) {
   const D = data();
   const months = [...new Set(D.all.map(r => U.month(r.effDate)).filter(Boolean))].sort();
@@ -3099,11 +3220,15 @@ VIEWS.fechamento = function (main) {
   if (tab === 'balanco') html += tabBalanco(st, pv, ym, prevYm, proj, series, trendN);
   else if (tab === 'receitas') html += tabReceitas(st, pv, ym, prevYm, proj, series, trendN, atend);
   else if (tab === 'despesas') html += tabDespesas(st, pv, ym, prevYm, proj, atend);
+  else if (tab === 'atend') html += tabAtendimentos(atend, ym, trendN);
   else html += tabComparativo(st, pv, ym, prevYm);
 
   main.innerHTML = html;
   $$('[data-ftab]').forEach(b => b.onclick = () => { S.ui.fechTab = b.dataset.ftab; render(); });
   $$('[data-ftrend]').forEach(b => b.onclick = () => { S.ui.fechTrend = +b.dataset.ftrend; render(); });
+  $$('[data-fatendprof]').forEach(b => b.onclick = () => { S.ui.fechAtendProf = b.dataset.fatendprof; render(); });
+  $$('[data-fatendmetric]').forEach(b => b.onclick = () => { S.ui.fechAtendMetric = b.dataset.fatendmetric; render(); });
+  $$('[data-fatendhide]').forEach(b => b.onclick = () => { const hid = S.ui.fechAtendHidden || (S.ui.fechAtendHidden = []); const p = b.dataset.fatendhide; const i = hid.indexOf(p); if (i >= 0) hid.splice(i, 1); else hid.push(p); render(); });
   $('#fch-proj').onchange = e => { S.ui.fechProj = e.target.checked; render(); };
   $('#fch-ppt').onclick = () => exportFechamentoPpt(ym, prevYm, st, pv, proj);
 };
