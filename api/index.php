@@ -94,6 +94,7 @@ $db = cmDb();
 migrarColunaEmailUsuarios($db);
 migrarTabelaResetSenha($db);
 garantirClienteDemonstrativo($db);
+garantirProdutoPsicologos($db);
 
 // ---------- login ----------
 if ($path === '/api/login') {
@@ -108,6 +109,35 @@ if ($path === '/api/login') {
 // independentes, não passam pelo e-mail de ninguém mais. Se por algum motivo um usuário
 // antigo não tiver e-mail cadastrado ainda, cai nesta caixa fixa como rede de segurança.
 const EMAIL_RESET_SENHA = 'mognon.db@gmail.com';
+
+/** Cria, uma única vez, a página de venda da "Planilha de Controle Financeiro para Psicólogos" e remove o infoproduto
+ *  cadastrado antes (api/seed_produto_psicologos.php). A trava do MySQL evita que duas chamadas simultâneas (a página
+ *  inicial faz duas ao carregar) criem a página em dobro. Qualquer falha é engolida: nunca pode derrubar a API. */
+function garantirProdutoPsicologos(PDO $db): void {
+  $trava = false;
+  try {
+    $db->exec('CREATE TABLE IF NOT EXISTS migracoes (
+      nome VARCHAR(80) PRIMARY KEY,
+      aplicada_em VARCHAR(40) NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    $feito = function () use ($db): bool {
+      $stmt = $db->prepare('SELECT 1 FROM migracoes WHERE nome = ?');
+      $stmt->execute(['produto-psicologos-v1']);
+      return (bool)$stmt->fetchColumn();
+    };
+    if ($feito()) return;
+    $arq = __DIR__ . '/seed_produto_psicologos.php';
+    if (!is_file($arq)) return; // o deploy ainda está subindo os arquivos
+    $trava = (int)$db->query("SELECT GET_LOCK('cm_produto_psicologos_v1', 0)")->fetchColumn() === 1;
+    if (!$trava || $feito()) return;
+    require_once $arq;
+    produtoPsicologosAplicar($db);
+  } catch (Throwable $e) {
+    // sem alarde: tenta de novo na próxima chamada
+  } finally {
+    if ($trava) { try { $db->query("SELECT RELEASE_LOCK('cm_produto_psicologos_v1')")->fetchColumn(); } catch (Throwable $e) {} }
+  }
+}
 
 function migrarTabelaResetSenha(PDO $db): void {
   $db->exec('CREATE TABLE IF NOT EXISTS reset_senha (

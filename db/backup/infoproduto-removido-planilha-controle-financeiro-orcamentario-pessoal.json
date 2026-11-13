@@ -1,0 +1,14 @@
+{
+  "removido_em": "2026-11-13",
+  "motivo": "Substituído pela página de venda da Planilha de Controle Financeiro para Psicólogos. Para restaurar, cadastre de novo no painel (aba Infoprodutos) com estes dados.",
+  "item": {
+    "id": "planilha-controle-financeiro-orcamentario-pessoal",
+    "nome": "Planilha Controle Financeiro Orçamentário Pessoal",
+    "descricao": "Pare de descobrir para onde foi o seu dinheiro só no fim do mês. Esta planilha organiza receitas, despesas e orçamento em um único arquivo, com painel que se atualiza sozinho.",
+    "icone": "📦",
+    "tipo": "gratis",
+    "precoLabel": "Grátis",
+    "link": "https://app.hotmart.com/products/manage/8367516/sales-helper",
+    "ativo": true
+  }
+}
