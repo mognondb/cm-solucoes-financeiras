@@ -95,6 +95,7 @@ migrarColunaEmailUsuarios($db);
 migrarTabelaResetSenha($db);
 garantirClienteDemonstrativo($db);
 garantirProdutoPsicologos($db);
+garantirPostsIniciais($db);
 
 // ---------- login ----------
 if ($path === '/api/login') {
@@ -136,6 +137,51 @@ function garantirProdutoPsicologos(PDO $db): void {
     // sem alarde: tenta de novo na próxima chamada
   } finally {
     if ($trava) { try { $db->query("SELECT RELEASE_LOCK('cm_produto_psicologos_v1')")->fetchColumn(); } catch (Throwable $e) {} }
+  }
+}
+
+/** Publica, uma única vez cada, os posts que estão em api/seeds/*.php (um arquivo por post; o marcador é o nome do arquivo).
+ *  É como um post entra no ar sem login no painel: o arquivo vai junto no deploy. Depois de criado, o post é editado
+ *  normalmente no painel e, se for apagado lá, não volta. A trava do MySQL evita duplicar quando duas chamadas chegam juntas.
+ *  Qualquer falha é engolida: nunca pode derrubar a API. */
+function garantirPostsIniciais(PDO $db): void {
+  try {
+    $arquivos = glob(__DIR__ . '/seeds/*.php');
+    if (!$arquivos) return;
+    $db->exec('CREATE TABLE IF NOT EXISTS migracoes (
+      nome VARCHAR(80) PRIMARY KEY,
+      aplicada_em VARCHAR(40) NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    $feitos = $db->query('SELECT nome FROM migracoes')->fetchAll(PDO::FETCH_COLUMN);
+    foreach ($arquivos as $arq) {
+      $marcador = 'seed:' . basename($arq, '.php');
+      if (in_array($marcador, $feitos, true)) continue;
+      $trava = false;
+      try {
+        $def = require $arq;
+        if (!is_array($def) || empty($def['post'])) continue;
+        foreach (($def['arquivos'] ?? []) as $f) { // imagens que sobem junto com o deploy: espera chegarem
+          if (!is_file(dirname(__DIR__) . $f)) continue 2;
+        }
+        $trava = (int)$db->query("SELECT GET_LOCK('cm_seed_" . md5($marcador) . "', 0)")->fetchColumn() === 1;
+        if (!$trava) continue;
+        $stmt = $db->prepare('SELECT 1 FROM migracoes WHERE nome = ?');
+        $stmt->execute([$marcador]);
+        if ($stmt->fetchColumn()) continue;
+        require_once __DIR__ . '/blog_lib.php';
+        blogMigrar($db);
+        $stmt = $db->prepare('SELECT id FROM posts WHERE slug = ? LIMIT 1');
+        $stmt->execute([$def['post']['slug'] ?? '']);
+        if (!$stmt->fetchColumn()) blogSalvar($db, $def['post']);
+        $db->prepare('INSERT INTO migracoes (nome, aplicada_em) VALUES (?, ?)')->execute([$marcador, nowIso()]);
+      } catch (Throwable $e) {
+        // sem alarde: tenta de novo na próxima chamada
+      } finally {
+        if ($trava) { try { $db->query("SELECT RELEASE_LOCK('cm_seed_" . md5($marcador) . "')")->fetchColumn(); } catch (Throwable $e) {} }
+      }
+    }
+  } catch (Throwable $e) {
+    // sem alarde
   }
 }
 

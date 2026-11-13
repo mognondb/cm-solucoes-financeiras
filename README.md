@@ -126,6 +126,11 @@ o painel interativo de demonstração da home, caixa de destaque, passo a passo,
 frequentes, botão e chamada para compra. Dá para salvar como rascunho, **agendar** (data futura) e ver
 a **pré-visualização** (computador e celular) com o mesmo visual do site.
 
+**Publicar por arquivo:** um post também pode entrar no ar sem passar pelo painel: o arquivo `api/seeds/<nome>.php`
+(retorna `['arquivos' => [...imagens exigidas...], 'post' => [...]]`, no mesmo formato do editor) é aplicado uma única vez,
+na primeira chamada da API depois do deploy. Depois de criado, o post é editado normalmente no painel e, se for
+apagado lá, não volta.
+
 **Capa provisória:** publicação sem foto de capa ganha, na prévia do link (WhatsApp, LinkedIn...), uma
 capa 1200x630 desenhada pelo servidor com a marca, a categoria e o título (`conteudos/capa.php`, fontes em
 `assets/fonts/`, infoprodutos mostram também o preço). Se o servidor não conseguir desenhar, usa a

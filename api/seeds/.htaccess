@@ -1,0 +1,2 @@
+# Arquivos de semente da API: só o roteador (index.php) os lê.
+Require all denied
