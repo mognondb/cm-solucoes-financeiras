@@ -36,7 +36,7 @@ h1{font-size:22px;margin:0}h2{font-size:15px;margin:22px 0 10px;color:var(--ink2
 .pos{color:var(--pos)}.neg{color:var(--neg)}
 code{background:var(--line2);padding:1px 4px;border-radius:4px}
 /* layout */
-.shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+.shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh;transition:grid-template-columns .15s}
 .shell>div{min-width:0}
 aside{background:linear-gradient(160deg,var(--side1),var(--side2));color:#fff;position:sticky;top:0;height:100vh;overflow:auto;padding:14px 10px}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) aside{border-right:1px solid var(--line)}}
@@ -49,7 +49,18 @@ body.nao-admin a[href="#importacao"],body.nao-admin a[href="#config"],body.nao-a
 #nav b{margin-left:auto;background:#e8b44c;color:#3b1716!important;color:#fff;border-radius:9px;font-size:11px;padding:0 6px;min-width:18px;text-align:center}#nav b:empty{display:none}
 .navsec{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:rgba(220,233,241,.55);padding:14px 10px 4px;font-weight:600}
 .navsec:first-child{padding-top:2px}
-body.navcollapsed .navsec{display:none}
+#navtoggle{position:absolute;top:10px;right:8px;background:rgba(255,255,255,.12);border:0;color:#fff;width:22px;height:22px;border-radius:6px;cursor:pointer;font-size:13px;line-height:1;padding:0}
+#navtoggle:hover{background:rgba(255,255,255,.25)}
+@media (min-width:901px){
+body.navcollapsed .shell{grid-template-columns:60px 1fr}
+body.navcollapsed aside{padding:14px 6px;overflow:visible}
+body.navcollapsed #navtoggle{position:static;display:block;margin:0 auto 8px}
+body.navcollapsed .logo-row img{width:34px;height:34px}
+body.navcollapsed .logo-row span{display:none}
+body.navcollapsed #nav a{justify-content:center;padding:9px 0}
+body.navcollapsed #nav a span,body.navcollapsed #nav b,body.navcollapsed .cm-by,body.navcollapsed .navsec{display:none}
+}
+@media (max-width:900px){#navtoggle{display:none}}
 .cm-by{font-size:10.5px;color:rgba(255,255,255,.55);text-align:center;margin:22px 0 4px;line-height:1.4}.cm-by b{color:rgba(255,255,255,.75);font-weight:600}
 .top{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:2px solid var(--accent);padding:10px 22px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
 .top .grow{flex:1}#ver-info{font-size:12px;color:var(--ink2)}
@@ -184,7 +195,7 @@ ul.alerts li.bad{border-left-color:var(--neg);background:var(--badbg)}ul.alerts 
 </head>
 <body>
 <div class="shell">
-  <aside><div class="logo-row"><img src="../../assets/img/clientes/instituto-luanda.png" alt="Instituto Luanda Oliveira"><span>Gestão de caixa</span></div><nav id="nav"></nav><p class="cm-by">Gestão financeira por<br><b>CM Soluções Financeiras</b></p></aside>
+  <aside><button class="btn sm" id="navtoggle" title="Recolher menu">‹</button><div class="logo-row"><img src="../../assets/img/clientes/instituto-luanda.png" alt="Instituto Luanda Oliveira"><span>Gestão de caixa</span></div><nav id="nav"></nav><p class="cm-by">Gestão financeira por<br><b>CM Soluções Financeiras</b></p></aside>
   <div>
     <div class="top">
       <button class="btn" id="menu">☰</button>
@@ -1227,6 +1238,10 @@ function renderNav() {
   const byId = Object.fromEntries(NAV.filter(n => podeVer(n[0])).map(n => [n[0], n]));
   const link = ([id, label, d]) => `<a href="#${id}" data-v="${id}" title="${U.esc(label)}" class="${S.ui.view === id ? 'on' : ''}"><svg viewBox="0 0 24 24"><path d="${d}"/></svg><span>${label}</span>${id === 'painel' ? '<b id="nav-alerts"></b>' : ''}${id === 'importacao' ? '<b id="nav-pend"></b>' : ''}</a>`;
   $('#nav').innerHTML = NAV_SECTIONS.map(([sec, ids]) => { const l = ids.filter(id => byId[id]); return l.length ? `<div class="navsec">${U.esc(sec)}</div>${l.map(id => link(byId[id])).join('')}` : ''; }).join('');
+}
+function applyNavCollapsed(v) {
+  document.body.classList.toggle('navcollapsed', v);
+  const b = $('#navtoggle'); if (b) { b.textContent = v ? '›' : '‹'; b.title = v ? 'Expandir menu' : 'Recolher menu'; }
 }
 function go(view) { view = navTarget(view); if (!podeVer(view)) view = 'painel'; S.ui.view = view; render(); window.scrollTo(0, 0); }
 window.addEventListener('hashchange', () => { const v = navTarget(location.hash.slice(1)); if (podeVer(v)) go(v); });
@@ -2815,6 +2830,8 @@ async function init() {
   $('#base-today').onclick = () => { S.ui.base = U.today(); S.cache = null; render(); };
   $('#menu').onclick = () => document.body.classList.toggle('navopen');
   $('#nav').addEventListener('click', () => document.body.classList.remove('navopen'));
+  applyNavCollapsed(localStorage.getItem('cm_nav_collapsed') === '1');
+  $('#navtoggle').onclick = () => { const v = !document.body.classList.contains('navcollapsed'); localStorage.setItem('cm_nav_collapsed', v ? '1' : '0'); applyNavCollapsed(v); };
   bindChartTips();
   bindChartFit();
   const h = navTarget(location.hash.slice(1)); if (podeVer(h)) S.ui.view = h; else if (!S.versions.length && podeVer('importacao')) S.ui.view = 'importacao';
