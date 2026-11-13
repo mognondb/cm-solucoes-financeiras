@@ -50,7 +50,11 @@ body.navcollapsed #nav a span,body.navcollapsed #nav b,body.navcollapsed .cm-by{
 #nav a{display:flex;align-items:center;gap:10px;color:#dce9f1;padding:7px 10px;border-radius:7px;font-size:13.5px}
 #nav a:hover{background:rgba(255,255,255,.08);text-decoration:none}#nav a.on{background:rgba(201,166,107,.18);color:#fff;font-weight:600;box-shadow:inset 3px 0 0 #c9a66b}
 #nav svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+body.nao-admin a[href="#importacao"],body.nao-admin a[href="#config"],body.nao-admin a[href="#backup"],body.nao-admin a[href="#lancamentos"],body.nao-admin a[href="#empreitas"]{display:none}
 #nav b{margin-left:auto;background:#c9a66b;color:#3f4c39!important;color:#fff;border-radius:9px;font-size:11px;padding:0 6px;min-width:18px;text-align:center}#nav b:empty{display:none}
+.navsec{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:rgba(255,255,255,.55);padding:14px 10px 4px;font-weight:600}
+.navsec:first-child{padding-top:2px}
+body.navcollapsed .navsec{display:none}
 .cm-by{font-size:10.5px;color:rgba(255,255,255,.55);text-align:center;margin:22px 0 4px;line-height:1.4}.cm-by b{color:rgba(255,255,255,.75);font-weight:600}
 .top{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:2px solid var(--accent);padding:10px 22px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
 .top .grow{flex:1}#ver-info{font-size:12px;color:var(--ink2)}
@@ -460,7 +464,6 @@ function defaultSettings() {
     lastMapping: null,     // último mapeamento de colunas usado
     empreitas: defaultEmpreitas(), // contratos de mão de obra: contratado, recebedores, pagamentos manuais (tela Empreitas)
     obras: {},             // centro de custo -> { contratado, faturado, orcamento, nota, fonte } informados pela CM
-    rotina: {},            // semana (segunda-feira) -> { steps: { id: { st, resp, nota, at } }, concluida: { at, pend } }
     fechamentos: [],       // fotografias imutáveis dos fechamentos mensais (só acrescenta)
     reviews: {},           // revisão do comparativo: 'idAtual|idAnterior' -> { 'secao|chave': data }
     lastBackupAt: null,
@@ -1165,21 +1168,6 @@ function obrasResumoCard() {
   ], top)}<p class="small">Top ${top.length} por maior impacto (lucro ou prejuízo). Lançado = recebido + a receber; a margem é provisória enquanto houver dados pendentes da obra.</p></div>`;
 }
 
-/* ---------- rotina semanal e fechamento mensal ---------- */
-const ROTINA_STEPS = [
-  ['importar', 'Importar o novo relatório do Conta Azul'],
-  ['integridade', 'Conferir a integridade do arquivo'],
-  ['cobertura', 'Verificar período e contas esperadas'],
-  ['comparar', 'Comparar com a versão anterior'],
-  ['revisar', 'Revisar lançamentos novos, alterados e desaparecidos'],
-  ['saldos', 'Validar saldos e vínculos de CNPJ'],
-  ['realizados', 'Conferir pagamentos e recebimentos realizados'],
-  ['projecao', 'Atualizar as projeções (data-base e cenários)'],
-  ['alertas', 'Revisar alertas e datas de risco'],
-  ['pendencias', 'Registrar pendências e responsáveis'],
-  ['relatorio', 'Gerar o relatório executivo da semana'],
-  ['backup', 'Fazer o backup e guardar na pasta do cliente'],
-];
 /* números do mês (realizado pela data efetiva; previsto pelo vencimento original) */
 function monthStats(all, settings, ym, cnpj) {
   const R = byCnpj(all, cnpj).filter(r => r.st !== 'cancelado');
@@ -1201,6 +1189,24 @@ function monthStats(all, settings, ym, cnpj) {
     prevRec, prevDesp, abertosRec: U.sum(abertosVenc.filter(r => r.k === 'receita'), r => r.openAmt), abertosDesp: U.sum(abertosVenc.filter(r => r.k === 'despesa'), r => r.openAmt),
     nAbertosVenc: abertosVenc.length, abertosVenc, saldos: bals.map(b => ({ conta: b.conta, cnpj: b.cnpj, type: b.type, calc: b.calc, banco: b.opening && b.opening.data === last ? +b.opening.valor : null, cash: b.cash })),
     porCat, porCatReceita, porCatAbertoRec, porCatAbertoDesp, real };
+}
+
+/* ---------- permissões: o que cada tipo de usuário enxerga e grava ----------
+   Admin (a CM) vê tudo e grava. Cliente e "dashboard" só leem: as abas operacionais ficam escondidas e a
+   gravação no servidor também é barrada (api/index.php). Sem conseguir confirmar o papel, trata como leitura. */
+let PAPEL = null;
+const SOMENTE_ADMIN = new Set(['lancamentos', 'importacao', 'config', 'backup', 'empreitas']);
+const isAdmin = () => PAPEL === 'admin';
+const NAV_ALIAS = { calendario: 'fluxo', alertas: 'painel', rotina: 'painel', conciliacao: 'painel' }; // links antigos
+function navTarget(v) { if (v === 'calendario') S.ui.fluxoVis = 'cal'; return NAV_ALIAS[v] || v; }
+function podeVer(id) { return NAV.some(n => n[0] === id) && (isAdmin() || !SOMENTE_ADMIN.has(id)); }
+async function detectarPapel() {
+  try {
+    const r = await fetch('/api/login', { headers: { Authorization: authHeader } });
+    if (r.status === 401) { location.href = '../index.html'; return; }
+    PAPEL = ((await r.json()) || {}).papel || null;
+  } catch (e) { PAPEL = null; }
+  document.body.classList.toggle('nao-admin', !isAdmin());
 }
 
 /* ---------- persistência: demonstrativo ----------
@@ -1455,7 +1461,12 @@ function demoSeed() {
 }
 const Store = {
   ok: true, remoteErr: null, cache: null, cacheAt: null, onRemoteChange: null,
-  async open() { this.cache = demoSeed(); this.cacheAt = new Date().toISOString(); },
+  async open() {
+    // quem entra como "cliente" vê só as abas de análise (como no relatório real); sem API, mostra tudo
+    await detectarPapel();
+    if (PAPEL === null) { PAPEL = 'admin'; document.body.classList.remove('nao-admin'); }
+    this.cache = demoSeed(); this.cacheAt = new Date().toISOString();
+  },
   async get(k) { return this.cache ? this.cache[k] : undefined; },
   async set(k, v) { if (!this.cache) this.cache = {}; this.cache[k] = v; },
   async checkRemote() {},
@@ -1521,16 +1532,12 @@ const NAV = [
   ['painel', 'Painel', 'M3 13h8V3H3zm0 8h8v-6H3zm10 0h8V11h-8zm0-18v6h8V3z'],
   ['fechamento', 'Fechamento mensal', 'M7 3v3M17 3v3M4 8h16M5 5h14v15H5zM9 14l2 2 4-4'],
   ['fluxo', 'Fluxo de caixa', 'M3 17l6-6 4 4 8-8M14 7h7v7'],
-  ['calendario', 'Calendário', 'M7 3v3M17 3v3M4 8h16M5 5h14v15H5z'],
   ['receber', 'A receber', 'M12 19V5M5 12l7 7 7-7'],
   ['pagar', 'A pagar', 'M12 5v14M5 12l7-7 7 7'],
-  ['conciliacao', 'Previsto x pago', 'M4 7h16M4 12h10M4 17h6'],
   ['despesas', 'Despesas', 'M4 20V10M10 20V4M16 20v-7M22 20H2'],
   ['obras', 'Obras e contratos', 'M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6'],
   ['empreitas', 'Empreitas', 'M14 7l3-3 3 3-3 3zM4 20l9-9M3 21l2-2'],
   ['folha', 'Folha e pessoal', 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0'],
-  ['rotina', 'Rotina semanal', 'M9 11l3 3 8-8M4 6h4M4 12h2M4 18h12'],
-  ['alertas', 'Alertas', 'M12 3l10 18H2zM12 10v4M12 17v.5'],
   ['lancamentos', 'Lançamentos', 'M4 6h16M4 10h16M4 14h16M4 18h16'],
   ['relatorio', 'Relatório executivo', 'M6 2h9l5 5v15H6zM14 2v6h6'],
   ['importacao', 'Importação e pendências', 'M12 3v12M7 10l5 5 5-5M4 21h16'],
@@ -1541,13 +1548,24 @@ function applyNavCollapsed(v) {
   document.body.classList.toggle('navcollapsed', v);
   const b = $('#navtoggle'); if (b) { b.textContent = v ? '›' : '‹'; b.title = v ? 'Expandir menu' : 'Recolher menu'; }
 }
+const NAV_SECTIONS = [
+  ['Fechamento', ['painel', 'fechamento']],
+  ['Fluxo de caixa', ['fluxo', 'receber', 'pagar']],
+  ['Obras, despesas e pessoal', ['obras', 'empreitas', 'despesas', 'folha']],
+  ['Gestão', ['lancamentos', 'importacao']],
+  ['Entrega', ['relatorio']],
+  ['Sistema', ['config', 'backup']],
+];
 function renderNav() {
-  $('#nav').innerHTML = NAV.map(([id, label, d]) => `<a href="#${id}" data-v="${id}" title="${U.esc(label)}" class="${S.ui.view === id ? 'on' : ''}"><svg viewBox="0 0 24 24"><path d="${d}"/></svg><span>${label}</span>${id === 'alertas' ? '<b id="nav-alerts"></b>' : ''}${id === 'importacao' ? '<b id="nav-pend"></b>' : ''}</a>`).join('');
+  const byId = Object.fromEntries(NAV.filter(n => podeVer(n[0])).map(n => [n[0], n]));
+  const link = ([id, label, d]) => `<a href="#${id}" data-v="${id}" title="${U.esc(label)}" class="${S.ui.view === id ? 'on' : ''}"><svg viewBox="0 0 24 24"><path d="${d}"/></svg><span>${label}</span>${id === 'painel' ? '<b id="nav-alerts"></b>' : ''}${id === 'importacao' ? '<b id="nav-pend"></b>' : ''}</a>`;
+  $('#nav').innerHTML = NAV_SECTIONS.map(([sec, ids]) => { const l = ids.filter(id => byId[id]); return l.length ? `<div class="navsec">${U.esc(sec)}</div>${l.map(id => link(byId[id])).join('')}` : ''; }).join('');
 }
-function go(view) { S.ui.view = view; render(); window.scrollTo(0, 0); }
-window.addEventListener('hashchange', () => { const v = location.hash.slice(1); if (NAV.some(n => n[0] === v)) go(v); });
+function go(view) { view = navTarget(view); if (!podeVer(view)) view = 'painel'; S.ui.view = view; render(); window.scrollTo(0, 0); }
+window.addEventListener('hashchange', () => { const v = navTarget(location.hash.slice(1)); if (podeVer(v)) go(v); });
 
 function render() {
+  if (!podeVer(S.ui.view)) S.ui.view = 'painel';
   renderNav();
   const v = activeVersion();
   $('#ver-info').innerHTML = v ? `Base: <b>${U.esc(v.label)}</b> · importada em ${U.dt(v.at)}` : 'Nenhuma base importada';
@@ -1571,6 +1589,7 @@ function sysMsg() {
   return m.join('');
 }
 function emptyState() {
+  if (!isAdmin()) return '<div class="empty"><h2>Ainda não há dados neste relatório</h2><p>Assim que a CM importar o extrato do Conta Azul, o painel aparece aqui.</p></div>';
   return `<div class="empty"><h2>Comece importando o relatório do Conta Azul</h2>
   <p>Exporte o <b>extrato financeiro completo</b> (todas as contas, ano inteiro, inclusive datas futuras) e importe aqui. O arquivo é lido só neste computador.</p>
   <p><a class="btn primary" href="#importacao">Ir para a importação</a> <a class="btn" href="#backup">Restaurar um backup</a></p></div>`;
@@ -2076,7 +2095,7 @@ VIEWS.painel = function (main) {
       { l: 'Contas correntes sem conciliação recente', n: stale.length, v: null },
       { l: 'Quitados com data futura', n: R.filter(r => r.futReal).length, v: U.sum(R.filter(r => r.futReal), r => r.sign * r.valor), _drill: drillId('Quitados com data futura', R.filter(r => r.futReal), COLS.base()) },
       { l: 'Em aberto sem data (fora da projeção)', n: pj.undated.length, v: U.sum(pj.undated, m => m.amt), _drill: drillId('Em aberto sem data', movesToRows(pj.undated), COLS.move()) },
-    ], { cls: 'click' })}<p class="small"><a href="#importacao">Ver pendências</a> · <a href="#rotina">Rotina da semana</a></p></div></div>`;
+    ], { cls: 'click' })}<p class="small"><a href="#importacao">Ver pendências</a></p></div></div>`;
   // gráfico 30 dias
   const d30 = pj.days.slice(0, 31);
   html += `<div class="card"><div class="ch"><h3>Saldo projetado: próximos 30 dias</h3><a href="#fluxo">Ver fluxo completo</a></div>${flowChart([{ name: 'Saldo projetado', points: d30.map(d => ({ l: U.brShort(d.d), v: d.fim })) }], { bars: d30.map(d => ({ l: U.brShort(d.d), ent: d.ent, sai: d.sai })), riskMin: S.settings.riskMin })}</div>`;
@@ -2089,8 +2108,9 @@ VIEWS.painel = function (main) {
       return { n: k ? cnpjName(k) : '<span class="warn-t">Sem CNPJ identificado</span>', bank: p ? p.start.bankTotal : null, calc: p ? p.start.calcTotal : null, ar: U.sum(o.filter(r => r.k === 'receita'), r => r.openAmt), ap: U.sum(o.filter(r => r.k === 'despesa'), r => r.openAmt), arv: U.sum(o.filter(r => r.k === 'receita' && r.overdue), r => r.openAmt), apv: U.sum(o.filter(r => r.k === 'despesa' && r.overdue), r => r.openAmt), eom: e ? e.fim : null, min: p ? p.minBal.v : null, neg: p ? (p.firstNeg ? `<span class="neg">${U.br(p.firstNeg.d)}</span>` : 'sem risco') : 'pendente', nv: (imp.by[k] || {}).n || 0 };
     }).filter(Boolean))}<p class="small">Consolidado = soma dos dois CNPJs. Transferências entre as contas dos dois CNPJs se anulam no consolidado (saem de um e entram no outro no mesmo dia).</p></div>`;
   }
-  const al = computeAlerts().filter(a => a.sev !== 'info').slice(0, 8);
-  html += `<div class="card"><div class="ch"><h3>Alertas</h3><a href="#alertas">Ver todos</a></div>${alertList(al)}</div>`;
+  const alAll = computeAlerts(), alMain = alAll.filter(a => a.sev !== 'info'), alTop = alMain.slice(0, 8);
+  const alShow = S.ui.alertasTodos ? alAll : alTop, alMais = alAll.length > alTop.length;
+  html += `<div class="card" id="card-alertas"><div class="ch"><h3>Alertas${alMain.length ? ' (' + alMain.length + ')' : ''}</h3>${alMais ? `<a onclick="S.ui.alertasTodos=!S.ui.alertasTodos;render()">${S.ui.alertasTodos ? 'Mostrar só os principais' : 'Ver todos (' + alAll.length + ')'}</a>` : ''}</div>${alertList(alShow)}</div>`;
   main.innerHTML = html;
 };
 /* principais mudanças desde a importação anterior */
@@ -2132,6 +2152,7 @@ function balanceTable(bals) {
 
 /* ---------- fluxo de caixa ---------- */
 VIEWS.fluxo = function (main) {
+  if (S.ui.fluxoVis === 'cal') return calendarioView(main);
   const mode = S.ui.flowMode || 'dia'; const sc = S.ui.scenario;
   const pj = projFor(S.ui.cnpj, sc);
   const lim = mode === 'dia' ? 31 : mode === 'semana' ? 13 * 7 : 366;
@@ -2140,7 +2161,7 @@ VIEWS.fluxo = function (main) {
   if (mode === 'semana') g = g.slice(0, 13); if (mode === 'mes') g = g.slice(0, 12);
   const lastWithData = Math.max(...pj.moves.filter(m => m.date).map(m => U.d(m.date).getTime()), 0);
   const label = x => mode === 'dia' ? U.br(x.k) : mode === 'semana' ? U.brShort(x.from) + ' a ' + U.brShort(x.to) : U.monthLabel(x.k);
-  let html = head('Fluxo de caixa projetado', scopeNote() + ' · cenário ' + sc, `<div class="seg">${['dia', 'semana', 'mes'].map(m => `<button class="${mode === m ? 'on' : ''}" onclick="S.ui.flowMode='${m}';render()">${m === 'dia' ? 'Diário (30 dias)' : m === 'semana' ? 'Semanal (13 semanas)' : 'Mensal (12 meses)'}</button>`).join('')}</div>
+  let html = head('Fluxo de caixa projetado', scopeNote() + ' · cenário ' + sc, fluxoVisToggle('lista') + ` <div class="seg">${['dia', 'semana', 'mes'].map(m => `<button class="${mode === m ? 'on' : ''}" onclick="S.ui.flowMode='${m}';render()">${m === 'dia' ? 'Diário (30 dias)' : m === 'semana' ? 'Semanal (13 semanas)' : 'Mensal (12 meses)'}</button>`).join('')}</div>
     <select onchange="S.ui.scenario=this.value;render()">${['conservador', 'base', 'otimista'].map(s => `<option ${s === sc ? 'selected' : ''} value="${s}">Cenário ${s}</option>`).join('')}</select>`);
   const sb = pj.start;
   const scObj = S.settings.scenarios[sc] || {};
@@ -2230,7 +2251,11 @@ function historicalDailyBalance(cnpj, fromDay, base) {
   }
   return map;
 }
-VIEWS.calendario = function (main) {
+/* alternância Lista | Calendário (o calendário é uma visão do próprio Fluxo de caixa, não uma aba) */
+function fluxoVisToggle(cur) {
+  return `<div class="seg"><button class="${cur === 'lista' ? 'on' : ''}" onclick="S.ui.fluxoVis='lista';render()">Lista</button><button class="${cur === 'cal' ? 'on' : ''}" onclick="S.ui.fluxoVis='cal';render()">Calendário</button></div>`;
+}
+function calendarioView(main) {
   const pj = projFor(S.ui.cnpj);
   const ym = S.ui.calMonth || U.month(S.ui.base);
   const [y, m] = ym.split('-').map(Number);
@@ -2241,7 +2266,7 @@ VIEWS.calendario = function (main) {
   const items = R.filter(r => (r.k === 'receita' || r.k === 'despesa') && r.st !== 'cancelado').map(r => ({ r, d: r.open ? r.dueDate : r.effDate })).filter(x => x.d && x.d >= first && x.d <= last);
   const byD = U.groupBy(items, x => x.d);
   const prevM = U.month(U.addDays(first, -1)), nextM = U.month(U.addDays(last, 1));
-  let html = head('Calendário de vencimentos', scopeNote(), `<button class="btn" onclick="S.ui.calMonth='${prevM}';render()">‹</button> <b>${U.monthLabel(ym)}</b> <button class="btn" onclick="S.ui.calMonth='${nextM}';render()">›</button>`);
+  let html = head('Calendário de vencimentos', scopeNote(), fluxoVisToggle('cal') + ` <button class="btn" onclick="S.ui.calMonth='${prevM}';render()">‹</button> <b>${U.monthLabel(ym)}</b> <button class="btn" onclick="S.ui.calMonth='${nextM}';render()">›</button>`);
   const pad = (U.d(first).getDay() + 6) % 7;
   let cells = '';
   for (let i = 0; i < pad; i++) cells += '<div class="cd off"></div>';
@@ -2259,7 +2284,7 @@ VIEWS.calendario = function (main) {
   html += `<div class="card"><div class="cal">${['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom'].map(x => `<div class="cdh">${x}</div>`).join('')}${cells}</div>
   <p class="small">Realizados aparecem na data efetiva; em aberto (inclusive vencidos), na data prevista original. "Saldo" é o saldo projetado (dias futuros) ou o realizado (dias passados), ambos em caixa/banco disponível. Um vencido em aberto só entra no saldo a partir de hoje (data-base) — por isso o saldo pode mudar bastante no dia de hoje mesmo sem lançamento novo nele.</p></div>`;
   main.innerHTML = html;
-};
+}
 
 /* ---------- a receber / a pagar ---------- */
 function horizonFilter(list, h) {
@@ -2358,64 +2383,8 @@ function recurring(list) {
 }
 
 /* ==========================================================================
-   Telas: previsto x pago, despesas, folha, cenários, comparativo, alertas,
-   pendências, lançamentos
+   Telas: despesas, folha, pendências, lançamentos
    ========================================================================== */
-
-VIEWS.conciliacao = function (main) {
-  const R = recs();
-  const kindSel = S.ui.concKind || 'despesa';
-  const all = R.filter(r => r.k === kindSel).map(reconcile).filter(Boolean);
-  const open = R.filter(r => r.k === kindSel && r.open);
-  const filt = S.ui.concFilt || 'div';
-  const sets = {
-    div: ['Com diferença de valor', all.filter(o => o.var != null && Math.abs(o.var) >= 0.01)],
-    naojust: ['Diferenças não justificadas', all.filter(o => o.status === 'Diferença não justificada')],
-    menor: ['Pagos a menor', all.filter(o => o.flags.includes('a menor'))],
-    atraso: ['Em atraso sem diferença', all.filter(o => o.status === 'Pago em atraso sem diferença')],
-    antec: ['Antecipados', all.filter(o => o.flags.includes('antecipado'))],
-    parcial: ['Parciais', all.filter(o => o.status === 'Pagamento parcial')],
-    encargos: ['Com encargos registrados', all.filter(o => o.r.juros || o.r.multa || o.r.taxas || o.r.desconto)],
-    valid: ['Pendentes de validação', all.filter(o => o.status === 'Pendente de validação')],
-    todos: ['Todos os quitados', all],
-  };
-  const semPag = open.filter(r => r.overdue);
-  let html = head('Previsto x efetivamente pago', scopeNote() + ' · Variação = valor efetivamente pago − valor original previsto', `<div class="seg"><button class="${kindSel === 'despesa' ? 'on' : ''}" onclick="S.ui.concKind='despesa';render()">Pagamentos</button><button class="${kindSel === 'receita' ? 'on' : ''}" onclick="S.ui.concKind='receita';render()">Recebimentos</button></div>`);
-  html += `<div class="kpis">${Object.entries(sets).map(([k, [l, L]]) => `<div class="kpi click ${filt === k ? 'sel' : ''}" onclick="S.ui.concFilt='${k}';render()"><div class="kl">${l}</div><div class="kv">${L.length}</div><div class="kp">variação ${U.money(U.sum(L, o => o.var))}</div></div>`).join('')}
-    <div class="kpi click" data-drill="${drillId('Vencidos sem pagamento identificado', semPag, COLS.pagar())}"><div class="kl">Vencidos sem pagamento</div><div class="kv">${semPag.length}</div><div class="kp">${U.money(U.sum(semPag, r => r.openAmt))}</div></div></div>`;
-  html += `<div class="banner small">Uma diferença positiva não é tratada automaticamente como juros ou multa: só é "explicada pelos encargos" quando os campos Juros, Multa, Taxas e Desconto do relatório fecham exatamente a diferença. O relatório do Conta Azul traz o pagamento no próprio lançamento; um pagamento é ligado a uma obrigação apenas quando é o mesmo lançamento (não por semelhança).</div>`;
-  html += `<div class="card"><h3>${sets[filt][0]}</h3><div id="tbl"></div></div>`;
-  // resumos mensal e semanal
-  const sumBy = (fn) => [...U.groupBy(all.filter(o => o.r.effDate), o => fn(o.r.effDate)).entries()].sort((a, b) => a[0] < b[0] ? -1 : 1).map(([k, l]) => {
-    const dv = l.filter(o => o.var != null && Math.abs(o.var) >= 0.01);
-    return { k, n: l.length, ndiv: dv.length, vdiv: U.sum(dv, o => o.var), enc: U.sum(l.filter(o => o.status === 'Diferença explicada pelos encargos'), o => o.enc), pend: U.sum(l.filter(o => o.status === 'Diferença não justificada' || o.status === 'Pendente de validação'), o => o.var || 0), _drill: drillId('Quitados em ' + k, l.map(o => o.r), COLS.pagar()) };
-  });
-  const cols = (lab) => [{ l: lab, k: 'k' }, { l: 'Quitados', n: true, f: r => r.n }, { l: 'Divergentes', n: true, f: r => r.ndiv }, { l: 'Total das diferenças', n: true, f: r => U.money(r.vdiv) }, { l: 'Encargos confirmados', n: true, f: r => U.money(r.enc) }, { l: 'Pendente de análise', n: true, f: r => U.money(r.pend) }];
-  html += `<div class="grid2"><div class="card"><h3>Resumo mensal</h3>${stable(cols('Mês'), sumBy(d => U.month(d)).map(x => ({ ...x, k: U.monthLabel(x.k) })), { cls: 'click' })}</div>
-    <div class="card"><h3>Resumo semanal</h3>${stable(cols('Semana (seg)'), sumBy(d => U.weekStart(d)).slice(-13).map(x => ({ ...x, k: U.br(x.k) })), { cls: 'click' })}</div></div>`;
-  main.innerHTML = html;
-  mountTable($('#tbl'), {
-    id: 'conc' + filt + kindSel, name: 'previsto_x_pago', rows: sets[filt][1].map(o => Object.assign({}, o.r, { _o: o })), sort: 'var', dir: -1, cols: [
-      { k: 'pessoa', l: kindSel === 'despesa' ? 'Fornecedor' : 'Cliente', s: r => r.pessoa },
-      { k: 'descricao', l: 'Descrição', s: r => r.descricao, cls: 'wrap' },
-      { k: 'cnpj', l: 'CNPJ', f: r => cnpjTag(r.cnpj), s: r => r.cnpj },
-      { k: 'categoria', l: 'Categoria', s: r => r.categoria }, { k: 'centroCusto', l: 'Centro de custo', s: r => r.centroCusto },
-      { k: 'orig', l: 'Valor original', n: true, f: r => U.money(r._o.orig), s: r => r._o.orig, sum: r => r._o.orig },
-      { k: 'dtVenc', l: 'Vencimento', f: r => U.br(r.dtVenc), s: r => r.dtVenc || '' },
-      { k: 'effDate', l: 'Pago em', f: r => U.br(r.effDate), s: r => r.effDate || '' },
-      { k: 'pago', l: 'Valor pago', n: true, f: r => U.money(r._o.pago), s: r => r._o.pago, sum: r => r._o.pago },
-      { k: 'var', l: 'Variação R$', n: true, f: r => r._o.var == null ? '—' : `<span class="${r._o.var > 0 ? 'neg' : r._o.var < 0 ? 'pos' : ''}">${U.money(r._o.var, { sign: 1 })}</span>`, s: r => r._o.var, sum: r => r._o.var },
-      { k: 'varp', l: 'Var. %', n: true, f: r => U.pct(r._o.varPct), s: r => r._o.varPct },
-      { k: 'atraso', l: 'Dias atraso', n: true, f: r => r._o.atraso == null ? '—' : r._o.atraso, s: r => r._o.atraso },
-      { k: 'juros', l: 'Juros', n: true, f: r => r.juros ? U.money(r.juros) : '', s: r => r.juros, sum: r => r.juros },
-      { k: 'multa', l: 'Multa', n: true, f: r => r.multa ? U.money(r.multa) : '', s: r => r.multa, sum: r => r.multa },
-      { k: 'desconto', l: 'Desconto', n: true, f: r => r.desconto ? U.money(r.desconto) : '', s: r => r.desconto, sum: r => r.desconto },
-      { k: 'taxas', l: 'Taxas', n: true, f: r => r.taxas ? U.money(r.taxas) : '', s: r => r.taxas, sum: r => r.taxas },
-      { k: 'status', l: 'Status', f: r => `<span class="st ${/não just|Pendente/.test(r._o.status) ? 'bad' : /Conferido|explicada/.test(r._o.status) ? 'ok' : 'open'}">${r._o.status}</span>`, s: r => r._o.status },
-      { k: 'just', l: 'Justificativa / pendência', s: r => (S.settings.manual[r.key] || {}).nota || r._o.just, cls: 'wrap small' },
-    ]
-  });
-};
 
 /* ---------- despesas ---------- */
 VIEWS.despesas = function (main) {
@@ -2459,11 +2428,8 @@ VIEWS.despesas = function (main) {
     <p class="small">Mostra 3 meses antes e 3 meses depois do mês base (${U.monthLabel(curM)}, em andamento, fica de fora para não distorcer a comparação).${evoMais ? ` <button class="btn sm" id="evo-toggle">${evoExp ? 'Ver só em torno do mês base' : `Ver todos os ${evo.length} meses`}</button>` : ''}</p></div>`;
   html += `<div class="card"><h3>Categorias que mais pressionam o caixa (próximos 30 dias)</h3>${groupTable(next30, r => r.categoria, 'Categoria', r => r.openAmt, { cols, limit: 10 })}</div>`;
   html += `<div class="card"><h3>Aumentos relevantes no mês atual (${U.monthLabel(curM)}) frente à média realizada dos meses anteriores</h3>${incr.length ? stable([{ l: 'Categoria', k: 'k' }, { l: 'Mês atual', n: true, f: r => U.money(r.now) }, { l: 'Média histórica', n: true, f: r => U.money(r.avg) }, { l: 'Aumento', n: true, f: r => `<span class="neg">${U.money(r.d)} (${U.pct(r.p)})</span>` }], incr.map(x => ({ ...x, _drill: drillId(x.k, x.l, cols) })), { cls: 'click' }) : '<p class="small">Nenhum aumento acima de 25% ou sem histórico suficiente (o histórico do Conta Azul ainda é curto).</p>'}</div>`;
-  const tabs = [['categoria', 'Categoria', r => r.categoria], ['pessoa', 'Fornecedor', r => r.pessoa], ['centro', 'Obra / centro de custo', r => r.centroCusto], ['cnpj', 'CNPJ', r => r.cnpj ? 'CNPJ ' + r.cnpj : '']];
-  html += `<div class="grid2">${tabs.map(([k, l, fn]) => `<div class="card"><h3>Realizado por ${l.toLowerCase()}</h3>${groupTable(real, fn, l, val, { cols, limit: 15 })}</div>`).join('')}</div>`;
   html += `<div class="grid2"><div class="card"><h3>Despesas recorrentes (mesmo fornecedor e categoria em 3+ meses)</h3>${stable([{ l: 'Fornecedor', f: x => U.esc(x[0].pessoa) }, { l: 'Categoria', f: x => U.esc(x[0].categoria) }, { l: 'Meses', n: true, f: x => new Set(x.map(r => U.month(r.dueDate || r.effDate))).size }, { l: 'Valor médio', n: true, f: x => U.money(U.sum(x, r => r.orig) / x.length) }], rec.map(l => Object.assign(l, { _drill: drillId(l[0].pessoa + ' · ' + l[0].categoria, l, cols) })), { cls: 'click' })}</div>
     <div class="card"><h3>Despesas extraordinárias (possíveis)</h3><p class="small">Valor acima de 2x a mediana da categoria, ou lançamento único na categoria acima de R$ 2.000.</p><div id="tex"></div></div></div>`;
-  html += `<p class="small">Resultado por obra: esta tela mostra entradas e saídas de caixa por centro de custo. Não é lucro ou prejuízo da obra: faltam custos sem centro de custo, compromissos ainda não lançados e a competência.</p>`;
   main.innerHTML = html;
   mountTable($('#tex'), { id: 'extra', rows: extra, cols, pageSize: 20 });
   const evoToggle = $('#evo-toggle'); if (evoToggle) evoToggle.onclick = () => { S.ui.despesasEvoExpandido = !evoExp; render(); };
@@ -2681,7 +2647,6 @@ function alertList(al) {
   if (!al.length) return '<p class="ok-t">Nenhum alerta.</p>';
   return `<ul class="alerts">${al.map(a => `<li class="${a.sev}" ${a.list ? `data-drill="${drillId(a.title, a.list, a.cols)}"` : ''}><b>${U.esc(a.title)}</b><span>${U.esc(a.txt)}</span>${a.list ? `<em>${a.list.length} lanç. ›</em>` : ''}</li>`).join('')}</ul>`;
 }
-VIEWS.alertas = function (main) { main.innerHTML = head('Alertas', scopeNote()) + `<div class="card">${alertList(computeAlerts())}</div>`; };
 
 /* ---------- pendências ---------- */
 // Renderiza dentro da aba "Importação e pendências" (não é mais uma aba própria).
@@ -2950,7 +2915,7 @@ VIEWS.config = function (main) {
     st.payrollRules = $('#prules').value.split('\n').map(l => l.split('=')).filter(x => x.length >= 2 && x[0].trim()).map(([c, ...t]) => ({ cls: c.trim(), re: t.join('=').split('|').map(s => s.trim()).filter(Boolean).join('|') }));
     await upd(); toast('Parâmetros salvos');
   };
-  $('#reset-settings').onclick = async () => { if (!confirm('Restaurar as configurações padrão? Ajustes manuais, contas validadas, saldos do banco, cenários, rotinas, dados de obras e revisões serão apagados (as versões importadas e os fechamentos registrados ficam). Faça um backup antes.')) return; const keep = { fechamentos: S.settings.fechamentos, accountAlias: S.settings.accountAlias || {} }; S.settings = Object.assign(defaultSettings(), keep); for (const v of S.versions) for (const r of v.records) { const c = aliasOf(r.conta, S.settings); if (c && !S.settings.accounts[c]) S.settings.accounts[c] = { cnpj: guessCnpj(c), type: guessAcctType(c), validated: false }; } await upd(); };
+  $('#reset-settings').onclick = async () => { if (!confirm('Restaurar as configurações padrão? Ajustes manuais, contas validadas, saldos do banco, cenários, dados de obras e revisões serão apagados (as versões importadas e os fechamentos registrados ficam). Faça um backup antes.')) return; const keep = { fechamentos: S.settings.fechamentos, accountAlias: S.settings.accountAlias || {} }; S.settings = Object.assign(defaultSettings(), keep); for (const v of S.versions) for (const r of v.records) { const c = aliasOf(r.conta, S.settings); if (c && !S.settings.accounts[c]) S.settings.accounts[c] = { cnpj: guessCnpj(c), type: guessAcctType(c), validated: false }; } await upd(); };
 };
 
 /* ---------- relatório executivo ---------- */
@@ -2971,7 +2936,6 @@ function reportData() {
   const obras = obraStats(R, S.settings);
   const imp = cnpjImpact(R);
   const bals = D.balances.filter(b => c === 'C' || b.cnpj === c);
-  const wk = S.settings.rotina[U.weekStart(base)];
   const rec = [];
   if (pj.firstNeg) rec.push(`Cobrir a falta de ${U.money(pj.firstNeg.gap)} prevista para ${U.br(pj.firstNeg.d)}: cobrar ou antecipar os recebíveis com vencimento próximo e renegociar pagamentos que não são folha nem tributo.`);
   if (apV.length) rec.push(`Regularizar ${apV.length} obrigação(ões) vencida(s) (${U.money(U.sum(apV, r => r.openAmt))}) ou corrigir no Conta Azul as que já foram pagas.`);
@@ -2984,10 +2948,10 @@ function reportData() {
   if (bals.some(b => b.cash && !b.opening)) rec.push('Conferir os saldos calculados com os extratos bancários e registrá-los em Configurações.');
   if (bals.some(b => b.cash && b.diffOpening)) rec.push('Explicar as diferenças entre saldo do banco e saldo calculado (movimento não lançado ou em outra conta).');
   if (obras.naoAlocDesp > 0) rec.push(`Indicar a obra das despesas sem obra (${U.money(obras.naoAlocDesp)}) para a rentabilidade por obra deixar de ser provisória.`);
-  return { v, D, base, c, pv, cnpjs, P, pj, R, eom, arOpen, apOpen, apV, arV, conc, pend, issues, C, W, crit, obras, imp, bals, wk, rec };
+  return { v, D, base, c, pv, cnpjs, P, pj, R, eom, arOpen, apOpen, apV, arV, conc, pend, issues, C, W, crit, obras, imp, bals, rec };
 }
 VIEWS.relatorio = function (main) {
-  const X = reportData(); const { v, D, base, c, cnpjs, P, pj, eom, arOpen, apOpen, apV, arV, conc, pend, issues, C, W, crit, obras, imp, bals, wk, rec } = X;
+  const X = reportData(); const { v, D, base, c, cnpjs, P, pj, eom, arOpen, apOpen, apV, arV, conc, pend, issues, C, W, crit, obras, imp, bals, rec } = X;
   const hide = S.ui.hideNames !== false;
   const nome = r => hide && r.folha && r.folha !== 'Não é folha' ? 'Colaborador (' + r.folha + ')' : r.pessoa;
   const at = (p, d) => (p.days.find(x => x.d === d) || {}).fim;
@@ -3000,7 +2964,6 @@ VIEWS.relatorio = function (main) {
   if (pj.start.status !== 'confirmado') lim.push(pj.start.nBank ? `saldo do extrato informado em ${pj.start.nBank} de ${pj.start.nAcc} conta(s); as demais usam o saldo calculado pelo relatório` : 'saldos calculados pelo relatório, sem conferência com o extrato bancário');
   if (imp.n) lim.push(imp.n + ' lançamento(s) com CNPJ ainda não validado');
   if (pend.length) lim.push(pend.length + ' lançamento(s) com pendência de validação');
-  if (!wk || !wk.concluida) lim.push('revisão semanal não concluída'); else if (wk.concluida.pend.length) lim.push('revisão semanal concluída com ' + wk.concluida.pend.length + ' pendência(s)');
   if (lim.length) html += `<div class="banner warn small"><b>Limitações deste relatório:</b> ${lim.map(U.esc).join('; ')}.</div>`;
   html += cardT('1. Resumo e posição por CNPJ', stable([{ l: '', f: k => cnpjName(k) }, { l: 'Banco conferido', n: true, f: k => P[k].start.bankTotal == null ? '<span class="muted-t">não informado</span>' : U.money(P[k].start.bankTotal) }, { l: 'Calculado', n: true, f: k => U.money(P[k].start.calcTotal) }, { l: 'Base', f: k => confTag(P[k].start.status) }, { l: 'A receber', n: true, f: k => U.money(U.sum(byCnpj(D.all, k).filter(r => r.open && r.k === 'receita'), r => r.openAmt)) }, { l: 'A pagar', n: true, f: k => U.money(U.sum(byCnpj(D.all, k).filter(r => r.open && r.k === 'despesa'), r => r.openAmt)) }, { l: 'Proj. ' + U.brShort(eom), n: true, f: k => U.money(at(P[k], eom)) }, { l: 'Menor saldo', n: true, f: k => U.money(P[k].minBal.v) }, { l: 'Risco', f: k => P[k].firstNeg ? `<span class="neg">${U.br(P[k].firstNeg.d)}</span>` : 'nenhum' }], cnpjs)
     + `<p class="small">Aplicações e conta capital, fora do disponível: ${U.money(P[c].start.aplic)}. ${c === 'C' ? 'No consolidado, transferências entre contas próprias e entre os dois CNPJs se anulam.' : ''}</p>`);
@@ -3017,7 +2980,7 @@ VIEWS.relatorio = function (main) {
   html += cardT('9. Pagamentos com diferença de valor', conc.length ? stable([{ l: 'Fornecedor / cliente', f: o => U.esc(nome(o.r)) }, { l: 'Original', n: true, f: o => U.money(o.orig) }, { l: 'Pago', n: true, f: o => U.money(o.pago) }, { l: 'Diferença', n: true, f: o => U.money(o.var, { sign: 1 }) }, { l: 'Status', f: o => o.status }, { l: 'Explicação', f: o => `<span class="small">${U.esc(o.just)}</span>` }], conc.slice(0, 15)) : '<p>Nenhuma diferença entre valor original e valor pago.</p>');
   html += cardT('10. Obrigações vencidas', apV.length ? stable(mcols, apV) : '<p>Nenhuma.</p>');
   html += cardT('11. Riscos de caixa', cnpjs.map(k => `<p>${cnpjName(k)}: ${P[k].firstNeg ? `<b class="neg">${U.br(P[k].firstNeg.d)}</b>, saldo projetado ${U.money(P[k].firstNeg.fim)}` : 'sem saldo abaixo do mínimo no horizonte com dados'}; menor saldo ${U.money(P[k].minBal.v)} em ${U.br(P[k].minBal.d)}.</p>`).join(''));
-  html += cardT('12. Pendências de validação', `<p>${pend.length} lançamento(s) com pendência${src('Pendências', pend)}. Principais:</p><ul>${[...U.groupBy(pend.flatMap(r => r.pend.filter(p => !/Sem centro de custo/.test(p)).map(p => ({ p, r }))), x => x.p).entries()].map(([k, l]) => `<li>${U.esc(k)}: ${l.length} (${U.money(U.sum(l, x => x.r.open ? x.r.openAmt : x.r.valor))})</li>`).join('')}${[...U.groupBy(issues, i => i.tipo).entries()].map(([k, l]) => `<li>${U.esc(k)}: ${l.length}</li>`).join('')}</ul>${wk && wk.concluida && wk.concluida.pend.length ? `<p class="small">Pendências registradas na revisão da semana: ${wk.concluida.pend.map(U.esc).join('; ')}.</p>` : ''}`);
+  html += cardT('12. Pendências de validação', `<p>${pend.length} lançamento(s) com pendência${src('Pendências', pend)}. Principais:</p><ul>${[...U.groupBy(pend.flatMap(r => r.pend.filter(p => !/Sem centro de custo/.test(p)).map(p => ({ p, r }))), x => x.p).entries()].map(([k, l]) => `<li>${U.esc(k)}: ${l.length} (${U.money(U.sum(l, x => x.r.open ? x.r.openAmt : x.r.valor))})</li>`).join('')}${[...U.groupBy(issues, i => i.tipo).entries()].map(([k, l]) => `<li>${U.esc(k)}: ${l.length}</li>`).join('')}</ul>`);
   const ob = obras.obras.filter(o => o.lancado || o.custo).slice(0, 10);
   html += cardT('13. Obras e contratos', ob.length ? stable([{ l: 'Obra', f: o => U.esc(o.centro) + ' ' + o.cnpjs.map(cnpjTag).join('') }, { l: 'Lançado', n: true, f: o => U.money(o.lancado) }, { l: 'Recebido', n: true, f: o => U.money(o.recebido) }, { l: 'A receber', n: true, f: o => U.money(o.aReceber) }, { l: 'Custo identificado', n: true, f: o => U.money(o.custo) }, { l: 'Resultado', n: true, f: o => U.money(o.resultado) }, { l: 'Margem', n: true, f: o => o.margem == null ? '—' : U.pct(o.margem) + (o.provisorio.length ? ' <span class="conf estimado">provisória</span>' : '') }], ob) + `<p class="small">Despesas sem obra identificada: ${U.money(obras.naoAlocDesp)}. Margem provisória enquanto houver custo não alocado, contrato não informado ou mão de obra sem obra.</p>` : '<p>Sem dados suficientes por obra.</p>');
   html += cardT('14. Recomendações para o próximo período', `<ol>${rec.map(x => `<li>${U.esc(x)}</li>`).join('') || '<li>Sem prioridades críticas identificadas pelos dados.</li>'}</ol><p class="small"><b>Sugestões automáticas</b> geradas a partir dos números; revisar antes de enviar à cliente.</p>`);
@@ -3048,8 +3011,8 @@ function reportXlsx(X) {
 /* ---------- backup ---------- */
 VIEWS.backup = async function (main) {
   let html = head('Backup e restauração', 'Os dados ficam salvos na base da CM; o backup aqui é uma cópia de segurança extra.');
-  html += `<div class="banner ${S.settings.lastBackupAt ? '' : 'warn'}">${S.settings.lastBackupAt ? 'Último backup feito: <b>' + U.dt(S.settings.lastBackupAt) + '</b>.' : '<b>Nenhum backup feito ainda.</b>'} O backup é a etapa 12 da rotina semanal.</div>`;
-  html += `<div class="grid2"><div class="card"><h3>Fazer backup</h3><p>Gera um arquivo .json com todas as versões importadas, configurações, saldos validados, ajustes manuais, cenários, rotinas, revisões e fechamentos.</p><button class="btn primary" id="bk-out">Baixar backup completo</button>
+  html += `<div class="banner ${S.settings.lastBackupAt ? '' : 'warn'}">${S.settings.lastBackupAt ? 'Último backup feito: <b>' + U.dt(S.settings.lastBackupAt) + '</b>.' : '<b>Nenhum backup feito ainda.</b>'}</div>`;
+  html += `<div class="grid2"><div class="card"><h3>Fazer backup</h3><p>Gera um arquivo .json com todas as versões importadas, configurações, saldos validados, ajustes manuais, cenários, revisões e fechamentos.</p><button class="btn primary" id="bk-out">Baixar backup completo</button>
     <p class="small">Recomendação: baixar o backup depois de cada importação semanal e guardar na pasta do cliente no Drive. Esse arquivo tem dados financeiros: trate como confidencial.</p></div>
     <div class="card"><h3>Restaurar backup</h3><p>Substitui os dados atuais (salvos na base da CM) pelo conteúdo do arquivo. O arquivo é conferido antes; nada muda até você confirmar.</p><label class="drop sm"><input type="file" id="bk-in" accept=".json"><span>Escolher arquivo de backup (.json)</span></label><div id="bk-msg"></div></div></div>
     <div class="card"><h3>Armazenamento</h3><div id="bk-info"><p class="small">Verificando…</p></div>
@@ -3124,13 +3087,13 @@ async function init() {
   $('#navtoggle').onclick = () => { const v = !document.body.classList.contains('navcollapsed'); localStorage.setItem('cm_nav_collapsed', v ? '1' : '0'); applyNavCollapsed(v); };
   bindChartTips();
   bindChartFit();
-  const h = location.hash.slice(1); if (NAV.some(n => n[0] === h)) S.ui.view = h; else if (!S.versions.length) S.ui.view = 'importacao';
+  const h = navTarget(location.hash.slice(1)); if (podeVer(h)) S.ui.view = h; else if (!S.versions.length && podeVer('importacao')) S.ui.view = 'importacao';
   render();
 }
 document.addEventListener('DOMContentLoaded', init);
 
 /* ==========================================================================
-   Telas: obras e contratos, rotina semanal, fechamento mensal
+   Telas: obras e contratos, fechamento mensal
    ========================================================================== */
 
 /* ---------- obras e contratos ---------- */
@@ -3191,60 +3154,6 @@ VIEWS.obras = function (main) {
       <p class="small">Natureza de cada centro de custo (obra, administrativo, a identificar) pode ser corrigida em <a href="#config">Configurações</a>.</p></div></div>`;
   main.innerHTML = html;
   $$('[data-obradet]').forEach(b => b.onclick = () => openObraDetalhes(L.find(o => o.centro === b.dataset.obradet), grp));
-};
-
-/* ---------- rotina semanal ---------- */
-const ST_OPTS = [['', 'Pendente'], ['feito', 'Feito'], ['ressalva', 'Feito com ressalva'], ['na', 'Não se aplica']];
-function rotinaHints() {
-  const D = data(); const v = activeVersion(); const pv = prevVersion(v); const base = S.ui.base;
-  const iss = findIssues(D.all); const cnt = re => iss.filter(i => re.test(i.tipo)).length;
-  const sb = projFor('C').start; const al = computeAlerts(); const C = cmpCached();
-  const RV = pv ? (S.settings.reviews[v.id + '|' + pv.id] || {}) : {};
-  const nRv = Object.keys(RV).filter(k => !k.startsWith('_')).length;
-  const accs = Object.keys(S.settings.accounts); const inFile = new Set(D.all.map(r => r.conta).filter(Boolean));
-  const dts = D.all.map(r => r.effDate || r.dueDate).filter(Boolean).sort();
-  return {
-    importar: `Versão ativa: ${U.esc(v.label)}, importada em ${U.dt(v.at)}.`,
-    integridade: `${v.records.length} lançamentos, ${v.ignored || 0} linha(s) ignorada(s); coluna Saldo conta ${D.saldoCheck ? (D.saldoCheck.bad.length ? D.saldoCheck.bad.length + ' divergência(s)' : 'confere') : 'ausente'}; duplicidades ${cnt(/duplicidade/)}; datas inválidas ${cnt(/Data inválida/)}; situações desconhecidas ${cnt(/Situação/)}.`,
-    cobertura: `Período ${dts.length ? U.br(dts[0]) + ' a ' + U.br(dts[dts.length - 1]) : '—'}; ${inFile.size} conta(s) no arquivo${accs.filter(a => !inFile.has(a)).length ? '; <span class="warn-t">sem lançamentos de: ' + accs.filter(a => !inFile.has(a)).map(U.esc).join(', ') + '</span>' : ''}.`,
-    comparar: pv ? `Comparado com ${U.esc(pv.label)}: ${C.res.novos.length} novos, ${C.res.quitados.length} quitados, ${C.res.sumiram.length} sumiram.` : 'Primeira versão: nada a comparar.',
-    revisar: pv ? `${nRv} alteração(ões) marcada(s) como revisada(s)${RV._concluida ? '; revisão concluída em ' + U.dt(RV._concluida.at) : ''}.` : '—',
-    saldos: `${sb.nBank} de ${sb.nAcc} conta(s) com saldo do extrato; ${Object.values(S.settings.accounts).filter(a => a.validated).length} de ${accs.length} vínculo(s) conta→CNPJ validado(s). <a href="#config">Configurações</a>`,
-    realizados: C ? `${C.res.recebidos.length} recebimento(s) e ${C.res.pagos.length} pagamento(s) quitados desde a versão anterior; ${D.all.filter(r => r.futReal).length} quitado(s) com data futura.` : `${D.all.filter(r => r.st === 'realizado').length} realizados.`,
-    projecao: `Data-base ${U.br(base)}. Cenário base: ${scenarioText(S.settings.scenarios.base)}.`,
-    alertas: `${al.filter(a => a.sev === 'bad').length} crítico(s), ${al.filter(a => a.sev === 'warn').length} de atenção. Risco: ${projFor('C').firstNeg ? U.br(projFor('C').firstNeg.d) : 'nenhum'}. <a href="#alertas">abrir</a>`,
-    pendencias: `${D.all.filter(r => r.pend.some(p => !/Sem centro de custo/.test(p))).length} lançamento(s) com pendência. <a href="#importacao">abrir</a>`,
-    relatorio: S.settings.lastReportAt ? 'Último relatório gerado em ' + U.dt(S.settings.lastReportAt) + '. <a href="#relatorio">abrir</a>' : 'Nenhum relatório gerado ainda. <a href="#relatorio">abrir</a>',
-    backup: S.settings.lastBackupAt ? 'Último backup em ' + U.dt(S.settings.lastBackupAt) + (S.settings.lastBackupAt < v.at ? ' <span class="warn-t">(antes da última importação)</span>' : '') + '. <a href="#backup">abrir</a>' : '<span class="warn-t">Nenhum backup feito.</span> <a href="#backup">abrir</a>',
-  };
-}
-function checklistHtml(steps, state, hints, prefix) {
-  return `<ul class="chk">${steps.map(([id, l], i) => { const s = state[id] || {}; return `<li class="${s.st === 'feito' || s.st === 'na' ? 'feito' : s.st === 'ressalva' ? 'pend' : ''}"><span class="n">${s.st === 'feito' || s.st === 'na' ? '✓' : i + 1}</span>
-    <div><b>${l}</b>${hints && hints[id] ? `<div class="hint">${hints[id]}</div>` : ''}</div>
-    <select data-${prefix}="${id}" data-f="st">${ST_OPTS.map(([v, t]) => `<option value="${v}" ${(s.st || '') === v ? 'selected' : ''}>${t}</option>`).join('')}</select>
-    <input data-${prefix}="${id}" data-f="resp" placeholder="Responsável" value="${U.esc(s.resp || '')}">
-    <input data-${prefix}="${id}" data-f="nota" placeholder="Nota / pendência" value="${U.esc(s.nota || '')}">
-    <span class="small muted-t">${s.at ? U.dt(s.at) : ''}</span></li>`; }).join('')}</ul>`;
-}
-VIEWS.rotina = function (main) {
-  const wk = S.ui.rotWeek || U.weekStart(S.ui.base);
-  const R = S.settings.rotina[wk] = S.settings.rotina[wk] || { steps: {}, historico: [] };
-  const hints = rotinaHints();
-  const done = ROTINA_STEPS.filter(([id]) => ['feito', 'na', 'ressalva'].includes((R.steps[id] || {}).st)).length;
-  const weeks = Object.keys(S.settings.rotina).sort().reverse();
-  let html = head('Rotina semanal de acompanhamento', 'Semana de ' + U.br(wk) + ' a ' + U.br(U.addDays(wk, 6)), `<button class="btn" onclick="S.ui.rotWeek='${U.addDays(wk, -7)}';render()">‹</button><button class="btn" onclick="S.ui.rotWeek='${U.addDays(wk, 7)}';render()">›</button>`);
-  html += `<div class="banner ${R.concluida ? (R.concluida.pend.length ? 'warn' : 'ok') : ''}">${R.concluida ? `Revisão concluída em <b>${U.dt(R.concluida.at)}</b>${R.concluida.pend.length ? ' com ' + R.concluida.pend.length + ' pendência(s) registrada(s): ' + R.concluida.pend.map(U.esc).join('; ') : ' sem pendências'}. <button class="btn sm" id="rot-reopen">Reabrir</button>` : `<b>${done} de ${ROTINA_STEPS.length}</b> etapas concluídas. A revisão pode ser concluída com pendências: elas ficam registradas e aparecem no relatório. <button class="btn sm primary" id="rot-close">Concluir revisão da semana</button>`}</div>`;
-  html += `<div class="card">${checklistHtml(ROTINA_STEPS, R.steps, hints, 'rot')}<p class="small">Cada mudança de etapa grava a data e a hora. As dicas abaixo de cada etapa vêm dos dados da versão ativa (${U.esc(activeVersion().label)}).</p></div>`;
-  html += `<div class="card"><h3>Histórico das semanas</h3>${stable([{ l: 'Semana', f: w => U.br(w) }, { l: 'Etapas', n: true, f: w => ROTINA_STEPS.filter(([id]) => ((S.settings.rotina[w].steps || {})[id] || {}).st).length + '/' + ROTINA_STEPS.length }, { l: 'Concluída', f: w => { const c = S.settings.rotina[w].concluida; return c ? U.dt(c.at) + (c.pend.length ? ' · ' + c.pend.length + ' pendência(s)' : '') : '<span class="muted-t">não</span>'; } }, { l: 'Conclusões anteriores', f: w => (S.settings.rotina[w].historico || []).map(h => U.dt(h.at)).join(', ') }, { l: '', f: w => `<button class="btn sm" onclick="S.ui.rotWeek='${w}';render()">abrir</button>` }], weeks)}</div>`;
-  main.innerHTML = html;
-  $$('[data-rot]').forEach(el => el.onchange = async () => { const s = R.steps[el.dataset.rot] = R.steps[el.dataset.rot] || {}; s[el.dataset.f] = el.value; s.at = Date.now(); await saveSettings(); if (el.dataset.f === 'st') render(); });
-  const cl = $('#rot-close'); if (cl) cl.onclick = async () => {
-    const pend = ROTINA_STEPS.filter(([id]) => !['feito', 'na'].includes((R.steps[id] || {}).st)).map(([id, l]) => l + ((R.steps[id] || {}).nota ? ' (' + R.steps[id].nota + ')' : '') + ((R.steps[id] || {}).resp ? ' · ' + R.steps[id].resp : ''));
-    if (pend.length && !confirm('Concluir com ' + pend.length + ' etapa(s) não concluída(s)? Elas ficam registradas como pendências da semana.')) return;
-    R.concluida = { at: Date.now(), pend, versao: activeVersion().label, base: S.ui.base, risco: projFor('C').firstNeg ? projFor('C').firstNeg.d : null };
-    await saveSettings(); render(); toast('Revisão da semana concluída');
-  };
-  const ro = $('#rot-reopen'); if (ro) ro.onclick = async () => { (R.historico = R.historico || []).push(R.concluida); delete R.concluida; await saveSettings(); render(); };
 };
 
 /* ---------- fechamento mensal ---------- */

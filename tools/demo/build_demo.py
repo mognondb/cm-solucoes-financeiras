@@ -125,7 +125,6 @@ rep_re(r"<b>Regra de pagamento a validar com os sócios:</b> o Notion.*?O sistem
        "<b>Regra de pagamento combinada com os sócios:</b> adiantamento no dia 20 e saldo no 5º dia útil. O sistema não altera datas: usa as do Conta Azul.", 1, flags=re.S)
 rep("data em que o Tiago conciliou a conta no Conta Azul", "data em que a CM conciliou a conta no Conta Azul")
 rep("guardar na pasta da Premium no Drive. Esse arquivo tem dados financeiros da cliente: trate como confidencial.", "guardar na pasta do cliente no Drive. Esse arquivo tem dados financeiros: trate como confidencial.")
-rep("['backup', 'Fazer o backup e guardar na pasta da Premium'],", "['backup', 'Fazer o backup e guardar na pasta do cliente'],")
 rep("se a Premium tiver, para comparar", "se o cliente tiver, para comparar")
 rep("adaptada ao modelo da Premium (múltiplos CNPJs", "adaptada ao modelo de empreiteira (múltiplos CNPJs")
 rep("premium_caixa_", "demo_caixa_", None)
@@ -194,7 +193,12 @@ function demoSeed() {
 }
 const Store = {
   ok: true, remoteErr: null, cache: null, cacheAt: null, onRemoteChange: null,
-  async open() { this.cache = demoSeed(); this.cacheAt = new Date().toISOString(); },
+  async open() {
+    // quem entra como "cliente" vê só as abas de análise (como no relatório real); sem API, mostra tudo
+    await detectarPapel();
+    if (PAPEL === null) { PAPEL = 'admin'; document.body.classList.remove('nao-admin'); }
+    this.cache = demoSeed(); this.cacheAt = new Date().toISOString();
+  },
   async get(k) { return this.cache ? this.cache[k] : undefined; },
   async set(k, v) { if (!this.cache) this.cache = {}; this.cache[k] = v; },
   async checkRemote() {},

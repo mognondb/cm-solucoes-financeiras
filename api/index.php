@@ -475,6 +475,8 @@ if (in_array($path, $rotasProtegidas, true)) {
     if (!$relatorio) jsonResponse(['message' => 'Relatório não encontrado'], 404);
     if ($sessao['papel'] === 'dashboard' && $id !== $sessao['relatorioId']) jsonResponse(['message' => 'Acesso negado'], 403);
     if ($sessao['papel'] === 'cliente' && ($relatorio['cliente_id'] !== $sessao['clienteId'] || !$relatorio['ativo'])) jsonResponse(['message' => 'Acesso negado'], 403);
+    // Importar, restaurar backup e ajustar configurações é trabalho da CM: cliente e "dashboard" só leem.
+    if ($method === 'PUT' && $sessao['papel'] !== 'admin') jsonResponse(['message' => 'Somente a CM pode gravar os dados do relatório'], 403);
 
     if ($method === 'GET') {
       $stmt = $db->prepare('SELECT dados_json, atualizado_em FROM relatorio_dados WHERE relatorio_id = ?');
