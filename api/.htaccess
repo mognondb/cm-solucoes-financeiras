@@ -19,3 +19,8 @@ RewriteRule ^(.*)$ index.php [QSA,L]
 <FilesMatch "^blog_(lib|routes)\.php$">
   Require all denied
 </FilesMatch>
+
+# Ajustes de PHP da pasta (limites de upload): não precisam ser lidos pela web.
+<Files ".user.ini">
+  Require all denied
+</Files>
