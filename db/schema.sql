@@ -64,7 +64,11 @@ CREATE TABLE IF NOT EXISTS diagnosticos (
   urgencia VARCHAR(60) NULL,
   mensagem TEXT NULL,
   lido TINYINT(1) NOT NULL DEFAULT 0,
-  criado_em VARCHAR(32) NOT NULL
+  criado_em VARCHAR(32) NOT NULL,
+  segmento VARCHAR(40) NULL,
+  versao TINYINT NULL,
+  respostas_json MEDIUMTEXT NULL,
+  resultado_json MEDIUMTEXT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS infoprodutos (

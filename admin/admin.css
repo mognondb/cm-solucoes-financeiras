@@ -228,6 +228,10 @@
   box-shadow: 0 20px 60px rgba(46,46,46,.18);
 }
 .admin-modal-box-wide { max-width: 720px; }
+.admin-modal-box-xl { max-width: 1000px; }
+.dg-admin { margin-top: 18px; }
+.dg-admin .dg-rel-topo h2 { font-size: 1.6rem; }
+.dg-admin .dg-tres { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
 .admin-modal-box .subtitulo-sm {
   margin-top: 26px;
   padding-top: 14px;

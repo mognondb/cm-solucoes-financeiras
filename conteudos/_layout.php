@@ -33,7 +33,8 @@ function cmJson($dados): string {
 
 /**
  * Abre a página. Opções: titulo, descricao, caminho (ex.: '/conteudos/'), imagem, og ('website'|'article'|'product'),
- * jsonld (lista de objetos), noindex, painel (carrega o painel interativo), ativo ('conteudos'|'infoprodutos'), corpo (classe extra).
+ * jsonld (lista de objetos), noindex, painel (carrega o painel interativo), ativo ('conteudos'|'infoprodutos'), corpo (classe extra),
+ * css (lista de folhas de estilo extras, no <head>). cmFechar aceita js (lista de scripts extras, no fim da página).
  */
 function cmAbrir(array $o): void {
   $titulo = (string)($o['titulo'] ?? BLOG_NOME_PUBLICO);
@@ -81,6 +82,8 @@ function cmAbrir(array $o): void {
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/style.css?v=7">
 <link rel="stylesheet" href="/assets/css/conteudos.css?v=<?= CM_V_CSS ?>">
+<?php foreach ((array)($o['css'] ?? []) as $href): ?><link rel="stylesheet" href="<?= blogEsc($href) ?>">
+<?php endforeach; ?>
 <?php if (!empty($o['painel'])): ?><link rel="stylesheet" href="/assets/css/dashboard.css?v=5">
 <?php endif; ?>
 <?php foreach ((array)($o['jsonld'] ?? []) as $j): ?><script type="application/ld+json"><?= cmJson($j) ?></script>
@@ -162,6 +165,8 @@ function cmFechar(array $o = []): void {
 <script src="/assets/js/conteudos.js?v=<?= CM_V_JS ?>"></script>
 <?php if (!empty($o['painel'])): ?><script src="/assets/js/dashboard.js?v=4"></script>
 <?php endif; ?>
+<?php foreach ((array)($o['js'] ?? []) as $src): ?><script src="<?= blogEsc($src) ?>"></script>
+<?php endforeach; ?>
 </body>
 </html>
 <?php

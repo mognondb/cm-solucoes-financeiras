@@ -14,6 +14,7 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc><?= blogEsc($o) ?>/</loc></url>
   <url><loc><?= blogEsc($o) ?>/conteudos/</loc></url>
+  <url><loc><?= blogEsc($o) ?>/diagnostico/</loc></url>
 <?php foreach ($stmt->fetchAll() as $r): ?>
   <url><loc><?= blogEsc($o . blogUrlDoPost($r)) ?></loc><lastmod><?= blogEsc(substr((string)($r['atualizado_em'] ?: $r['publicado_em']), 0, 10)) ?></lastmod></url>
 <?php endforeach; ?>

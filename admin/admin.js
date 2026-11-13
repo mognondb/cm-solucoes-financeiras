@@ -943,6 +943,31 @@
     }
   }
 
+  // Diagnósticos novos (CM Diagnóstico): segmento e nível de cada análise; antigos (formulário curto): ramo e dificuldade.
+  function descricaoDiagnostico(d) {
+    const D = window.CMDiag;
+    if (d.versao >= 2 && d.resultado && D) {
+      const seg = (D.SEGMENTOS.find((s) => s.id === d.segmento) || {}).rotulo || d.segmento || '—';
+      const r = D.resumo(d.resultado);
+      return `${escapeHtml(seg)} · Saúde: ${escapeHtml(r.saude)} · Gestão: ${escapeHtml(r.maturidade)} · Eficiência: ${escapeHtml(r.eficiencia)}`;
+    }
+    return `${escapeHtml(d.ramo || '—')} · ${escapeHtml(d.dificuldade || '—')}`;
+  }
+
+  // Detalhe de um diagnóstico novo: contato, relatório completo (o mesmo que a pessoa viu) e as respostas pergunta a pergunta.
+  function detalheDiagnosticoNovo(d) {
+    const D = window.CMDiag;
+    const contato = [['Nome', d.nome], ['Empresa', d.empresa], ['E-mail', d.email], ['WhatsApp', d.telefone]]
+      .filter(([, v]) => v).map(([k, v]) => `<li><strong>${escapeHtml(k)}:</strong> ${escapeHtml(v)}</li>`).join('');
+    const r = d.respostas || {};
+    const linhas = D.sequencia(r).filter((q) => D.respondida(q, r) && r[q.id] !== undefined)
+      .map((q) => `<tr><th scope="row">${escapeHtml(D.tituloDe(q, r))}</th><td>${escapeHtml(D.rotuloResposta(q, r))}</td></tr>`).join('');
+    return `<ul class="admin-preview-lista">${contato}</ul>
+      <div class="dg-root dg-admin">${D.relatorioHtml(d.resultado, {})}</div>
+      <h3 class="subtitulo-sm">Respostas, pergunta a pergunta</h3>
+      <table class="dg-tab"><tbody>${linhas}</tbody></table>`;
+  }
+
   function renderListaDiagnosticos() {
     const lista = document.getElementById('listaDiagnosticos');
     if (diagnosticosState.itens.length === 0) {
@@ -953,7 +978,7 @@
       <div class="admin-item ${d.lido ? '' : 'novo'}" data-id="${escapeHtml(d.id)}">
         <div class="admin-item-info">
           <h4>${escapeHtml(d.nome)}${d.empresa ? ` <small>— ${escapeHtml(d.empresa)}</small>` : ''}</h4>
-          <p>${escapeHtml(d.ramo || '—')} · ${escapeHtml(d.dificuldade || '—')}</p>
+          <p>${descricaoDiagnostico(d)}</p>
           <span class="admin-item-meta">${d.criadoEm ? new Date(d.criadoEm).toLocaleString('pt-BR') : ''}${!d.lido ? ' · Novo' : ''}</span>
         </div>
         <div class="admin-item-actions">
@@ -975,7 +1000,9 @@
     const d = diagnosticosState.itens.find((i) => i.id === id);
     if (!d) return;
     document.getElementById('ddNome').textContent = d.nome;
-    document.getElementById('ddConteudo').innerHTML = `<ul class="admin-preview-lista">${
+    const novo = d.versao >= 2 && d.resultado && window.CMDiag;
+    document.querySelector('#modalDiagnosticoDetalhe .admin-modal-box').classList.toggle('admin-modal-box-xl', !!novo);
+    document.getElementById('ddConteudo').innerHTML = novo ? detalheDiagnosticoNovo(d) : `<ul class="admin-preview-lista">${
       CAMPOS_DIAGNOSTICO.filter(([campo]) => d[campo])
         .map(([campo, label]) => `<li><strong>${escapeHtml(label)}:</strong> ${escapeHtml(d[campo])}</li>`)
         .join('')

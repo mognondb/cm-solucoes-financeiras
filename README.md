@@ -29,7 +29,7 @@ legacy-jekyll-boilerplate/  Arquivos antigos do scaffold padrão do GitHub Pages
 1. **Hero** — apresentação rápida da CM.
 2. **Sobre** — quem é a CM e como ela trabalha.
 3. **Serviços** — BPO Financeiro (a partir de R$ 797/mês, com o que está incluso) e Emissão de notas fiscais
-   (valor por faixa de notas/mês), mais o Diagnóstico Financeiro gratuito (abre um formulário em modal — veja mais abaixo).
+   (valor por faixa de notas/mês), mais o CM Diagnóstico gratuito (página própria em `/diagnostico/` — veja mais abaixo).
 4. **Conteúdos** — o conteúdo mais recente (some enquanto nada foi publicado); a lista completa fica em `/conteudos/`.
 5. **Infoprodutos** — planilhas gratuitas e produtos pagos (Hotmart), carregados do
    servidor do painel (ou de `assets/data/infoprodutos.json` como fallback), mais as páginas de venda
@@ -163,30 +163,48 @@ Essas senhas ficam guardadas no Cloudflare KV com hash (PBKDF2), nunca em texto 
 diferente do login mestre, que continua sendo um secret do Worker. Criar, editar e
 excluir usuários exige estar logado como administrador.
 
-### Diagnóstico Financeiro (captação de leads qualificados)
+### CM Diagnóstico (plataforma de análise e captação de leads qualificados)
 
-O botão "Solicitar diagnóstico grátis" (seção Serviços) abre um formulário em modal —
-diferente do formulário de contato geral, ele pergunta sobre o negócio do visitante
-(ramo, porte, como o financeiro é controlado hoje, maior dificuldade, o que busca
-alcançar, urgência) sem pedir nenhum dado sensível. Isso dá à CM um contato bem mais
-concreto pra estudar antes da conversa.
+Os botões "Fazer o diagnóstico grátis" da home levam a `/diagnostico/` (`diagnostico/index.php`).
+Não é um questionário genérico: o percurso se adapta ao perfil de quem responde, uma pergunta por tela.
 
-- Cada envio é salvo no Cloudflare KV e aparece na aba **"Diagnósticos"** do painel
-  (`admin/index.html`), com todos os campos, link direto de e-mail e de WhatsApp pra
-  responder rápido. Dá pra marcar como lido/novo e remover.
-- Também dispara (opcionalmente) um e-mail de aviso pra `contato@cmfinanceiro.com` via
-  Formspree — veja **item 1 abaixo** pra configurar.
-- O formulário tem um campo-armadilha (honeypot) invisível contra spam automatizado:
-  bots que preenchem todos os campos de um formulário geralmente preenchem esse também,
-  e a submissão é descartada (no servidor, mesmo que o JavaScript do navegador seja
-  contornado).
-- É uma rota pública do Worker (`/api/diagnostico`, só o POST — listar e remover
-  continuam exigindo login de administrador), então não depende do admin estar
-  logado em lugar nenhum pra funcionar.
+1. **Perfil** (segmento, tempo, porte, equipe, modelo) — com um resumo de como o percurso será adaptado
+   (quem trabalha sozinho não responde sobre funcionários nem folha).
+2. **Panorama financeiro** — faturamento, custos diretos, despesas fixas, dívidas, reserva de caixa e
+   formas de recebimento, em faixas.
+3. **Operação do segmento** — alimentação (estoque, desperdício, custo por item, compras), saúde,
+   estética e beleza, comércio, serviços e "outro".
+4. **Organização e gestão** — separação pessoal/negócio, registros, contas a pagar e a receber,
+   retirada, lucro, planejamento e acompanhamento.
+5. **Aprofundamento** — só aparece quando as respostas pedem (aplicativos, cartão, estoque, perdas, fichas
+   técnicas, convênios, pacotes, recebíveis, dívidas).
+
+No fim a pessoa informa os dados de contato (com aceite) e recebe o relatório. O resultado traz **três
+análises separadas** (saúde financeira, maturidade de gestão e eficiência operacional), seis dimensões, uma
+leitura integrada e recomendações por prioridade — nunca uma nota única. Há também uma **simulação** com um
+negócio de alimentação (`/diagnostico/?exemplo=1`, ou o link "Ver um exemplo"); ela não envia nada.
+
+- **Onde editar**: `assets/js/diagnostico-dados.js` (perguntas, opções, pontos de cada resposta e as
+  referências de margem por segmento em `LIM_MARGEM`), `diagnostico-recs.js` (recomendações e quando
+  aparecem), `diagnostico-motor.js` (cálculo dos indicadores, notas e leitura integrada) e
+  `diagnostico-relatorio.js` (o relatório em si). Para um novo segmento: incluir em `SEGMENTOS`, criar as
+  perguntas da etapa 3 com `se`, e preencher `LIM_MARGEM`, `EFICIENCIA_DESC`, as opções de recebimento e as
+  recomendações. Ao alterar qualquer arquivo, aumente o `?v=` dele em `diagnostico/index.php` e `admin/index.html`.
+- **Calibragem**: os pesos, as notas e as referências de margem são regras práticas para pequenos negócios,
+  não benchmarks validados — vale ajustá-los comparando com casos reais.
+- **Indicadores**: vêm de faixas de valor (usa-se o ponto médio de cada faixa), por isso são estimativas e o
+  relatório avisa disso. "Não sei informar" nos valores deixa o indicador de fora e vira a recomendação de
+  levantar os números; nas perguntas de prática vale 0 ponto.
+- **Dados**: cada envio vai para a tabela `diagnosticos` (colunas `segmento`, `versao`, `respostas_json` e
+  `resultado_json` são criadas sozinhas na primeira chamada da API) e aparece na aba **"Diagnósticos"** do painel,
+  com segmento, nível de cada análise, o relatório completo e as respostas pergunta a pergunta. Diagnósticos do
+  formulário antigo continuam abrindo normalmente. A CM também recebe um e-mail de aviso (função `mail()` do PHP,
+  melhor esforço; se falhar, o registro continua no painel).
+- **Spam**: campo-armadilha invisível, validação de e-mail e consentimento no servidor e limite de tamanho do envio.
 
 ## Configurações pendentes (precisam dos seus dados reais)
 
-### 1. Formulário de contato (relatório) e Diagnóstico Financeiro
+### 1. Formulário de contato (relatório)
 O formulário geral em `index.html` (`id="formRelatorio"`) está apontando para:
 ```html
 action="https://formspree.io/f/SEU_FORM_ID"
@@ -197,42 +215,19 @@ Para funcionar de verdade:
    e copie o endpoint gerado (`https://formspree.io/f/xxxxxxx`)
 3. Substitua `SEU_FORM_ID` pelo ID real em `index.html`
 
-**Diagnóstico Financeiro** (o formulário em modal) usa um endpoint **separado** — crie
-um segundo formulário no Formspree (mesmo processo acima, pode ser o mesmo e-mail de
-destino) e cole o endpoint na variável de ambiente `FORMSPREE_DIAGNOSTICO_URL` do
-Worker no Cloudflare (Settings → Variables → Add variable; não precisa ser "Secret").
-Sem essa variável, as respostas continuam sendo salvas e aparecendo no painel — só o
-e-mail automático de aviso não é enviado.
-
-Alternativas ao Formspree: Netlify Forms, Google Forms (embutido), ou um backend próprio.
-
-### 2. Links reais da Hotmart
-Os infoprodutos pagos em `assets/data/infoprodutos.json` estão com
-`https://pay.hotmart.com/SEU-LINK-AQUI` como placeholder. Atualize pelo painel `/admin/`
-(ou editando o JSON diretamente) assim que os produtos existirem na Hotmart.
-
-### 3. Dados de contato
-Atualize e-mail, WhatsApp, CNPJ e horário de atendimento no rodapé e na seção de contato
-de `index.html` (atualmente com valores de exemplo).
-
-### 4. Servidor do painel administrativo
-Siga `admin/README-servidor.md` para publicar o Cloudflare Worker que autentica o
-painel e guarda os dados (gratuito, ~5 min, sem token nenhum). Sem isso, o painel
-fica no ar mas não consegue carregar nem salvar nada.
 
 **Se você já tinha publicado o Worker antes:** toda vez que `admin/worker.js` for
 atualizado (o arquivo ganhou rotas e validações novas várias vezes — clientes/
 relatórios, usuários, Diagnóstico Financeiro, e agora o construtor de dashboards),
 copie o conteúdo novo para o Worker no Cloudflare (Edit code → colar → Save and
-Deploy). Nenhuma variável nova é obrigatória — só o `FORMSPREE_DIAGNOSTICO_URL` do
-item 1 acima, que é opcional.
+Deploy). Nenhuma variável nova é obrigatória.
 
 ### 5. Site público já busca os dados em tempo real
 `assets/js/main.js` (constante `ADMIN_API_URL`) já aponta pro Worker publicado — os
 Infoprodutos do site mostram direto o que está cadastrado no painel (sem precisar de
 novo deploy a cada alteração), com `assets/data/infoprodutos.json` só como reserva
-caso o servidor esteja fora do ar. O formulário de Diagnóstico Financeiro depende
-dessa mesma conexão pra funcionar.
+caso o servidor esteja fora do ar. O CM Diagnóstico envia as respostas para o mesmo servidor
+(`/api/diagnostico`).
 
 ## Publicação
 

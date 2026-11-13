@@ -93,6 +93,7 @@ if ($method === 'OPTIONS') jsonResponse(null, 200);
 $db = cmDb();
 migrarColunaEmailUsuarios($db);
 migrarTabelaResetSenha($db);
+migrarColunasDiagnosticos($db);
 garantirClienteDemonstrativo($db);
 garantirProdutoPsicologos($db);
 garantirPostsIniciais($db);
@@ -253,6 +254,25 @@ function garantirClienteDemonstrativo(PDO $db): void {
   }
 }
 
+/** Colunas do CM Diagnóstico (percurso adaptativo): respostas e resultado completos em JSON, segmento e versão do modelo.
+ *  Os diagnósticos antigos (formulário curto) continuam intactos: essas colunas ficam nulas neles. */
+function migrarColunasDiagnosticos(PDO $db): void {
+  try {
+    migrarColunasDiagnosticosAplicar($db);
+  } catch (Throwable $e) {
+    // sem alarde: se o banco recusar o ALTER, só o CM Diagnóstico novo fica indisponível; o resto da API segue
+  }
+}
+function migrarColunasDiagnosticosAplicar(PDO $db): void {
+  $cols = ['segmento' => 'VARCHAR(40) NULL', 'versao' => 'TINYINT NULL', 'respostas_json' => 'MEDIUMTEXT NULL', 'resultado_json' => 'MEDIUMTEXT NULL'];
+  $stmt = $db->query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'diagnosticos'");
+  $tem = array_map('strtolower', $stmt->fetchAll(PDO::FETCH_COLUMN));
+  if (!$tem) return; // tabela ainda não existe (instalação nova passa antes pelo setup)
+  foreach ($cols as $nome => $tipo) {
+    if (!in_array($nome, $tem, true)) $db->exec("ALTER TABLE diagnosticos ADD COLUMN $nome $tipo");
+  }
+}
+
 function migrarColunaEmailUsuarios(PDO $db): void {
   $stmt = $db->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'usuarios' AND COLUMN_NAME = 'email'");
   if ((int)$stmt->fetchColumn() === 0) $db->exec('ALTER TABLE usuarios ADD COLUMN email VARCHAR(190) NULL AFTER nome');
@@ -367,6 +387,29 @@ if ($path === '/api/diagnostico') {
 
     $limitar = fn($v, $max) => mb_substr(trim((string)($v ?? '')), 0, $max);
     $id = 'diag-' . round(microtime(true) * 1000) . '-' . substr(bin2hex(random_bytes(4)), 0, 6);
+
+    // CM Diagnóstico (percurso adaptativo): guarda respostas e resultado completos
+    if ((int)($dados['versao'] ?? 0) >= 2) {
+      $emailOk = filter_var(trim((string)$dados['email']), FILTER_VALIDATE_EMAIL);
+      if (!$emailOk) jsonResponse(['message' => 'Informe um e-mail válido'], 400);
+      if (empty($dados['consentimento'])) jsonResponse(['message' => 'É preciso concordar com o contato para enviar'], 400);
+      $respostas = $dados['respostas'] ?? null; $resultado = $dados['resultado'] ?? null;
+      if (!is_array($respostas) || !is_array($resultado)) jsonResponse(['message' => 'Respostas inválidas'], 400);
+      $respJson = json_encode($respostas, JSON_UNESCAPED_UNICODE); $resJson = json_encode($resultado, JSON_UNESCAPED_UNICODE);
+      if ($respJson === false || $resJson === false || strlen($respJson) > 40000 || strlen($resJson) > 120000) jsonResponse(['message' => 'Dados grandes demais'], 413);
+      $segmentos = ['alimentacao', 'saude', 'estetica', 'comercio', 'servicos', 'outro'];
+      $segmento = in_array($dados['segmento'] ?? '', $segmentos, true) ? $dados['segmento'] : 'outro';
+      $perfil = []; foreach ((array)($resultado['perfil'] ?? []) as $p) if (is_array($p)) $perfil[(string)($p['rotulo'] ?? '')] = (string)($p['valor'] ?? '');
+      $stmt = $db->prepare('INSERT INTO diagnosticos (id, nome, email, telefone, empresa, ramo, colaboradores, controle_atual, dificuldade, objetivo, urgencia, mensagem, lido, criado_em, segmento, versao, respostas_json, resultado_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?)');
+      $stmt->execute([
+        $id, $limitar($dados['nome'], 120), $limitar($emailOk, 160), $limitar($dados['telefone'] ?? '', 40), $limitar($dados['empresa'] ?? '', 120),
+        $limitar($perfil['Segmento'] ?? $segmento, 80), $limitar($perfil['Equipe'] ?? '', 40), '', '', '', '', '', nowIso(),
+        $segmento, 2, $respJson, $resJson,
+      ]);
+      avisarNovoDiagnostico($db, $dados, $resultado, $segmento);
+      jsonResponse(['ok' => true]);
+    }
+
     $stmt = $db->prepare('INSERT INTO diagnosticos (id, nome, email, telefone, empresa, ramo, colaboradores, controle_atual, dificuldade, objetivo, urgencia, mensagem, lido, criado_em) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,0,?)');
     $stmt->execute([
       $id, $limitar($dados['nome'], 120), $limitar($dados['email'], 160), $limitar($dados['telefone'] ?? '', 40),
@@ -411,6 +454,40 @@ if ($path === '/api/diagnosticos') {
   jsonResponse(array_map('diagnosticoToJson', $rows));
 }
 
+/** Aviso por e-mail à CM a cada diagnóstico recebido (melhor esforço: se o envio falhar, o registro já está no painel).
+ *  Só texto simples; nada que veio do navegador entra no assunto nem nos cabeçalhos. */
+function avisarNovoDiagnostico(PDO $db, array $d, array $res, string $segmento): void {
+  try {
+    // teto de avisos por hora: se alguém despejar o formulário em massa, o painel guarda tudo, mas a caixa de e-mail não enche
+    $stmt = $db->prepare('SELECT COUNT(*) FROM diagnosticos WHERE criado_em >= ?');
+    $stmt->execute([gmdate('Y-m-d\TH:i:s', time() - 3600)]);
+    if ((int)$stmt->fetchColumn() > 12) return;
+    $limpa = fn($v, $max = 160) => mb_substr(preg_replace('/[\x00-\x1F\x7F]+/u', ' ', trim((string)$v)), 0, $max);
+    $nivel = function ($k) use ($res) {
+      $a = $res['analises'][$k] ?? [];
+      $mapa = ['critico' => 'Ponto crítico', 'atencao' => 'Atenção', 'desenvolvimento' => 'Em desenvolvimento', 'solido' => 'Sólido'];
+      return ($mapa[$a['nivel'] ?? ''] ?? 'Sem dados') . (isset($a['pct']) && is_numeric($a['pct']) ? ' (' . (int)$a['pct'] . '/100)' : '');
+    };
+    $recs = []; foreach (array_slice((array)($res['recomendacoes'] ?? []), 0, 3) as $r) if (is_array($r)) $recs[] = '- ' . $limpa($r['titulo'] ?? '', 120);
+    $tel = preg_replace('/\D+/', '', (string)($d['telefone'] ?? ''));
+    $corpo = "Novo CM Diagnóstico recebido em cmfinanceiro.com.\n\n"
+      . 'Nome: ' . $limpa($d['nome'] ?? '', 120) . "\n"
+      . 'Empresa: ' . $limpa($d['empresa'] ?? '', 120) . "\n"
+      . 'E-mail: ' . $limpa($d['email'] ?? '') . "\n"
+      . 'WhatsApp: ' . $limpa($d['telefone'] ?? '', 40) . ($tel !== '' ? "  (https://wa.me/55$tel)" : '') . "\n"
+      . 'Segmento: ' . $limpa($segmento, 40) . "\n\n"
+      . 'Saúde financeira: ' . $nivel('saude') . "\n"
+      . 'Maturidade de gestão: ' . $nivel('maturidade') . "\n"
+      . 'Eficiência operacional: ' . $nivel('eficiencia') . "\n\n"
+      . "Principais recomendações:\n" . ($recs ? implode("\n", $recs) : '-') . "\n\n"
+      . "O relatório completo e as respostas estão no painel administrativo, na aba Diagnósticos.";
+    $headers = "From: CM Soluções Financeiras <nao-responda@cmfinanceiro.com>\r\nContent-Type: text/plain; charset=UTF-8";
+    @mail(EMAIL_RESET_SENHA, 'Novo CM Diagnóstico: ' . $limpa($d['nome'] ?? 'sem nome', 60), $corpo, $headers);
+  } catch (Throwable $e) {
+    // sem alarde
+  }
+}
+
 function diagnosticoRow(PDO $db, string $id): ?array {
   $stmt = $db->prepare('SELECT * FROM diagnosticos WHERE id = ?');
   $stmt->execute([$id]);
@@ -423,6 +500,9 @@ function diagnosticoToJson(array $r): array {
     'empresa' => $r['empresa'], 'ramo' => $r['ramo'], 'colaboradores' => $r['colaboradores'],
     'controleAtual' => $r['controle_atual'], 'dificuldade' => $r['dificuldade'], 'objetivo' => $r['objetivo'],
     'urgencia' => $r['urgencia'], 'mensagem' => $r['mensagem'], 'lido' => (bool)$r['lido'], 'criadoEm' => $r['criado_em'],
+    'versao' => isset($r['versao']) ? (int)$r['versao'] : null, 'segmento' => $r['segmento'] ?? null,
+    'respostas' => !empty($r['respostas_json']) ? json_decode($r['respostas_json'], true) : null,
+    'resultado' => !empty($r['resultado_json']) ? json_decode($r['resultado_json'], true) : null,
   ];
 }
 
