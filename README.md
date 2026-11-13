@@ -126,6 +126,11 @@ o painel interativo de demonstração da home, caixa de destaque, passo a passo,
 frequentes, botão e chamada para compra. Dá para salvar como rascunho, **agendar** (data futura) e ver
 a **pré-visualização** (computador e celular) com o mesmo visual do site.
 
+**Capa provisória:** publicação sem foto de capa ganha, na prévia do link (WhatsApp, LinkedIn...), uma
+capa 1200x630 desenhada pelo servidor com a marca, a categoria e o título (`conteudos/capa.php`, fontes em
+`assets/fonts/`, infoprodutos mostram também o preço). Se o servidor não conseguir desenhar, usa a
+imagem fixa `assets/img/capa-padrao.png`, que também é a imagem da página inicial e da lista de conteúdos.
+
 Detalhes técnicos: tabela `posts` (criada sozinha na primeira chamada, sem passo manual); código em
 `api/blog_lib.php` (sanitização e renderização) e `api/blog_routes.php` (rotas `/api/posts`,
 `/api/post` públicas e `/api/admin/post*` e `/api/admin/upload` só para administrador); páginas em

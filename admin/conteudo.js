@@ -474,7 +474,13 @@
   /* ============================================================ lateral */
 
   function desenharCapa() {
-    $('ceCapa').replaceChildren(campoFoto(post, 'capa', desenharCapa));
+    const alvo = $('ceCapa');
+    alvo.replaceChildren(campoFoto(post, 'capa', desenharCapa));
+    if (post.capa) return;
+    alvo.append(h('p', { class: 'admin-field-hint', text: 'Sem foto, o site desenha sozinho uma capa com a marca, a categoria e o título. É a imagem que aparece quando o link é compartilhado.' }));
+    if (post.id && post.slug && situacao() === 'Publicado') { // só publicadas têm capa provisória pública
+      alvo.append(h('img', { class: 'ce-capa-auto', src: `/conteudos/capa/${encodeURIComponent(post.slug)}.png?v=${Date.now()}`, alt: 'Capa provisória desenhada pelo site', loading: 'lazy' }));
+    }
   }
 
   function situacao() {

@@ -1,9 +1,12 @@
 # /conteudos/            -> lista (index.php)
 # /conteudos/sitemap.xml -> mapa do site
+# /conteudos/capa/<endereço>.png -> capa provisória
 # /conteudos/<endereco>  -> página do conteúdo
 DirectoryIndex index.php
 RewriteEngine On
 RewriteRule ^sitemap\.xml$ sitemap.php [L]
+# /conteudos/capa/<endereço>.png -> capa provisória desenhada com o título (publicação sem imagem de capa)
+RewriteRule ^capa/([A-Za-z0-9-]+)\.png$ capa.php?slug=$1 [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^([A-Za-z0-9-]+)/?$ post.php?slug=$1 [QSA,L]

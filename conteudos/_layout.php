@@ -40,7 +40,8 @@ function cmAbrir(array $o): void {
   $tituloCompleto = $titulo . ' | ' . CM_SITE_NOME;
   $desc = blogCortar($o['descricao'] ?? 'Guias, manuais e novidades da CM Soluções Financeiras para organizar e entender o financeiro da sua empresa.', 300);
   $url = cmOrigem() . ($o['caminho'] ?? '/conteudos/');
-  $img = cmAbs((string)($o['imagem'] ?? '')) ?: cmOrigem() . '/assets/img/logo-cm.png';
+  $img = cmAbs((string)($o['imagem'] ?? '')) ?: cmOrigem() . '/assets/img/capa-padrao.png'; // nunca a logo crua: fica enorme e feia na prévia
+  $imgPadrao = empty($o['imagem']) || !empty($o['imagemAuto']); // as capas padrão e automática têm 1200x630
   $og = in_array($o['og'] ?? '', ['article', 'product'], true) ? $o['og'] : 'website';
   $ativo = $o['ativo'] ?? 'conteudos';
   $link = fn(string $href, string $rot, string $chave = '') => '<a href="' . $href . '"' . ($chave !== '' && $chave === $ativo ? ' class="ativo" aria-current="page"' : '') . '>' . $rot . '</a>';
@@ -65,6 +66,11 @@ function cmAbrir(array $o): void {
 <meta property="og:description" content="<?= blogEsc($desc) ?>">
 <meta property="og:url" content="<?= blogEsc($url) ?>">
 <meta property="og:image" content="<?= blogEsc($img) ?>">
+<?php if ($imgPadrao): ?><meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<?php endif; ?>
+<meta property="og:image:alt" content="<?= blogEsc($titulo) ?>">
+<meta name="twitter:image" content="<?= blogEsc($img) ?>">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/assets/img/logo-cm.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">

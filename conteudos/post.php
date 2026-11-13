@@ -6,6 +6,7 @@
  */
 declare(strict_types=1);
 require __DIR__ . '/_layout.php';
+require __DIR__ . '/_capa.php';
 
 $tipo = defined('CM_TIPO') ? CM_TIPO : 'blog';
 $slug = strtolower(trim((string)($_GET['slug'] ?? '')));
@@ -30,15 +31,14 @@ $autor = trim((string)($r['autor'] ?? '')) ?: CM_SITE_NOME;
 $caminho = blogUrlDoPost($r);
 $urlAbs = cmOrigem() . $caminho;
 $capa = (string)($r['capa'] ?? '');
-if ($capa === '') { // sem capa: usa a primeira imagem do próprio conteúdo na prévia do link
-  foreach ($blocos as $b) { if (($b['t'] ?? '') === 'imagem' || ($b['t'] ?? '') === 'imagem_texto') { $capa = (string)$b['url']; break; } if (($b['t'] ?? '') === 'galeria') { $capa = (string)$b['itens'][0]['url']; break; } }
-}
+// Sem imagem de capa, a prévia do link usa uma capa desenhada com o título (conteudos/capa.php).
+$imgOg = $capa !== '' ? $capa : cmCapaAutoUrl($r);
 $ctxBlocos = ['cta' => ['url' => $cta['url'], 'rotulo' => $cta['rotulo'], 'preco' => $cta['preco']]];
 
 /* ---- dados estruturados ---- */
 if ($venda) {
   $prod = ['@context' => 'https://schema.org', '@type' => 'Product', 'name' => $r['titulo'], 'description' => $descricao, 'url' => $urlAbs, 'brand' => ['@type' => 'Brand', 'name' => CM_SITE_NOME]];
-  if ($capa !== '') $prod['image'] = cmAbs($capa);
+  $prod['image'] = cmAbs($imgOg);
   $preco = !empty($r['gratuito']) ? 0.0 : cmPrecoNumero((string)($r['preco_label'] ?? ''));
   if ($preco !== null) $prod['offers'] = ['@type' => 'Offer', 'price' => number_format($preco, 2, '.', ''), 'priceCurrency' => 'BRL', 'availability' => 'https://schema.org/InStock', 'url' => $cta['url']];
   $jsonld = [$prod];
@@ -47,7 +47,7 @@ if ($venda) {
           'datePublished' => $r['publicado_em'], 'dateModified' => $r['atualizado_em'] ?: $r['publicado_em'],
           'author' => ['@type' => $autor === CM_SITE_NOME ? 'Organization' : 'Person', 'name' => $autor],
           'publisher' => ['@type' => 'Organization', 'name' => CM_SITE_NOME, 'logo' => ['@type' => 'ImageObject', 'url' => cmOrigem() . '/assets/img/logo-cm.png']]];
-  if ($capa !== '') $art['image'] = cmAbs($capa);
+  $art['image'] = cmAbs($imgOg);
   $jsonld = [$art, ['@context' => 'https://schema.org', '@type' => 'BreadcrumbList', 'itemListElement' => [
     ['@type' => 'ListItem', 'position' => 1, 'name' => 'Início', 'item' => cmOrigem() . '/'],
     ['@type' => 'ListItem', 'position' => 2, 'name' => BLOG_NOME_PUBLICO, 'item' => cmOrigem() . '/conteudos/'],
@@ -60,7 +60,7 @@ $stmt->execute([$tipo, nowIso(), $r['id']]);
 $outros = array_map('blogResumoJson', $stmt->fetchAll());
 
 cmAbrir([
-  'titulo' => $r['titulo'], 'descricao' => $descricao, 'caminho' => $caminho, 'imagem' => $capa,
+  'titulo' => $r['titulo'], 'descricao' => $descricao, 'caminho' => $caminho, 'imagem' => $imgOg, 'imagemAuto' => $capa === '',
   'og' => $venda ? 'product' : 'article', 'jsonld' => $jsonld, 'painel' => blogPrecisaPainel($blocos),
   'ativo' => $venda ? 'infoprodutos' : 'conteudos', 'corpo' => $venda ? 'pg-venda' : 'pg-artigo',
 ]);
@@ -127,7 +127,7 @@ $externo = blogUrlExterna($cta['url']);
     </p>
   </header>
 
-  <?php if ($capa !== '' && !empty($r['capa'])): ?>
+  <?php if ($capa !== ''): ?>
   <figure class="art-capa container"><img src="<?= blogEsc($r['capa']) ?>" alt="<?= blogEsc($r['capa_alt'] ?: $r['titulo']) ?>" decoding="async" fetchpriority="high"></figure>
   <?php endif; ?>
 
