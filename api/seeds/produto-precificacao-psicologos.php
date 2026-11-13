@@ -18,7 +18,7 @@ return [
  "autor": "CM Soluções Financeiras",
  "capa": "/assets/img/produtos/precificacao-psicologos/capa.png",
  "capaAlt": "Planilha de Precificação para Psicólogos, com a aba de cálculo do preço da sessão em destaque",
- "precoLabel": "",
+ "precoLabel": "R$ 10,00",
  "gratuito": false,
  "linkCompra": "https://pay.hotmart.com/G107631232H",
  "ctaRotulo": "Quero a planilha",

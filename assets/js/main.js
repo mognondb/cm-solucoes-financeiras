@@ -122,6 +122,12 @@ carregarUltimoConteudo();
 
 // Infoprodutos: os cadastrados direto no painel (lista simples) e, logo depois,
 // as páginas de venda criadas no editor de Conteúdos com o tipo "Infoproduto".
+// Rodapé do cartão: o preço (ou "Grátis") bem visível ao lado do botão. Sem preço cadastrado, fica só o botão.
+function linhaAcao(preco, gratis, botao) {
+  const valor = String(preco || '').trim();
+  return `<div class="card-acao">${valor ? `<span class="card-valor${gratis ? ' gratis' : ''}">${escapeHtml(valor)}</span>` : ''}${botao}</div>`;
+}
+
 async function carregarInfoprodutos() {
   const grid = document.getElementById('infoprodutosGrid');
   if (!grid) return;
@@ -139,33 +145,27 @@ async function carregarInfoprodutos() {
 
     const cartoesLista = itens.map((item) => {
       const gratis = item.tipo === 'gratis';
-      const badgeClass = gratis ? 'badge-free' : 'badge-paid';
-      const badgeTexto = gratis ? 'Grátis' : escapeHtml(item.precoLabel || '');
       const botao = gratis
         ? `<a href="${escapeHtml(item.link)}" class="btn btn-outline card-btn" download>Baixar grátis</a>`
         : `<a href="${escapeHtml(item.link)}" class="btn btn-primary card-btn" target="_blank" rel="noopener">Comprar agora</a>`;
 
       return `
         <div class="card card-info">
-          <span class="badge ${badgeClass}">${badgeTexto}</span>
           <h3>${escapeHtml(item.nome)}</h3>
           <p>${escapeHtml(item.descricao)}</p>
-          ${botao}
+          ${linhaAcao(gratis ? 'Grátis' : item.precoLabel, gratis, botao)}
         </div>`;
     });
 
     const cartoesPagina = paginas.map((p) => {
-      const badgeClass = p.gratuito ? 'badge-free' : 'badge-paid';
-      const badgeTexto = p.gratuito ? 'Grátis' : escapeHtml(p.precoLabel || '');
       const capa = p.capa ? `<a class="card-capa" href="${escapeHtml(p.url)}" tabindex="-1" aria-hidden="true"><img src="${escapeHtml(p.capa)}" alt="" loading="lazy" decoding="async"></a>` : '';
       return `
         <div class="card ${p.capa ? 'card-pagina' : 'card-info'}">
-          ${badgeTexto ? `<span class="badge ${badgeClass}">${badgeTexto}</span>` : ''}
           ${capa}
           <div class="${p.capa ? 'card-corpo' : 'card-corpo-simples'}">
             <h3>${escapeHtml(p.titulo)}</h3>
             <p>${escapeHtml(p.resumo)}</p>
-            <a href="${escapeHtml(p.url)}" class="btn ${p.gratuito ? 'btn-outline' : 'btn-primary'} card-btn">Ver detalhes</a>
+            ${linhaAcao(p.gratuito ? 'Grátis' : p.precoLabel, p.gratuito, `<a href="${escapeHtml(p.url)}" class="btn ${p.gratuito ? 'btn-outline' : 'btn-primary'} card-btn">Ver detalhes</a>`)}
           </div>
         </div>`;
     });

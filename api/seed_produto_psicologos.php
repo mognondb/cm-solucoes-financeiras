@@ -23,9 +23,9 @@ function produtoPsicologosDefinicao(): array {
  "autor": "CM Soluções Financeiras",
  "capa": "/assets/img/produtos/controle-financeiro-psicologos/capa.png",
  "capaAlt": "Planilha de Controle Financeiro para Psicólogos, com o painel do consultório em destaque",
- "precoLabel": "",
+ "precoLabel": "R$ 29,99",
  "gratuito": false,
- "linkCompra": "https://pay.hotmart.com/G107631232H",
+ "linkCompra": "https://pay.hotmart.com/Q107277632H",
  "ctaRotulo": "Quero a planilha",
  "status": "publicado",
  "blocos": [

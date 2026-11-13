@@ -366,6 +366,10 @@ img { max-width: 100%; display: block; }
 .card h3 { font-size: 1.15rem; }
 .card p { color: var(--color-text-light); font-size: 0.94rem; flex: 1; }
 .card-btn { margin-top: 14px; align-self: flex-start; }
+.card-acao { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 16px; margin-top: 18px; }
+.card-acao .card-btn { margin-top: 0; }
+.card-valor { font-family: 'Fraunces', serif; font-weight: 500; font-size: 1.6rem; line-height: 1; color: var(--h-gold-text); letter-spacing: -0.01em; }
+.card-valor.gratis { color: var(--color-olive); }
 .card-info { padding-top: 48px; }
 .badge {
   position: absolute;

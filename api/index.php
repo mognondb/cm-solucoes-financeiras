@@ -96,6 +96,7 @@ migrarTabelaResetSenha($db);
 garantirClienteDemonstrativo($db);
 garantirProdutoPsicologos($db);
 garantirPostsIniciais($db);
+ajustarPrecosPlanilhas($db);
 
 // ---------- login ----------
 if ($path === '/api/login') {
@@ -182,6 +183,34 @@ function garantirPostsIniciais(PDO $db): void {
     }
   } catch (Throwable $e) {
     // sem alarde
+  }
+}
+
+/** Preços das duas planilhas de psicologia (e o link de compra da de Controle Financeiro), aplicados UMA vez nas páginas que
+ *  já estão no ar. Só preenche o preço se estiver vazio e só troca o link se ainda for o antigo: o que foi editado no painel
+ *  não é sobrescrito. Instalações novas já nascem certas pelos arquivos de api/seed*. Falha engolida: nunca derruba a API. */
+function ajustarPrecosPlanilhas(PDO $db): void {
+  $marcador = 'ajuste:precos-planilhas-v1';
+  try {
+    $db->exec('CREATE TABLE IF NOT EXISTS migracoes (
+      nome VARCHAR(80) PRIMARY KEY,
+      aplicada_em VARCHAR(40) NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    $stmt = $db->prepare('SELECT 1 FROM migracoes WHERE nome = ?');
+    $stmt->execute([$marcador]);
+    if ($stmt->fetchColumn()) return;
+    require_once __DIR__ . '/blog_lib.php';
+    blogMigrar($db);
+    $agora = nowIso();
+    $db->prepare("UPDATE posts SET preco_label = ?, atualizado_em = ? WHERE tipo = 'infoproduto' AND slug = ? AND (preco_label IS NULL OR preco_label = '')")
+       ->execute(['R$ 29,99', $agora, 'planilha-controle-financeiro-psicologos']);
+    $db->prepare("UPDATE posts SET link_compra = ?, atualizado_em = ? WHERE tipo = 'infoproduto' AND slug = ? AND link_compra = ?")
+       ->execute(['https://pay.hotmart.com/Q107277632H', $agora, 'planilha-controle-financeiro-psicologos', 'https://pay.hotmart.com/G107631232H']);
+    $db->prepare("UPDATE posts SET preco_label = ?, atualizado_em = ? WHERE tipo = 'infoproduto' AND slug = ? AND (preco_label IS NULL OR preco_label = '')")
+       ->execute(['R$ 10,00', $agora, 'planilha-precificacao-psicologos']);
+    $db->prepare('INSERT IGNORE INTO migracoes (nome, aplicada_em) VALUES (?, ?)')->execute([$marcador, $agora]);
+  } catch (Throwable $e) {
+    // sem alarde: tenta de novo na próxima chamada
   }
 }
 
