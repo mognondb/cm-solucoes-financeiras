@@ -72,7 +72,10 @@ function cmAbrir(array $o): void {
 <meta property="og:image:alt" content="<?= blogEsc($titulo) ?>">
 <meta name="twitter:image" content="<?= blogEsc($img) ?>">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" href="/assets/img/logo-cm.png">
+<link rel="icon" href="/favicon.ico?v=1" sizes="16x16 32x32 48x48">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/img/icon-32.png?v=1">
+<link rel="icon" type="image/png" sizes="192x192" href="/assets/img/icon-192.png?v=1">
+<link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png?v=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
