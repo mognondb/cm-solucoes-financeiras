@@ -15,8 +15,8 @@ RewriteRule ^(.*)$ index.php [QSA,L]
   Require all denied
 </Files>
 
-# Bibliotecas internas do blog: só o roteador (index.php) deve carregá-las.
-<FilesMatch "^blog_(lib|routes)\.php$">
+# Bibliotecas internas do blog e arquivos de semente: só o roteador (index.php) deve carregá-los.
+<FilesMatch "^(blog_(lib|routes)|seed_[a-z_]+)\.php$">
   Require all denied
 </FilesMatch>
 
