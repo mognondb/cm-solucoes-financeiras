@@ -68,21 +68,76 @@ async function buscarDados(tipo, caminhoLocal) {
   return res.json();
 }
 
-// Infoprodutos: carregados do servidor (ou de assets/data/infoprodutos.json como
-// fallback), cadastrados pelo painel /admin/
+// Páginas publicadas pelo painel (conteúdos e páginas de venda de infoprodutos).
+// Falha em silêncio: se a API não responder, o site segue sem essas partes.
+async function buscarPosts(tipo, limite) {
+  try {
+    const res = await fetch(`${ADMIN_API_URL}/api/posts?tipo=${tipo}&limite=${limite}`, { cache: 'no-store' });
+    if (!res.ok) return [];
+    const dados = await res.json();
+    return Array.isArray(dados.posts) ? dados.posts : [];
+  } catch {
+    return [];
+  }
+}
+
+function dataLonga(iso) {
+  const d = new Date(iso);
+  return isNaN(d) ? '' : d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Sao_Paulo' });
+}
+
+// Cartão do conteúdo mais recente (mesmo visual da lista em /conteudos/)
+function cartaoConteudo(p) {
+  const capa = p.capa
+    ? `<img src="${escapeHtml(p.capa)}" alt="${escapeHtml(p.capaAlt || p.titulo)}" loading="lazy" decoding="async">`
+    : `<span class="c-capa-vazia" aria-hidden="true">${escapeHtml((p.categoria || 'CM').toUpperCase().slice(0, 22))}</span>`;
+  const meta = [
+    p.categoria ? `<span class="c-categoria">${escapeHtml(p.categoria)}</span>` : '',
+    p.publicadoEm ? `<span>${escapeHtml(dataLonga(p.publicadoEm))}</span>` : '',
+    `<span>${Number(p.tempoLeitura) || 1} min de leitura</span>`,
+  ].join('');
+  return `
+    <a class="c-card c-destaque" href="${escapeHtml(p.url)}">
+      <span class="c-capa">${capa}</span>
+      <span class="c-corpo">
+        <span class="c-meta">${meta}</span>
+        <strong class="c-titulo">${escapeHtml(p.titulo)}</strong>
+        ${p.resumo ? `<span class="c-resumo">${escapeHtml(p.resumo)}</span>` : ''}
+        <span class="c-ler">Ler conteúdo <span aria-hidden="true">→</span></span>
+      </span>
+    </a>`;
+}
+
+async function carregarUltimoConteudo() {
+  const secao = document.getElementById('conteudos');
+  if (!secao) return;
+  const [ultimo] = await buscarPosts('blog', 1);
+  if (!ultimo) return; // sem publicações: a seção e os links ficam escondidos
+  document.getElementById('conteudoDestaque').innerHTML = cartaoConteudo(ultimo);
+  secao.hidden = false;
+  document.querySelectorAll('[data-conteudos-link]').forEach((a) => { a.hidden = false; });
+}
+
+carregarUltimoConteudo();
+
+// Infoprodutos: os cadastrados direto no painel (lista simples) e, logo depois,
+// as páginas de venda criadas no editor de Conteúdos com o tipo "Infoproduto".
 async function carregarInfoprodutos() {
   const grid = document.getElementById('infoprodutosGrid');
   if (!grid) return;
   try {
-    const dados = await buscarDados('infoprodutos', 'assets/data/infoprodutos.json');
+    const [dados, paginas] = await Promise.all([
+      buscarDados('infoprodutos', 'assets/data/infoprodutos.json'),
+      buscarPosts('infoproduto', 50),
+    ]);
     const itens = dados.filter((item) => item.ativo !== false);
 
-    if (itens.length === 0) {
+    if (itens.length === 0 && paginas.length === 0) {
       grid.innerHTML = '<p class="loading-placeholder">Nenhum produto disponível no momento.</p>';
       return;
     }
 
-    grid.innerHTML = itens.map((item) => {
+    const cartoesLista = itens.map((item) => {
       const gratis = item.tipo === 'gratis';
       const badgeClass = gratis ? 'badge-free' : 'badge-paid';
       const badgeTexto = gratis ? 'Grátis' : escapeHtml(item.precoLabel || '');
@@ -97,7 +152,25 @@ async function carregarInfoprodutos() {
           <p>${escapeHtml(item.descricao)}</p>
           ${botao}
         </div>`;
-    }).join('');
+    });
+
+    const cartoesPagina = paginas.map((p) => {
+      const badgeClass = p.gratuito ? 'badge-free' : 'badge-paid';
+      const badgeTexto = p.gratuito ? 'Grátis' : escapeHtml(p.precoLabel || '');
+      const capa = p.capa ? `<a class="card-capa" href="${escapeHtml(p.url)}" tabindex="-1" aria-hidden="true"><img src="${escapeHtml(p.capa)}" alt="" loading="lazy" decoding="async"></a>` : '';
+      return `
+        <div class="card ${p.capa ? 'card-pagina' : 'card-info'}">
+          ${badgeTexto ? `<span class="badge ${badgeClass}">${badgeTexto}</span>` : ''}
+          ${capa}
+          <div class="${p.capa ? 'card-corpo' : 'card-corpo-simples'}">
+            <h3>${escapeHtml(p.titulo)}</h3>
+            <p>${escapeHtml(p.resumo)}</p>
+            <a href="${escapeHtml(p.url)}" class="btn ${p.gratuito ? 'btn-outline' : 'btn-primary'} card-btn">Ver detalhes</a>
+          </div>
+        </div>`;
+    });
+
+    grid.innerHTML = [...cartoesLista, ...cartoesPagina].join('');
   } catch (err) {
     grid.innerHTML = '<p class="loading-placeholder">Não foi possível carregar os produtos agora.</p>';
   }

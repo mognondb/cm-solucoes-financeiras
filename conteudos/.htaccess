@@ -1,0 +1,14 @@
+# /conteudos/            -> lista (index.php)
+# /conteudos/sitemap.xml -> mapa do site
+# /conteudos/<endereco>  -> página do conteúdo
+DirectoryIndex index.php
+RewriteEngine On
+RewriteRule ^sitemap\.xml$ sitemap.php [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([A-Za-z0-9-]+)/?$ post.php?slug=$1 [QSA,L]
+
+# Peças internas (arquivos que começam com "_") não são páginas.
+<FilesMatch "^_">
+  Require all denied
+</FilesMatch>

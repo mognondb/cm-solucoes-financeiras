@@ -1,0 +1,7 @@
+# Pasta de fotos e planilhas enviadas pelo painel: nada daqui é executado como programa.
+<FilesMatch "\.(php[0-9]?|phtml|phar|pl|py|cgi|sh|htaccess)$">
+  Require all denied
+</FilesMatch>
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+</IfModule>

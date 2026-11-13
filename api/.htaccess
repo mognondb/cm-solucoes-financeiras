@@ -14,3 +14,8 @@ RewriteRule ^(.*)$ index.php [QSA,L]
 <Files "config.php">
   Require all denied
 </Files>
+
+# Bibliotecas internas do blog: só o roteador (index.php) deve carregá-las.
+<FilesMatch "^blog_(lib|routes)\.php$">
+  Require all denied
+</FilesMatch>

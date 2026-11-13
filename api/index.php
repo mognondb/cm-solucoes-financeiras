@@ -595,6 +595,13 @@ if ($path === '/api/file') {
   jsonResponse(['message' => 'Método não suportado'], 405);
 }
 
+// ---------- blog e páginas de venda de infoprodutos (arquivo próprio) ----------
+// (só carrega o arquivo do blog quando o endereço é dele: o resto da API não depende dele)
+if (preg_match('~^/api/(posts?|admin/(posts?|post-preview|upload))$~', $path)) {
+  require_once __DIR__ . '/blog_routes.php';
+  blogRotas($path, $method, $db);
+}
+
 jsonResponse(['message' => 'Não encontrado'], 404);
 
 // ---------- helpers de formatação ----------

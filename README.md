@@ -30,9 +30,11 @@ legacy-jekyll-boilerplate/  Arquivos antigos do scaffold padrão do GitHub Pages
 2. **Sobre** — quem é a CM e como ela trabalha.
 3. **Serviços** — os níveis de apoio (Implantação, Acompanhamento, Assistência, Gestão) e o
    Diagnóstico Financeiro gratuito (abre um formulário em modal — veja mais abaixo).
-4. **Infoprodutos** — planilhas gratuitas e produtos pagos (Hotmart), carregados do
-   servidor do painel (ou de `assets/data/infoprodutos.json` como fallback).
-5. **Contato / Relatório** — formulário para o cliente interessado preencher.
+4. **Conteúdos** — o conteúdo mais recente (some enquanto nada foi publicado); a lista completa fica em `/conteudos/`.
+5. **Infoprodutos** — planilhas gratuitas e produtos pagos (Hotmart), carregados do
+   servidor do painel (ou de `assets/data/infoprodutos.json` como fallback), mais as páginas de venda
+   criadas na aba "Conteúdos" com o tipo "Infoproduto".
+6. **Contato / Relatório** — formulário para o cliente interessado preencher.
 
 ## Painel administrativo (`/admin/`)
 
@@ -105,6 +107,31 @@ gravação exigem login no servidor.
   (mesmo usuário/senha do painel) e tem um link de volta para a pasta do cliente certo.
 - Esses dados ficam só no Cloudflare KV (nunca no repositório Git) — por isso nenhum
   cliente ou dashboard real está versionado aqui.
+
+### Conteúdos e páginas de venda de infoprodutos (aba "Conteúdos")
+
+No painel, a aba **Conteúdos** lista as publicações; **+ Nova publicação** abre o editor
+(`admin/conteudo.html`). Ao começar, escolha o tipo:
+
+- **Conteúdo**: artigo, manual de uso de planilha, apresentação de painel, novidade. Vira a página
+  `/conteudos/<endereço>`, aparece na lista `/conteudos/` e o mais recente aparece na página inicial.
+- **Infoproduto**: página de venda (imagens com legenda, lista do que vem no produto, perguntas
+  frequentes, preço e botão de compra). Vira `/infoprodutos/<endereço>` e aparece **junto dos cartões
+  de infoprodutos** da página inicial.
+
+Cada publicação é uma lista de **blocos**: texto formatado, foto, imagem ao lado do texto, galeria,
+arquivo para baixar (planilha, PDF, .pbix), tabela (dá para colar do Excel), fórmula com botão "Copiar",
+painel/vídeo incorporado (Power BI "Publicar na Web", Looker Studio, Google Planilhas, YouTube, Vimeo),
+o painel interativo de demonstração da home, caixa de destaque, passo a passo, lista, perguntas
+frequentes, botão e chamada para compra. Dá para salvar como rascunho, **agendar** (data futura) e ver
+a **pré-visualização** (computador e celular) com o mesmo visual do site.
+
+Detalhes técnicos: tabela `posts` (criada sozinha na primeira chamada, sem passo manual); código em
+`api/blog_lib.php` (sanitização e renderização) e `api/blog_routes.php` (rotas `/api/posts`,
+`/api/post` públicas e `/api/admin/post*` e `/api/admin/upload` só para administrador); páginas em
+`conteudos/` e `infoprodutos/` (PHP, com `.htaccess` para os endereços bonitos); fotos e arquivos
+enviados ficam em `uploads/midia/` no servidor (não vão para o Git). Qualquer pessoa com o endereço
+consegue baixar um arquivo enviado: para produtos pagos, entregue o arquivo pela plataforma de venda.
 
 ### Usuários com acesso limitado
 

@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/css/style.css?v=2">
-<link rel="stylesheet" href="admin.css?v=3">
+<link rel="stylesheet" href="admin.css?v=4">
 </head>
 <body class="admin-body">
 
@@ -85,6 +85,7 @@
 
   <nav class="admin-tabs">
     <button class="admin-tab active" data-tab="infoprodutos">Infoprodutos</button>
+    <button class="admin-tab" data-tab="conteudos">Conteúdos</button>
     <button class="admin-tab" data-tab="usuarios">Usuários</button>
     <button class="admin-tab" data-tab="diagnosticos">Diagnósticos</button>
   </nav>
@@ -103,6 +104,31 @@
       </div>
       <p class="admin-feedback" id="feedbackInfoprodutos" role="status"></p>
       <div class="admin-lista" id="listaInfoprodutos">
+        <p class="loading-placeholder">Carregando...</p>
+      </div>
+    </section>
+
+    <!-- TAB CONTEÚDOS (artigos, manuais, painéis e páginas de venda de infoprodutos) -->
+    <section class="admin-tab-panel" id="tab-conteudos" hidden>
+      <p class="admin-field-hint" style="margin-bottom:16px;">
+        Aqui você escreve o que aparece na seção <strong>Conteúdos</strong> do site (artigos, manuais
+        de planilhas, apresentação de painéis...) e as <strong>páginas de venda</strong> dos
+        infoprodutos, com fotos, planilhas, tabelas e painéis. Cada publicação é uma página própria;
+        o tipo escolhido define onde ela aparece na página inicial.
+      </p>
+      <div class="admin-toolbar">
+        <a class="btn btn-primary" href="conteudo.html">+ Nova publicação</a>
+        <div class="admin-toolbar-actions">
+          <select id="filtroConteudos" class="admin-select-sm" aria-label="Filtrar publicações">
+            <option value="">Todas</option>
+            <option value="blog">Só conteúdos</option>
+            <option value="infoproduto">Só infoprodutos</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" id="btnRecarregarConteudos">Recarregar</button>
+        </div>
+      </div>
+      <p class="admin-feedback" id="feedbackConteudos" role="status"></p>
+      <div class="admin-lista" id="listaConteudos">
         <p class="loading-placeholder">Carregando...</p>
       </div>
     </section>
@@ -295,6 +321,6 @@
   </div>
 </div>
 
-<script src="admin.js?v=4"></script>
+<script src="admin.js?v=6"></script>
 </body>
 </html>

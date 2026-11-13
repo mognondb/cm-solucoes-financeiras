@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Editor de publicação | CM Soluções Financeiras</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css?v=7">
+<link rel="stylesheet" href="admin.css?v=4">
+<link rel="stylesheet" href="conteudo.css?v=1">
+</head>
+<body class="admin-body">
+
+<!-- LOGIN (mesma sessão do painel: se já entrou lá, entra direto) -->
+<div class="admin-login" id="loginScreen">
+  <div class="admin-login-box">
+    <img src="../assets/img/logo-cm.png" alt="CM Soluções Financeiras" class="admin-logo">
+    <h1>Painel Administrativo</h1>
+    <p class="admin-sub">Área restrita — acesso só para a equipe CM.</p>
+    <form id="loginForm">
+      <label for="userInput">Usuário</label>
+      <input type="text" id="userInput" autocomplete="username" required>
+      <label for="passInput">Senha</label>
+      <input type="password" id="passInput" autocomplete="current-password" required>
+      <label class="checkbox-label">
+        <input type="checkbox" id="manterConectado">
+        Manter-me conectado
+      </label>
+      <button type="submit" class="btn btn-primary btn-block" id="btnEntrar">Entrar</button>
+      <p class="admin-feedback" id="loginFeedback" role="status"></p>
+    </form>
+  </div>
+</div>
+
+<div class="ce-erro" id="erroInicial" hidden></div>
+
+<!-- EDITOR -->
+<div class="ce-app" id="editorApp" hidden>
+  <header class="admin-header ce-topo">
+    <div class="admin-header-inner ce-topo-inner">
+      <img src="../assets/img/logo-cm.png" alt="CM" class="admin-logo-sm">
+      <div class="ce-topo-titulo">
+        <strong id="ceRotuloTopo">Nova publicação</strong>
+        <span class="ce-chip" id="ceSituacao">Rascunho</span>
+      </div>
+      <span class="admin-dirty" id="dirtyBadge" hidden>Alterações não salvas</span>
+      <p class="admin-feedback ce-feedback" id="salvarFeedback" role="status"></p>
+      <button type="button" class="btn btn-ghost btn-sm" id="btnPrevia">Pré-visualizar</button>
+      <button type="button" class="btn btn-outline btn-sm" id="btnRascunho">Salvar rascunho</button>
+      <button type="button" class="btn btn-primary btn-sm" id="btnPublicar">Publicar</button>
+      <a href="index.html" class="btn btn-ghost btn-sm" id="linkVoltar">← Voltar</a>
+    </div>
+  </header>
+
+  <div class="ce-grade">
+    <main class="ce-principal">
+      <input type="text" id="ceTitulo" class="ce-titulo" placeholder="Título da publicação" maxlength="255" autocomplete="off">
+      <div id="ceBlocos" class="ce-blocos"></div>
+    </main>
+
+    <aside class="ce-lateral" aria-label="Configurações da publicação">
+      <section class="ce-cx">
+        <h3>Tipo de publicação</h3>
+        <div class="ce-seg" id="ceTipo" role="radiogroup" aria-label="Tipo de publicação">
+          <button type="button" role="radio" data-tipo="blog">Conteúdo</button>
+          <button type="button" role="radio" data-tipo="infoproduto">Infoproduto</button>
+        </div>
+        <p class="admin-field-hint" id="ceTipoAjuda"></p>
+      </section>
+
+      <section class="ce-cx" id="ceCxVenda" hidden>
+        <h3>Venda</h3>
+        <label class="ce-lbl">Preço (como aparece no site)
+          <input type="text" id="cePreco" maxlength="60" placeholder="R$ 47,00">
+        </label>
+        <label class="checkbox-label ce-check"><input type="checkbox" id="ceGratuito"> Este material é gratuito</label>
+        <label class="ce-lbl">Link de compra (ou de download, se for grátis)
+          <input type="url" id="ceLink" maxlength="500" placeholder="https://pay.exemplo.com/...">
+        </label>
+        <label class="ce-lbl">Texto do botão
+          <input type="text" id="ceCtaRotulo" maxlength="60" placeholder="Comprar agora">
+        </label>
+        <p class="admin-field-hint">Sem link, o botão abre uma conversa no WhatsApp com o nome do produto.</p>
+      </section>
+
+      <section class="ce-cx">
+        <h3>Publicação</h3>
+        <p class="ce-situacao-txt" id="ceSituacaoTxt"></p>
+        <label class="ce-lbl">Data de publicação
+          <input type="datetime-local" id="cePublicadoEm">
+        </label>
+        <p class="admin-field-hint">Deixe em branco para publicar agora. Com data futura, a página entra no ar sozinha na hora marcada.</p>
+        <label class="ce-lbl">Endereço da página
+          <input type="text" id="ceSlug" maxlength="120" placeholder="gerado a partir do título">
+        </label>
+        <p class="admin-field-hint" id="ceSlugAjuda"></p>
+        <a class="btn btn-ghost btn-sm btn-block" id="ceVerNoSite" target="_blank" rel="noopener" hidden>Ver no site ↗</a>
+      </section>
+
+      <section class="ce-cx">
+        <h3>Capa</h3>
+        <div id="ceCapa"></div>
+        <label class="ce-lbl">Descrição da imagem (acessibilidade)
+          <input type="text" id="ceCapaAlt" maxlength="255">
+        </label>
+      </section>
+
+      <section class="ce-cx">
+        <h3>Resumo e organização</h3>
+        <label class="ce-lbl">Resumo (aparece nos cartões)
+          <textarea id="ceResumo" rows="3" maxlength="600" placeholder="Se ficar em branco, usamos o começo do texto."></textarea>
+        </label>
+        <label class="ce-lbl">Categoria
+          <input type="text" id="ceCategoria" maxlength="80" list="ceCategorias" placeholder="Ex.: Planilhas, Gestão, Dashboards">
+          <datalist id="ceCategorias"></datalist>
+        </label>
+        <label class="ce-lbl">Etiquetas (separadas por vírgula)
+          <input type="text" id="ceTags" maxlength="255" placeholder="fluxo de caixa, planilha">
+        </label>
+        <label class="ce-lbl">Autor
+          <input type="text" id="ceAutor" maxlength="120" placeholder="CM Soluções Financeiras">
+        </label>
+      </section>
+
+      <section class="ce-cx">
+        <h3>Google e links compartilhados</h3>
+        <label class="ce-lbl">Descrição para buscadores (até 160 caracteres)
+          <textarea id="ceSeo" rows="2" maxlength="300"></textarea>
+        </label>
+        <p class="admin-field-hint">Também é o texto da prévia quando o link é enviado no WhatsApp ou LinkedIn.</p>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<!-- ESCOLHA DO TIPO (ao começar uma publicação nova) -->
+<div class="admin-modal" id="modalTipo" hidden>
+  <div class="admin-modal-box">
+    <h2>O que você vai publicar?</h2>
+    <div class="admin-opcoes-escolha">
+      <button type="button" class="admin-opcao-escolha" data-tipo="blog">
+        <strong>Conteúdo</strong>
+        <span>Artigo, manual de uso de planilha, apresentação de painel, novidade. Aparece na seção "Conteúdos" da página inicial e em /conteudos/.</span>
+      </button>
+      <button type="button" class="admin-opcao-escolha" data-tipo="infoproduto">
+        <strong>Infoproduto (página de venda)</strong>
+        <span>Planilha, e-book ou curso, com imagens, legendas, preço e botão de compra. Aparece junto dos infoprodutos na página inicial.</span>
+      </button>
+    </div>
+    <div class="admin-modal-actions">
+      <a href="index.html" class="btn btn-ghost btn-sm">Cancelar</a>
+    </div>
+  </div>
+</div>
+
+<!-- PRÉ-VISUALIZAÇÃO -->
+<div class="ce-previa" id="previa" hidden>
+  <div class="ce-previa-barra">
+    <strong>Pré-visualização</strong>
+    <div class="ce-seg ce-seg-sm" id="previaLargura">
+      <button type="button" class="on" data-w="100%">Computador</button>
+      <button type="button" data-w="390px">Celular</button>
+    </div>
+    <button type="button" class="btn btn-outline btn-sm" id="previaFechar">Fechar</button>
+  </div>
+  <div class="ce-previa-palco"><iframe id="previaFrame" title="Pré-visualização da publicação"></iframe></div>
+</div>
+
+<input type="file" id="ceArquivo" hidden>
+<script src="conteudo.js?v=1"></script>
+</body>
+</html>

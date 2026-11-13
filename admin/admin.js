@@ -278,7 +278,7 @@
   // Se já existe uma sessão salva (reentrou na aba, ou marcou "Manter-me
   // conectado" numa visita anterior), reentra direto — exceto se a tela de
   // redefinição de senha estiver aberta (link do e-mail tem prioridade).
-  if (!(resetUser && resetToken) && authHeader && config.apiUrl) {
+  if (!(resetUser && resetToken) && authHeader) {
     fetch(`${config.apiUrl}/api/login`, { headers: { Authorization: authHeader } })
       .then(async (res) => {
         if (!res.ok) {
@@ -296,6 +296,85 @@
       })
       .catch(() => {});
   }
+
+  // ---------- Conteúdos (publicações do site: artigos e páginas de venda) ----------
+
+  const conteudosState = { itens: [] };
+
+  function rotuloSituacao(p) {
+    if (p.status !== 'publicado') return 'Rascunho';
+    return p.publicadoEm && new Date(p.publicadoEm) > new Date() ? 'Agendado' : 'Publicado';
+  }
+
+  async function carregarConteudos() {
+    const lista = document.getElementById('listaConteudos');
+    const feedback = document.getElementById('feedbackConteudos');
+    lista.innerHTML = '<p class="loading-placeholder">Carregando...</p>';
+    feedback.textContent = '';
+    feedback.className = 'admin-feedback';
+    try {
+      const res = await fetch(`${config.apiUrl}/api/admin/posts`, { headers: { Authorization: authHeader } });
+      const body = await res.json().catch(() => ([]));
+      if (!res.ok) throw new Error(body.message || `Erro ao carregar as publicações (HTTP ${res.status})`);
+      conteudosState.itens = body;
+      renderListaConteudos();
+    } catch (err) {
+      lista.innerHTML = '';
+      feedback.textContent = err.message;
+      feedback.className = 'admin-feedback error';
+    }
+  }
+
+  function renderListaConteudos() {
+    const lista = document.getElementById('listaConteudos');
+    const filtro = document.getElementById('filtroConteudos').value;
+    const itens = conteudosState.itens.filter((p) => !filtro || p.tipo === filtro);
+    if (itens.length === 0) {
+      lista.innerHTML = '<p class="loading-placeholder">Nenhuma publicação ainda. Clique em "+ Nova publicação" para começar.</p>';
+      return;
+    }
+    lista.innerHTML = itens.map((p) => {
+      const sit = rotuloSituacao(p);
+      const venda = p.tipo === 'infoproduto';
+      const data = p.publicadoEm ? new Date(p.publicadoEm).toLocaleDateString('pt-BR') : 'sem data';
+      return `
+      <div class="admin-item ${sit === 'Rascunho' ? 'inativo' : ''}" data-id="${escapeHtml(p.id)}">
+        <div class="admin-item-info">
+          <h4>${escapeHtml(p.titulo)}</h4>
+          <p>${venda ? 'Página de venda' : 'Conteúdo'}${p.categoria ? ` · ${escapeHtml(p.categoria)}` : ''}${venda && p.precoLabel ? ` · ${escapeHtml(p.precoLabel)}` : ''}${venda && p.gratuito ? ' · Grátis' : ''}</p>
+          <span class="admin-item-meta">${sit} · ${data}</span>
+        </div>
+        <div class="admin-item-actions">
+          <a class="btn btn-ghost btn-sm" href="conteudo.html?id=${encodeURIComponent(p.id)}">Editar</a>
+          ${sit === 'Publicado' ? `<a class="btn btn-ghost btn-sm" href="${escapeHtml(p.url)}" target="_blank" rel="noopener">Ver no site</a>` : ''}
+          <button class="btn btn-outline btn-sm" data-acao="remover">Excluir</button>
+        </div>
+      </div>`;
+    }).join('');
+    lista.querySelectorAll('.admin-item').forEach((el) => {
+      el.querySelector('[data-acao="remover"]').addEventListener('click', () => removerConteudo(el.dataset.id));
+    });
+  }
+
+  async function removerConteudo(id) {
+    const p = conteudosState.itens.find((i) => i.id === id);
+    if (!p || !confirm(`Excluir "${p.titulo}"? Isso apaga a página do site e não dá para desfazer.`)) return;
+    const feedback = document.getElementById('feedbackConteudos');
+    try {
+      const res = await fetch(`${config.apiUrl}/api/admin/post?id=${encodeURIComponent(id)}`, { method: 'DELETE', headers: { Authorization: authHeader } });
+      if (!res.ok) throw new Error('Não foi possível excluir.');
+      conteudosState.itens = conteudosState.itens.filter((i) => i.id !== id);
+      renderListaConteudos();
+      feedback.textContent = 'Publicação excluída.';
+      feedback.className = 'admin-feedback success';
+    } catch (err) {
+      feedback.textContent = err.message;
+      feedback.className = 'admin-feedback error';
+    }
+  }
+
+  document.getElementById('btnRecarregarConteudos').addEventListener('click', carregarConteudos);
+  document.getElementById('filtroConteudos').addEventListener('change', renderListaConteudos);
 
   // ---------- Abas ----------
 
@@ -318,6 +397,7 @@
 
   function carregarTudo() {
     TIPOS.forEach(carregarLista);
+    carregarConteudos();
     carregarClientes();
     carregarUsuarios();
     carregarDiagnosticos();

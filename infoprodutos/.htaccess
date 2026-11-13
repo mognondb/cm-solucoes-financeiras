@@ -1,0 +1,6 @@
+# /infoprodutos/<endereco> -> página de venda do infoproduto
+DirectoryIndex index.php
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([A-Za-z0-9-]+)/?$ post.php?slug=$1 [QSA,L]
