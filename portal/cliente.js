@@ -210,6 +210,7 @@
 
   function tipoLabel(r) {
     if (r.modo === 'embed') return 'Link externo';
+    if (r.modo === 'nativo') return 'Gestão de caixa';
     if (r.tipo === 'personalizado') return 'Construtor';
     if (r.tipo === 'fechamento') return 'Fechamento (antigo)';
     if (r.tipo === 'orcamento') return 'Orçamento (antigo)';

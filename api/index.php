@@ -93,6 +93,7 @@ if ($method === 'OPTIONS') jsonResponse(null, 200);
 $db = cmDb();
 migrarColunaEmailUsuarios($db);
 migrarTabelaResetSenha($db);
+garantirClienteDemonstrativo($db);
 
 // ---------- login ----------
 if ($path === '/api/login') {
@@ -118,6 +119,33 @@ function migrarTabelaResetSenha(PDO $db): void {
     usado_em VARCHAR(40) NULL,
     INDEX idx_reset_username (username)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+
+/** Cliente "Demonstrativo" (empresa e números 100% fictícios, usado para gravar vídeos e
+ *  posts): criado UMA vez, com o relatório nativo apontando para relatorios/demo.html.
+ *  O marcador na tabela "migracoes" garante que, se o cliente for apagado depois no painel,
+ *  ele não seja recriado. Qualquer falha aqui é engolida de propósito: nunca pode derrubar a API. */
+function garantirClienteDemonstrativo(PDO $db): void {
+  try {
+    $db->exec('CREATE TABLE IF NOT EXISTS migracoes (
+      nome VARCHAR(80) PRIMARY KEY,
+      aplicada_em VARCHAR(40) NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    $stmt = $db->prepare('SELECT 1 FROM migracoes WHERE nome = ?');
+    $stmt->execute(['cliente-demonstrativo-v1']);
+    if ($stmt->fetchColumn()) return;
+
+    $agora = nowIso();
+    $db->prepare('INSERT IGNORE INTO clientes (id, nome, dados_json, criado_em, atualizado_em) VALUES (?,?,?,?,?)')
+      ->execute(['demonstrativo', 'Demonstrativo', null, $agora, $agora]);
+    $db->prepare('INSERT IGNORE INTO relatorios (id, cliente_id, cliente, tipo, modo, periodo, descricao, embed_url, extra_json, dados_token, ativo, atualizado_em)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)')
+      ->execute(['demonstrativo-fechamento-visao-geral', 'demonstrativo', 'Demonstrativo', 'fechamento', 'nativo', 'Visão Geral',
+        'Gestão de caixa completa (dados fictícios)', 'relatorios/demo.html', null, null, 1, $agora]);
+    $db->prepare('INSERT INTO migracoes (nome, aplicada_em) VALUES (?,?)')->execute(['cliente-demonstrativo-v1', $agora]);
+  } catch (Throwable $e) {
+    // sem alarde: o demonstrativo é opcional
+  }
 }
 
 function migrarColunaEmailUsuarios(PDO $db): void {
