@@ -228,7 +228,6 @@
         campoFoto(b, 'url', refazer, { ao: (r) => { b.w = r.w; b.h = r.h; }, limpar: () => { b.w = 0; b.h = 0; } }),
         txt('Legenda (opcional)', b, 'legenda', { max: 300, ph: 'Ex.: Aba "Resumo" da planilha' }),
         txt('Descrição da imagem, para quem não consegue vê-la (opcional)', b, 'alt', { max: 200 }),
-        sel('Largura na página', b, 'largura', [['normal', 'Coluna de leitura'], ['larga', 'Larga'], ['cheia', 'Largura total']]),
       ],
     },
     imagem_texto: {
@@ -632,7 +631,7 @@
           ${capa ? `<figure class="art-capa container"><img src="${capa}" alt=""></figure>` : ''}<div class="art-body">${r.html}</div></article>`;
     return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><base target="_blank">
       <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-      <link rel="stylesheet" href="/assets/css/style.css?v=7"><link rel="stylesheet" href="/assets/css/conteudos.css?v=2">${r.precisaPainel ? '<link rel="stylesheet" href="/assets/css/dashboard.css?v=5">' : ''}</head>
+      <link rel="stylesheet" href="/assets/css/style.css?v=7"><link rel="stylesheet" href="/assets/css/conteudos.css?v=4">${r.precisaPainel ? '<link rel="stylesheet" href="/assets/css/dashboard.css?v=5">' : ''}</head>
       <body class="home pg-cont ${venda ? 'pg-venda' : 'pg-artigo'}">${corpo}${r.precisaPainel ? '<script src="/assets/js/dashboard.js?v=4"><\/script>' : ''}<script src="/assets/js/conteudos.js?v=1"><\/script></body></html>`;
   }
 

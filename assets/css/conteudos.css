@@ -2,7 +2,8 @@
    Conteúdos (artigos, manuais, painéis) e páginas de venda de infoprodutos.
    Usa as variáveis e o cabeçalho/rodapé de style.css (body.home).
    ========================================================================== */
-.pg-cont { --c-leitura: 740px; --c-largo: 1040px; --c-cheio: 1140px; }
+/* Uma única largura para tudo o que é corpo da publicação (texto, tabela, imagem, painel, caixas...). */
+.pg-cont { --c-corpo: 820px; }
 .pg-cont .nav a.ativo { color: var(--color-olive-dark); font-weight: 500; }
 .pg-cont main { min-height: 60vh; }
 .pg-cont .section-eyebrow, .pg-cont .eyebrow { margin-bottom: 14px; }
@@ -82,7 +83,7 @@
 .c-todos a:hover { color: var(--color-gold); }
 
 /* ---------------------------------------------------------------- artigo */
-.art-topo { max-width: calc(var(--c-leitura) + 48px); padding-top: 64px; }
+.art-topo { max-width: calc(var(--c-corpo) + 48px); padding-top: 64px; }
 .art-trilha { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: .8rem; color: var(--color-text-light); margin-bottom: 22px; }
 .art-trilha a { color: var(--color-text-light); text-decoration: none; }
 .art-trilha a:hover { color: var(--color-olive-dark); }
@@ -91,18 +92,14 @@
 .art-resumo { font-size: 1.15rem; color: var(--color-text-light); line-height: 1.65; margin-bottom: 20px; }
 .art-meta { display: flex; flex-wrap: wrap; gap: 4px 8px; font-size: .84rem; color: var(--color-text-light); margin: 0 0 8px; }
 .art-meta > * + *::before { content: '·'; margin-right: 8px; opacity: .55; }
-.art-capa { max-width: calc(var(--c-largo) + 48px); margin: 26px auto 8px; }
+.art-capa { max-width: calc(var(--c-corpo) + 48px); margin: 26px auto 8px; }
 .art-capa img { width: 100%; max-height: 520px; object-fit: cover; border-radius: var(--h-radius); box-shadow: var(--h-shadow); }
 
 .art-body { padding: 30px 0 28px; }
-.art-body > * { width: min(var(--c-leitura), calc(100% - 48px)); margin: 0 auto 1.6rem; }
-.art-body > .b-galeria, .art-body > .b-embed, .art-body > .b-tabela, .art-body > .b-imgtexto,
-.art-body > .b-imagem.b-larg-larga, .art-body > .b-cta, .art-body > .b-passos { width: min(var(--c-largo), calc(100% - 48px)); }
-.art-body > .b-painel, .art-body > .b-imagem.b-larg-cheia { width: min(var(--c-cheio), calc(100% - 48px)); }
-.art-body > .b-passos, .art-body > .b-lista, .art-body > .b-faq, .art-body > .b-formula, .art-body > .b-destaque, .art-body > .b-arquivo { width: min(var(--c-leitura), calc(100% - 48px)); }
+.art-body > * { width: min(var(--c-corpo), calc(100% - 48px)); margin: 0 auto 1.6rem; }
 .venda-corpo { padding-top: 54px; }
 
-.art-rodape { max-width: calc(var(--c-leitura) + 48px); border-top: 1px solid var(--h-line); padding-top: 26px; margin-top: 8px; }
+.art-rodape { max-width: calc(var(--c-corpo) + 48px); border-top: 1px solid var(--h-line); padding-top: 26px; margin-top: 8px; }
 .art-tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; }
 .art-tags span { font-size: .8rem; color: var(--h-gold-text); background: #f4ece0; padding: 4px 12px; border-radius: 999px; }
 .art-compartilhar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: .86rem; color: var(--color-text-light); }
@@ -113,14 +110,14 @@
 .art-compartilhar a:hover, .art-compartilhar button:hover { border-color: var(--color-olive); }
 
 .art-convite {
-  max-width: calc(var(--c-leitura) + 48px + 120px); margin-top: 56px; margin-bottom: 72px; display: flex; gap: 28px; align-items: center; justify-content: space-between; flex-wrap: wrap;
+  max-width: var(--c-corpo); width: calc(100% - 48px); margin-top: 56px; margin-bottom: 72px; display: flex; gap: 28px; align-items: center; justify-content: space-between; flex-wrap: wrap;
   background: var(--h-sage); border: 1px solid var(--h-sage-line); border-radius: var(--h-radius); padding: 34px 38px;
 }
 .art-convite h2 { font-size: 1.35rem; margin-bottom: 6px; }
 .art-convite p { margin: 0; color: var(--color-text-light); max-width: 460px; }
 
 /* ---------------------------------------------------------------- blocos do editor */
-.b-texto { font-size: 1.06rem; line-height: 1.82; color: #3b3b36; }
+.b-texto { font-size: 1.08rem; line-height: 1.82; color: #3b3b36; }
 .b-texto > *:first-child { margin-top: 0; }
 .b-texto > *:last-child { margin-bottom: 0; }
 .b-texto h2 { font-size: 1.7rem; margin: 1.8em 0 .5em; }

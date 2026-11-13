@@ -9,7 +9,7 @@ require_once __DIR__ . '/../api/blog_lib.php';
 
 const CM_SITE_NOME = 'CM Soluções Financeiras';
 const CM_WHATS = '554888766576';
-const CM_V_CSS = 2;
+const CM_V_CSS = 4;
 const CM_V_JS = 1;
 
 function cmOrigem(): string {
