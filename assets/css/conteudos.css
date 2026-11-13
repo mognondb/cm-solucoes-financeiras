@@ -9,7 +9,7 @@
 .pg-cont .section-eyebrow, .pg-cont .eyebrow { margin-bottom: 14px; }
 
 /* ---------------------------------------------------------------- página inicial */
-.section-conteudos { background: var(--h-sage, #eef1e8); }
+.section-conteudos { background: transparent; }
 .section-conteudos .c-card { box-shadow: 0 1px 2px rgba(46, 46, 46, .04), 0 18px 40px -22px rgba(46, 46, 46, .16); }
 .conteudos-mais { text-align: center; margin: 32px 0 0; }
 .card-pagina { padding: 0; overflow: hidden; }

@@ -9,7 +9,7 @@ require_once __DIR__ . '/../api/blog_lib.php';
 
 const CM_SITE_NOME = 'CM Soluções Financeiras';
 const CM_WHATS = '554888766576';
-const CM_V_CSS = 4;
+const CM_V_CSS = 5;
 const CM_V_JS = 1;
 
 function cmOrigem(): string {
@@ -95,10 +95,10 @@ function cmAbrir(array $o): void {
 
     <nav class="nav" id="nav">
       <?= $link('/#sobre', 'Sobre') ?>
+      <?= $link('/conteudos/', BLOG_NOME_PUBLICO, 'conteudos') ?>
       <?= $link('/#painel', 'Painel') ?>
       <?= $link('/#servicos', 'Serviços') ?>
       <?= $link('/#infoprodutos', 'Infoprodutos', 'infoprodutos') ?>
-      <?= $link('/conteudos/', BLOG_NOME_PUBLICO, 'conteudos') ?>
       <?= $link('/#contato', 'Contato') ?>
     </nav>
 
@@ -127,10 +127,10 @@ function cmFechar(array $o = []): void {
     <div class="footer-col">
       <h5>Navegação</h5>
       <a href="/#sobre">Sobre</a>
+      <a href="/conteudos/"><?= blogEsc(BLOG_NOME_PUBLICO) ?></a>
       <a href="/#painel">Painel</a>
       <a href="/#servicos">Serviços</a>
       <a href="/#infoprodutos">Infoprodutos</a>
-      <a href="/conteudos/"><?= blogEsc(BLOG_NOME_PUBLICO) ?></a>
       <a href="/#contato">Contato</a>
     </div>
     <div class="footer-col">

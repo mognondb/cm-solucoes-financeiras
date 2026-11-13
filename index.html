@@ -21,7 +21,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css?v=7">
 <link rel="stylesheet" href="assets/css/dashboard.css?v=5">
-<link rel="stylesheet" href="assets/css/conteudos.css?v=4">
+<link rel="stylesheet" href="assets/css/conteudos.css?v=5">
 </head>
 <body class="home">
 
@@ -35,9 +35,9 @@
 
     <nav class="nav" id="nav">
       <a href="#sobre">Sobre</a>
+      <a href="conteudos/" data-conteudos-link hidden>Conteúdos</a>
       <a href="#painel">Painel</a>
       <a href="#servicos">Serviços</a>
-      <a href="conteudos/" data-conteudos-link hidden>Conteúdos</a>
       <a href="#infoprodutos">Infoprodutos</a>
       <a href="#contato">Contato</a>
     </nav>
@@ -116,6 +116,19 @@
         </div>
       </div>
       <p class="callout">O financeiro deixa de ser apenas uma obrigação e passa a ser uma ferramenta de gestão.</p>
+    </div>
+  </section>
+
+  <!-- CONTEÚDOS (o mais recente; a lista completa fica em /conteudos/). Só aparece depois da primeira publicação. -->
+  <section id="conteudos" class="section section-conteudos" hidden>
+    <div class="container">
+      <p class="section-eyebrow">Conteúdos</p>
+      <h2 class="section-title">Para entender melhor o financeiro do seu negócio</h2>
+      <p class="section-sub">
+        Manuais de planilhas, apresentações de painéis e boas práticas de gestão, direto da rotina da CM.
+      </p>
+      <div id="conteudoDestaque"></div>
+      <p class="conteudos-mais"><a href="conteudos/" class="btn btn-outline">Ver todos os conteúdos</a></p>
     </div>
   </section>
 
@@ -216,19 +229,6 @@
           Solicitar diagnóstico grátis
         </button>
       </div>
-    </div>
-  </section>
-
-  <!-- CONTEÚDOS (o mais recente; a lista completa fica em /conteudos/). Só aparece depois da primeira publicação. -->
-  <section id="conteudos" class="section section-conteudos" hidden>
-    <div class="container">
-      <p class="section-eyebrow">Conteúdos</p>
-      <h2 class="section-title">Para entender melhor o financeiro do seu negócio</h2>
-      <p class="section-sub">
-        Manuais de planilhas, apresentações de painéis e boas práticas de gestão, direto da rotina da CM.
-      </p>
-      <div id="conteudoDestaque"></div>
-      <p class="conteudos-mais"><a href="conteudos/" class="btn btn-outline">Ver todos os conteúdos</a></p>
     </div>
   </section>
 
@@ -458,9 +458,9 @@
     <div class="footer-col">
       <h5>Navegação</h5>
       <a href="#sobre">Sobre</a>
+      <a href="conteudos/" data-conteudos-link hidden>Conteúdos</a>
       <a href="#painel">Painel</a>
       <a href="#servicos">Serviços</a>
-      <a href="conteudos/" data-conteudos-link hidden>Conteúdos</a>
       <a href="#infoprodutos">Infoprodutos</a>
       <a href="#contato">Contato</a>
     </div>
