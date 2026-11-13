@@ -28,8 +28,8 @@ legacy-jekyll-boilerplate/  Arquivos antigos do scaffold padrão do GitHub Pages
 
 1. **Hero** — apresentação rápida da CM.
 2. **Sobre** — quem é a CM e como ela trabalha.
-3. **Serviços** — os níveis de apoio (Implantação, Acompanhamento, Assistência, Gestão) e o
-   Diagnóstico Financeiro gratuito (abre um formulário em modal — veja mais abaixo).
+3. **Serviços** — BPO Financeiro (a partir de R$ 797/mês, com o que está incluso) e Emissão de notas fiscais
+   (valor por faixa de notas/mês), mais o Diagnóstico Financeiro gratuito (abre um formulário em modal — veja mais abaixo).
 4. **Conteúdos** — o conteúdo mais recente (some enquanto nada foi publicado); a lista completa fica em `/conteudos/`.
 5. **Infoprodutos** — planilhas gratuitas e produtos pagos (Hotmart), carregados do
    servidor do painel (ou de `assets/data/infoprodutos.json` como fallback), mais as páginas de venda

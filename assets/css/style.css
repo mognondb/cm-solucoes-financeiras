@@ -381,21 +381,18 @@ img { max-width: 100%; display: block; }
 .cards-grid-info { grid-template-columns: repeat(auto-fit, minmax(260px, 320px)); justify-content: center; }
 .info-nota { margin-top: 32px; font-size: 0.85rem; color: var(--color-text-light); }
 
-/* Caminhos (Serviços): duas superfícies claras, sem blocos escuros */
-.path-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 20px; }
-.path-card { border-radius: 22px; padding: 38px; border: 1px solid var(--h-line); }
-.path-light { background: #fff; }
-.path-dark { background: var(--h-sage); border-color: var(--h-sage-line); }
-.path-card h3 { color: var(--color-olive-dark); font-size: 1.3rem; }
-.path-card p { color: var(--color-text-light); }
-.path-lista { list-style: none; padding: 0; margin: 22px 0; display: flex; flex-direction: column; gap: 16px; }
-.path-lista li { display: flex; flex-direction: column; }
-.path-lista strong { color: var(--color-olive-dark); font-weight: 600; }
-.path-lista span { font-size: 0.86rem; color: var(--color-text-light); }
-.path-nota { font-size: 0.86rem; font-style: italic; border-top: 1px solid rgba(46, 46, 46, .08); padding-top: 16px; margin: 16px 0 0; }
-.path-legenda { text-align: center; font-style: italic; color: var(--color-text-light); margin: 26px 0 0; }
-
-.servicos-grid { grid-template-columns: repeat(2, 1fr); margin-top: 48px; }
+/* Serviços e valores */
+.servicos-grid { grid-template-columns: 1.3fr 1fr; align-items: stretch; margin-top: 8px; }
+.card-servico p { flex: none; }
+.card-servico .card-preco { font-size: 1.55rem; color: var(--h-gold-text); margin: 6px 0 0 !important; }
+.card-obs { font-size: 0.9rem !important; margin: 10px 0 0; }
+.card-incluso { font-size: 0.74rem !important; letter-spacing: 1.6px; text-transform: uppercase; font-weight: 600; color: var(--color-olive) !important; margin: 26px 0 14px; }
+.card-lista { list-style: none; padding: 0; margin: 0 0 10px; display: flex; flex-direction: column; gap: 12px; flex: 1; }
+.card-lista li { position: relative; padding-left: 28px; font-size: 0.94rem; line-height: 1.5; color: var(--color-text); }
+.card-lista li::before { content: ''; position: absolute; left: 3px; top: 0.4em; width: 10px; height: 6px; border-left: 2px solid var(--color-olive); border-bottom: 2px solid var(--color-olive); transform: rotate(-45deg); }
+.preco-tabela { list-style: none; padding: 0; margin: 22px 0 10px; border-top: 1px solid var(--h-line); flex: 1; }
+.preco-tabela li { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 15px 0; border-bottom: 1px solid var(--h-line); font-size: 0.96rem; color: var(--color-text); }
+.preco-tabela strong { font-family: 'Fraunces', serif; font-weight: 500; font-size: 1.2rem; color: var(--h-gold-text); white-space: nowrap; }
 .card-preco {
   font-family: 'Fraunces', serif;
   font-weight: 500;
@@ -589,7 +586,7 @@ img { max-width: 100%; display: block; }
   .cards-grid { grid-template-columns: repeat(2, 1fr); }
   .jornada { grid-template-columns: repeat(3, 1fr); row-gap: 36px; }
   .jornada-linha { display: none; }
-  .path-grid { grid-template-columns: 1fr; }
+  .servicos-grid { grid-template-columns: 1fr; }
   .section { padding: 92px 0; }
 }
 
@@ -625,7 +622,6 @@ img { max-width: 100%; display: block; }
   .hero .eyebrow { display: block; letter-spacing: 1.4px; line-height: 1.7; }
   .hero .eyebrow::before { display: none; }
   .card { padding: 28px; }
-  .path-card { padding: 30px 26px; }
   .form-relatorio { padding: 28px 22px; }
   .diagnostico-banner { flex-direction: column; align-items: flex-start; padding: 34px 28px; }
   .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px 20px; }
