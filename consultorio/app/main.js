@@ -8,7 +8,7 @@ import * as acesso from './telas/acesso.js';
 const raiz = document.getElementById('app');
 const NAV = [
   { itens: [['inicio', 'Início'], ['agenda', 'Agenda'], ['pacientes', 'Pacientes'], ['pacotes', 'Pacotes de sessões']] },
-  { titulo: 'Financeiro', itens: [['receber', 'A receber'], ['pagar', 'A pagar'], ['caixa', 'Fluxo de caixa'], ['contas', 'Contas e cartões'], ['extrato', 'Extrato bancário']] },
+  { titulo: 'Financeiro', itens: [['receber', 'A receber'], ['pagar', 'A pagar'], ['caixa', 'Fluxo de caixa'], ['contas', 'Contas e cartões'], ['movimentacoes', 'Movimentações bancárias'], ['extrato', 'Extrato bancário']] },
   { titulo: 'Documentos', itens: [['recibos', 'Recibos'], ['relatorios', 'Relatórios']] },
   { titulo: 'Cadastros', itens: [['fornecedores', 'Fornecedores'], ['importar', 'Importar planilha']] },
   { itens: [['config', 'Configurações']] },
@@ -17,7 +17,7 @@ const NAV_INF = ['inicio', 'agenda', 'pacientes', 'receber'];
 const ROTULO = Object.fromEntries(NAV.flatMap((g) => g.itens));
 /* Telas já construídas (cada uma é um módulo em telas/). As demais mostram "Em construção" sem fazer pedido ao servidor;
    ao construir uma tela, acrescente-a aqui. Se uma tela listada falhar ao carregar, o erro aparece de verdade (não vira "em construção"). */
-const PRONTAS = new Set(['inicio', 'config', 'pacientes', 'agenda', 'receber', 'pagar', 'contas', 'caixa', 'extrato', 'recibos', 'relatorios', 'fornecedores', 'importar', 'pacotes']);
+const PRONTAS = new Set(['inicio', 'config', 'pacientes', 'agenda', 'receber', 'pagar', 'contas', 'caixa', 'extrato', 'recibos', 'relatorios', 'fornecedores', 'importar', 'pacotes', 'movimentacoes']);
 const PUBLICAS = new Set(['entrar', 'cadastro', 'esqueci', 'redefinir', 'verificar']);
 let limpar = null;
 let casca = false;

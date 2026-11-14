@@ -27,6 +27,7 @@ Pense em um "Conta Azul" feito para essa rotina, com a agenda no centro: o que a
 | G3 | Preço social: marca no paciente, na sessão e na cobrança, valor social por atendimento e desconto concedido nos relatórios | feito |
 | G4 | Extrato: apagar importação errada, sugestões v2 (categoria, fornecedor, grupos), edição em massa, conciliação manual com busca e seletor de categoria/fornecedor com busca | feito |
 | G5 | Pacotes de sessões pagos antecipadamente: vender, marcar todas as sessões ligadas ao pacote sem nova cobrança, saldo, validade e encerramento | feito |
+| G6 | Movimentações bancárias: o que entrou e saiu das contas dia a dia (dias expansíveis), saldo, não conciliado por dia, uma conta ou todas | feito |
 
 Rotas do aplicativo que ainda não têm tela aparecem como "Em construção" (lista `PRONTAS` em `app/main.js`: ao criar uma tela, acrescente-a ali).
 O hash aceita parâmetros (`#/agenda?paciente=12`): a tela recebe `abrir(el, resto, consulta)`.
@@ -257,6 +258,20 @@ o dinheiro continua sendo lançamento comum, então o **caixa não muda**: a rec
 - **Regras**: validade impede marcar sessões depois da data; reativar sessão cancelada exige vaga; a série deve caber em 800 dias (`PSI_HORIZONTE_SERIE_DIAS`); `PUT pacotes/{id}` não baixa a quantidade abaixo de usadas + agendadas.
   **Encerrar** (`POST pacotes/{id}/encerrar`) solta as sessões futuras, que voltam à cobrança normal do paciente; `reabrir` desfaz. **Apagar** só sem sessões nem baixas (409 com o motivo); devolução de dinheiro é estorno em "A receber".
 - Sessão avulsa ligada ou desligada do pacote na edição (`pacoteId` ou `null`, sempre só "esta sessão"). O backup/exportação inclui `pacotes_de_sessoes`.
+
+### Movimentações bancárias (G6)
+
+Aba parecida com o extrato, mais compacta: **um dia por linha** (entradas, saídas, saldo ao fim do dia e o que não foi conciliado), cada dia se abre para os movimentos. `GET movimentacoes?mes=AAAA-MM&conta=todas|ID`
+(`api/lib/rotas_movimentacoes.php`, tela `app/telas/movimentacoes.js`; aceita `#/movimentacoes?conta=ID&mes=AAAA-MM`).
+
+- **Movimento** = pagamento/recebimento (baixa) ou transferência registrados no sistema, só os que contam no saldo (data ≥ data do saldo inicial da conta). Por isso o saldo da aba é o mesmo de "Contas e cartões".
+- **Saldo ao fim do dia** é calculado de trás para frente a partir do saldo de hoje (saldo atual − o que aconteceu depois daquele dia); `saldoAbertura` é o saldo no começo do mês.
+- **Escopo**: uma conta (qualquer tipo, inclusive cartão, cujo saldo negativo é a dívida) ou **todas** = contas de caixa ativas (banco, carteira, plataforma). **Cartão de crédito não entra no total**, como no fluxo de caixa: a dívida vem em `dividaCartoes`
+  e a compra só sai do caixa quando a fatura é paga. **Transferência entre duas contas do escopo** aparece no dia (`interna`) mas não conta como entrada nem saída; pagar fatura (conta → cartão) é saída.
+- **Não conciliado** = linhas do extrato importado ainda `pendente` (nem ligadas a um pagamento, nem ignoradas), na data da linha: por dia (`naoConciliado`: qtd, entradas, saídas, total, e as linhas em `pendentes`), no mês, e no total com a lista por mês (`pendentes.porMes`)
+  para avisar do que está em outros meses. Movimentos ligados a uma linha do extrato levam `conciliado: true`. "Conciliar" leva ao extrato já na conta da linha (`#/extrato?conta=ID`).
+- A resposta traz `contas` (id, nome, tipo, saldo e pendências de cada uma) para o seletor. Mês muito movimentado é cortado em 3.000 registros e a resposta avisa (`truncado`).
+- Na tela: seletor de conta, mês anterior/seguinte, "Só dias com pendência", "Abrir todos/Fechar todos", clicar num movimento abre o detalhe do lançamento. Cada dia é um botão com `aria-expanded` (teclado: Enter/Espaço).
 
 ## Testar localmente
 

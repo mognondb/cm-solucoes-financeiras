@@ -11,10 +11,12 @@ import { carregarLeitor } from '../planilha.js';
 const est = { conta: null, situacao: 'pendente', busca: '', agrupar: false, sel: new Set() };
 let raiz = null; let dados = null; let importacoes = []; let contas = []; let pacientes = null;
 
-export async function abrir(el) {
+export async function abrir(el, resto, consulta) {
   raiz = el; el.onclick = clique; el.onchange = mudou; el.oninput = digitou;
   await carregarBase(['contas', 'categorias', 'fornecedores']); contas = App.cache.contas.filter((c) => c.ativo);
   if (!contas.length) { montar(el, html`<div class="cartao">${vazio('Nenhuma conta cadastrada', 'Cadastre uma conta em "Contas e cartões" para importar o extrato dela.', html`<a class="btn btn-pri" href="#/contas">Abrir contas</a>`)}</div>`); return; }
+  const pedida = consulta && Number(consulta.get('conta'));   // vindo de "Movimentações bancárias": abre já na conta da linha
+  if (pedida && contas.some((c) => c.id === pedida)) { est.conta = pedida; est.situacao = 'pendente'; }
   if (!est.conta || !contas.some((c) => c.id === est.conta)) est.conta = (contas.find((c) => c.tipo === 'banco') || contas[0]).id;
   est.sel = new Set(); est.busca = '';
   await carregar();

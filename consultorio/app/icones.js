@@ -7,6 +7,7 @@ const P = {
   pagar: '<path d="M12 21V8M7 13l5-5 5 5"/><path d="M4 4h16"/>',
   caixa: '<path d="M4 19V5M4 19h16"/><path d="M8 15l3-4 3 2 5-6"/>',
   contas: '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/>',
+  movimentacoes: '<path d="M4 7h13M13 3l4 4-4 4"/><path d="M20 17H7M11 13l-4 4 4 4"/>',
   extrato: '<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4M10 12h6M10 16h6"/>',
   recibos: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
   relatorios: '<path d="M5 20V10M12 20V4M19 20v-7"/>',
