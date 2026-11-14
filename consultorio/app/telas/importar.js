@@ -3,7 +3,7 @@
 import { api } from '../api.js';
 import { somenteLeitura, carregarBase } from '../estado.js';
 import { html, raw, montar, $, selo } from '../ui.js';
-import { lerArquivo, detectarCabecalho, ligarColunas, montarLinhas, baixarModelo, letraColuna } from '../planilha.js';
+import { lerArquivo, detectarCabecalho, ligarColunas, montarLinhas, baixarModelo, letraColuna, ehModelo, chave } from '../planilha.js';
 
 const TIPOS = {
   pacientes: { rotulo: 'Pacientes', singular: 'paciente', plural: 'pacientes', modelo: 'modelo-pacientes.csv', destino: '#/pacientes', verDestino: 'Ver pacientes',
@@ -13,7 +13,7 @@ const TIPOS = {
   categorias: { rotulo: 'Categorias', singular: 'categoria', plural: 'categorias', modelo: 'modelo-categorias.csv', destino: '#/config/categorias', verDestino: 'Ver categorias',
     intro: 'Categorias de receita e de despesa usadas nos relatórios. Informe o tipo (receita ou despesa) e o nome; para despesas, se é fixa ou variável e se costuma entrar no livro-caixa.' },
 };
-const novoEstado = (tipo) => ({ tipo, passo: 'arquivo', campos: null, limite: 2000, leitura: null, aba: 0, cab: 0, mapa: {}, padroes: {}, duplicados: 'ignorar', previa: null, enviadas: null, filtro: 'todas', ocupado: false, final: null, erro: '' });
+const novoEstado = (tipo) => ({ tipo, passo: 'arquivo', campos: null, limite: 2000, leitura: null, aba: 0, cab: 0, mapa: {}, padroes: {}, duplicados: 'ignorar', direto: false, previa: null, enviadas: null, filtro: 'todas', ocupado: false, final: null, erro: '' });
 let est = novoEstado('pacientes');
 let raiz = null;
 
@@ -31,7 +31,7 @@ function desenhar() {
   montar(raiz, html`<div class="cabeca"><div><h1>Importar cadastros</h1><p>Traga de uma planilha o que você já tem, sem digitar tudo de novo.</p></div></div>
     <div class="abas" role="tablist">${Object.entries(TIPOS).map(([k, v]) => html`<button role="tab" aria-selected="${k === est.tipo}" data-tipo="${k}">${v.rotulo}</button>`)}</div>${passo()}`);
 }
-const erroForm = (msg) => { const x = $('#erro-imp', raiz); if (x) { x.textContent = msg; x.hidden = !msg; } };
+const erroForm = (msg) => { const x = $('#erro-imp', raiz); if (x) { x.textContent = msg; x.hidden = !msg; } if (msg) { const st = $('#status-imp', raiz); if (st) st.hidden = true; } };
 
 /* ------------------------------------------------------------------ 1. escolher o arquivo */
 function passoArquivo() {
@@ -39,10 +39,11 @@ function passoArquivo() {
   if (somenteLeitura()) return html`<div class="cartao">${raw('<p class="suave" style="margin:0">Seu período de teste terminou: a plataforma está somente para leitura e não é possível importar.</p>')}</div>`;
   return html`<div class="cartao"><div class="cartao-t"><h3>Importar ${T.rotulo.toLowerCase()}</h3></div>
     <p class="suave" style="margin-top:0">${T.intro}</p>
-    <ol class="suave" style="padding-left:20px;margin:0 0 14px"><li>Baixe o modelo, preencha e salve. Se já tem uma planilha sua, pode usá-la: as colunas são reconhecidas pelo nome.</li><li>Escolha o arquivo (Excel .xlsx ou CSV).</li><li>Confira o que será importado e confirme.</li></ol>
+    <ol class="suave" style="padding-left:20px;margin:0 0 14px"><li>Baixe o modelo, preencha e salve. Usando o modelo, o sistema já sabe o que é cada coluna: não precisa ligar nada.</li><li>Escolha o arquivo (Excel .xlsx ou CSV). Se for uma planilha sua, com outros títulos, você liga as colunas em um passo a mais.</li><li>Confira o que será importado e confirme.</li></ol>
     <div class="pac-acoes" style="margin:0 0 8px"><button class="btn btn-sec" data-modelo>Baixar modelo de planilha</button>
       <label class="btn btn-pri" style="cursor:pointer">Escolher arquivo<input type="file" id="arq-imp" accept=".csv,.xlsx,.txt,text/csv" hidden></label></div>
     <p class="erro-form" id="erro-imp" role="alert" ${est.erro ? '' : raw('hidden')}>${est.erro}</p>
+    <p class="suave" id="status-imp" role="status" hidden>Lendo o arquivo e conferindo os dados…</p>
     <p class="suave peq" style="margin:10px 0">O arquivo é lido no seu navegador. Nada é gravado antes da conferência. Até ${est.limite.toLocaleString('pt-BR')} linhas por vez.</p>
     <details><summary class="suave peq" style="cursor:pointer">Quais colunas o sistema reconhece?</summary>
       <ul class="suave peq" style="margin:8px 0 0">${est.campos.map((c) => html`<li><strong>${c.rotulo}</strong>${c.obrigatorio ? ' (obrigatório)' : ''}${c.dica ? ` — ${c.dica}` : ''}</li>`)}</ul></details></div>`;
@@ -50,9 +51,13 @@ function passoArquivo() {
 
 async function escolherArquivo(file) {
   if (!file) return;
-  est.erro = ''; erroForm('');
-  try { est.leitura = await lerArquivo(file); } catch (e) { est.erro = e.message || 'Não foi possível ler o arquivo.'; erroForm(est.erro); return; }
-  est.aba = 0; est.padroes = {}; est.duplicados = 'ignorar'; preparar(); est.passo = 'mapear'; desenhar();
+  est.erro = ''; erroForm(''); const st = $('#status-imp', raiz); if (st) st.hidden = false;
+  try { est.leitura = await lerArquivo(file); } catch (e) { if (st) st.hidden = true; est.erro = e.message || 'Não foi possível ler o arquivo.'; erroForm(est.erro); return; }
+  est.aba = 0; est.padroes = {}; est.duplicados = 'ignorar';
+  // planilha do modelo: as colunas já se sabem, vai direto para a conferência (sem ligar coluna por coluna)
+  const modelo = est.leitura.abas.findIndex((a) => ehModelo(a.linhas, est.campos));
+  if (modelo >= 0) { est.aba = modelo; preparar(); est.direto = true; est.passo = 'arquivo'; return conferir(); }
+  if (st) st.hidden = true; est.direto = false; preparar(); est.passo = 'mapear'; desenhar();
 }
 function preparar() {
   const linhas = est.leitura.abas[est.aba].linhas;
@@ -83,13 +88,16 @@ function passoMapear() {
         <td class="suave peq" data-exemplo="${c.chave}">${exemploDe(est.mapa[c.chave])}</td></tr>`)}
     </tbody></table></div>
     ${est.tipo === 'categorias' ? html`<div class="campo" style="margin-top:12px"><label for="imp-tipo">Tipo padrão (usado quando a linha não informa o tipo)</label><select id="imp-tipo" data-padrao="tipo"><option value="">Nenhum: a linha precisa informar</option><option value="despesa" ${est.padroes.tipo === 'despesa' ? raw('selected') : ''}>Despesa</option><option value="receita" ${est.padroes.tipo === 'receita' ? raw('selected') : ''}>Receita</option></select></div>` : ''}
-    <fieldset class="campo" style="border:0;padding:0;margin:14px 0 4px"><legend style="font-weight:600;font-size:.9rem;margin-bottom:6px">Quem já está cadastrado</legend>
-      <label class="marca"><input type="radio" name="dup" value="ignorar" ${est.duplicados === 'ignorar' ? raw('checked') : ''}><span><strong>Ignorar</strong> (recomendado): não mexe no que já existe.</span></label>
-      <label class="marca"><input type="radio" name="dup" value="atualizar" ${est.duplicados === 'atualizar' ? raw('checked') : ''}><span><strong>Atualizar</strong> o cadastro existente com os dados da planilha (só os campos preenchidos; nada é apagado).</span></label></fieldset>
+    ${blocoDuplicados()}
     <details style="margin:10px 0"><summary class="suave peq" style="cursor:pointer">Ver as primeiras linhas do arquivo</summary><div class="rolagem"><table class="tabela" style="margin-top:6px"><tbody>${linhas.slice(0, est.cab + 5).map((l, i) => html`<tr style="${i === est.cab ? 'font-weight:600;background:var(--creme)' : ''}"><td class="suave peq">${i + 1}</td>${cols.map((c) => html`<td class="peq">${preenchida(l[c]) ? String(l[c]).slice(0, 30) : ''}</td>`)}</tr>`)}</tbody></table></div></details>
     <p class="erro-form" id="erro-imp" role="alert" ${est.erro ? '' : raw('hidden')}>${est.erro}</p>
     <p class="faixa-aten" id="aviso-falta" style="border-radius:10px;padding:8px 12px;margin:0 0 8px;font-size:.88rem" ${faltando().length ? '' : raw('hidden')}>${avisoFalta()}</p>
     <div class="pac-acoes"><button class="btn btn-sec" data-voltar-arquivo>Trocar o arquivo</button><button class="btn btn-pri" data-conferir ${faltando().length || est.ocupado ? raw('disabled') : ''}>${est.ocupado ? 'Conferindo…' : 'Conferir os dados'}</button></div></div>`;
+}
+function blocoDuplicados() {
+  return html`<fieldset style="border:0;padding:0;margin:14px 0 4px;min-width:0"><legend style="font-weight:600;font-size:.9rem;margin-bottom:6px">Quem já está cadastrado</legend>
+      <label class="marca"><input type="radio" name="dup" value="ignorar" ${est.duplicados === 'ignorar' ? raw('checked') : ''}><span><strong>Ignorar</strong> (recomendado): não mexe no que já existe.</span></label>
+      <label class="marca"><input type="radio" name="dup" value="atualizar" ${est.duplicados === 'atualizar' ? raw('checked') : ''}><span><strong>Atualizar</strong> o cadastro existente com os dados da planilha (só os campos preenchidos; nada é apagado).</span></label></fieldset>`;
 }
 const avisoFalta = () => { const f = faltando(); return f.length ? `Ligue ${f.length === 1 ? 'a coluna obrigatória' : 'as colunas obrigatórias'}: ${f.map((c) => c.rotulo).join(', ')}.` : ''; };
 /** Atualiza só o que depende do mapa (exemplos, aviso e botão), sem redesenhar a tela (para não perder o foco do select). */
@@ -119,17 +127,27 @@ function passoPrevia() {
   const filtros = [['todas', 'Todas', itens.length], ['novo', 'Novos', r.novos], ['atualizar', 'Atualizar', r.atualizados], ['ignorado', 'Ignorados', r.ignorados], ['problemas', 'Com problema', r.erros]].filter(([k, , n]) => k === 'todas' || n > 0);
   const visiveis = itens.filter((i) => est.filtro === 'todas' || (est.filtro === 'problemas' ? i.situacao === 'erro' : i.situacao === est.filtro));
   const mostrar = visiveis.slice(0, 300); const aplicaveis = r.novos + r.atualizados;
+  const exemplos = linhasDeExemplo();
   return html`<div class="cartao"><div class="cartao-t"><h3>Confira antes de importar</h3></div>
+    ${est.direto ? html`<p class="suave peq" style="margin:-4px 0 10px">Planilha modelo reconhecida (<strong>${est.leitura.arquivo}</strong>): as colunas foram ligadas automaticamente.</p>` : ''}
+    ${exemplos ? html`<p class="faixa-aten" role="alert" style="border-radius:10px;padding:8px 12px;margin:0 0 12px;font-size:.88rem">${exemplos === 1 ? '1 linha parece ser um exemplo' : `${exemplos} linhas parecem ser exemplos`} do próprio modelo (nome${exemplos === 1 ? '' : 's'} como "${est.exemplosNome}"). Se não ${exemplos === 1 ? 'for' : 'forem'} real${exemplos === 1 ? '' : 'is'}, apague ${exemplos === 1 ? 'a linha' : 'as linhas'} da planilha e escolha o arquivo de novo.</p>` : ''}
     <div class="kpis"><div class="kpi ok"><span>Novos</span><strong>${r.novos}</strong></div><div class="kpi"><span>Atualizar</span><strong>${r.atualizados}</strong></div><div class="kpi"><span>Ignorados</span><strong>${r.ignorados}</strong><small class="suave">Já cadastrados, repetidos ou vazios</small></div><div class="kpi ${r.erros ? 'alerta' : ''}"><span>Com problema</span><strong>${r.erros}</strong>${r.erros ? html`<small class="suave">Não serão importados</small>` : ''}</div></div>
     <div class="chips" role="group" aria-label="Filtrar linhas" style="margin-bottom:12px">${filtros.map(([k, t, n]) => html`<button type="button" class="chip" aria-pressed="${k === est.filtro}" data-filtro="${k}">${t} (${n})</button>`)}</div>
     <div class="rolagem"><table class="tabela"><thead><tr><th>Linha</th><th>${T.rotulo.slice(0, -1) === 'Categoria' ? 'Categoria' : 'Nome'}</th><th>Situação</th><th>Observação</th></tr></thead><tbody>
       ${mostrar.map((i) => html`<tr><td class="suave">${i.linha}</td><td>${i.rotulo || html`<span class="suave">—</span>`}</td><td>${selo(SITUACAO[i.situacao][0], SITUACAO[i.situacao][1])}</td><td class="peq">${i.mensagem || ''}${i.avisos.map((a) => html`<br><span style="color:var(--atencao)">${a}</span>`)}</td></tr>`)}
     </tbody></table></div>
     ${visiveis.length > mostrar.length ? html`<p class="suave peq" style="margin:8px 0 0">Mostrando ${mostrar.length} de ${visiveis.length} linhas deste filtro.</p>` : ''}
+    ${blocoDuplicados()}
     ${r.erros ? html`<p class="suave peq" style="margin:10px 0 0">As linhas com problema não serão importadas. Corrija a planilha e importe de novo: o que já entrou será ignorado.</p>` : ''}
     <p class="erro-form" id="erro-imp" role="alert" ${est.erro ? '' : raw('hidden')}>${est.erro}</p>
-    <div class="pac-acoes" style="margin-top:14px"><button class="btn btn-sec" data-voltar-mapear>Voltar e ajustar</button>
+    <div class="pac-acoes" style="margin-top:14px"><button class="btn btn-sec" data-voltar-mapear>${est.direto ? 'Ligar as colunas à mão' : 'Voltar e ajustar'}</button>
       <button class="btn btn-pri" data-importar ${aplicaveis && !est.ocupado ? '' : raw('disabled')}>${est.ocupado ? 'Importando…' : aplicaveis ? `Importar ${aplicaveis} ${aplicaveis === 1 ? T.singular : T.plural}` : 'Nada para importar'}</button></div></div>`;
+}
+/** Quantas linhas enviadas trazem o nome de exemplo do modelo (quem esquece de apagar as linhas de exemplo importaria "Maria da Silva"). */
+function linhasDeExemplo() {
+  const campo = est.campos.find((c) => c.chave === 'nome') || est.campos.find((c) => c.obrigatorio); if (!campo || !est.enviadas) return 0;
+  const ex = new Set((campo.exemplos || []).slice(0, 2).map(chave).filter(Boolean)); est.exemplosNome = (campo.exemplos || [])[0] || '';
+  return est.enviadas.filter((l) => ex.has(chave(l[campo.chave]))).length;
 }
 async function importar() {
   est.erro = ''; est.ocupado = true; const b = raiz.querySelector('[data-importar]'); if (b) { b.disabled = true; b.textContent = 'Importando…'; }
@@ -158,7 +176,7 @@ async function clique(e) {
   if (t.closest('[data-modelo]')) return baixarModelo(TIPOS[est.tipo].modelo, est.campos);
   if (t.closest('[data-voltar-arquivo]')) { est.passo = 'arquivo'; est.leitura = null; est.erro = ''; return desenhar(); }
   if (t.closest('[data-conferir]')) return conferir();
-  if (t.closest('[data-voltar-mapear]')) { est.passo = 'mapear'; est.erro = ''; return desenhar(); }
+  if (t.closest('[data-voltar-mapear]')) { est.passo = 'mapear'; est.direto = false; est.erro = ''; return desenhar(); }
   if (t.closest('[data-importar]')) return importar();
   if (t.closest('[data-outro]')) { const k = est.tipo; est = novoEstado(k); try { await carregarCampos(); } catch { /* segue */ } return desenhar(); }
   const f = t.closest('[data-filtro]'); if (f) { est.filtro = f.dataset.filtro; return desenhar(); }
@@ -170,5 +188,5 @@ function mudou(e) {
   if (t.matches('select[data-padrao]')) { est.padroes[t.dataset.padrao] = t.value; return atualizarMapa(); }
   if (t.matches('select[data-aba]')) { est.aba = Number(t.value); preparar(); return desenhar(); }
   if (t.matches('select[data-cab]')) { est.cab = Number(t.value); est.mapa = ligarColunas(est.leitura.abas[est.aba].linhas[est.cab] || [], est.campos); return desenhar(); }
-  if (t.matches('input[name="dup"]')) { est.duplicados = t.value; }
+  if (t.matches('input[name="dup"]')) { est.duplicados = t.value; if (est.passo === 'previa') return conferir(); }
 }

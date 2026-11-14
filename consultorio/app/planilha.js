@@ -34,6 +34,18 @@ function pontos(linha, campos) {
   const conhecidos = new Set(campos.flatMap((c) => [chave(c.rotulo), chave(c.chave), ...c.sinonimos.map(chave)]));
   return linha.reduce((n, cel) => n + (cel !== null && cel !== undefined && conhecidos.has(chave(cel)) ? 1 : 0), 0);
 }
+/** A planilha é o modelo do sistema? Cabeçalho na 1ª linha, cada título exatamente o nome de um campo (sem repetir nem sobrar coluna desconhecida) e os campos obrigatórios presentes.
+    Nesse caso não há o que ligar: as colunas já se sabem. Qualquer outra planilha (títulos diferentes, coluna a mais) segue para a ligação manual. */
+export function ehModelo(linhas, campos) {
+  const cab = linhas[0]; if (!cab) return false;
+  const porNome = new Map(campos.map((c) => [chave(c.rotulo), c.chave])); const vistos = new Set();
+  for (const cel of cab) {
+    const k = chave(cel); if (!k) continue;
+    const campo = porNome.get(k); if (!campo || vistos.has(campo)) return false; vistos.add(campo);
+  }
+  return vistos.size > 0 && campos.filter((c) => c.obrigatorio).every((c) => vistos.has(c.chave));
+}
+
 /** Procura o cabeçalho entre as primeiras linhas (planilhas exportadas costumam ter título antes). Devolve o índice da linha. */
 export function detectarCabecalho(linhas, campos) {
   let melhor = 0; let pMelhor = pontos(linhas[0] || [], campos);
