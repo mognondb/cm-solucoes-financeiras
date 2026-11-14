@@ -87,18 +87,19 @@ function dataLonga(iso) {
 }
 
 // Cartão do conteúdo mais recente (mesmo visual da lista em /conteudos/)
+// Sem imagem de capa o cartão fica só com texto (a categoria já aparece acima do título): nada de bloco decorativo vazio.
 function cartaoConteudo(p) {
   const capa = p.capa
-    ? `<img src="${escapeHtml(p.capa)}" alt="${escapeHtml(p.capaAlt || p.titulo)}" loading="lazy" decoding="async">`
-    : `<span class="c-capa-vazia" aria-hidden="true">${escapeHtml((p.categoria || 'CM').toUpperCase().slice(0, 22))}</span>`;
+    ? `<span class="c-capa"><img src="${escapeHtml(p.capa)}" alt="${escapeHtml(p.capaAlt || p.titulo)}" loading="lazy" decoding="async"></span>`
+    : '';
   const meta = [
     p.categoria ? `<span class="c-categoria">${escapeHtml(p.categoria)}</span>` : '',
     p.publicadoEm ? `<span>${escapeHtml(dataLonga(p.publicadoEm))}</span>` : '',
     `<span>${Number(p.tempoLeitura) || 1} min de leitura</span>`,
   ].join('');
   return `
-    <a class="c-card c-destaque" href="${escapeHtml(p.url)}">
-      <span class="c-capa">${capa}</span>
+    <a class="c-card c-destaque${p.capa ? '' : ' sem-capa'}" href="${escapeHtml(p.url)}">
+      ${capa}
       <span class="c-corpo">
         <span class="c-meta">${meta}</span>
         <strong class="c-titulo">${escapeHtml(p.titulo)}</strong>

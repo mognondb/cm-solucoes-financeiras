@@ -9,7 +9,7 @@ require_once __DIR__ . '/../api/blog_lib.php';
 
 const CM_SITE_NOME = 'CM Soluções Financeiras';
 const CM_WHATS = '554888766576';
-const CM_V_CSS = 5;
+const CM_V_CSS = 6;
 const CM_V_JS = 1;
 
 function cmOrigem(): string {
@@ -181,17 +181,19 @@ function cmFechar(array $o = []): void {
 /** Cartão de um conteúdo ou de um infoproduto (recebe a forma "de lista" vinda de blogResumoJson). */
 function cmCard(array $p, bool $destaque = false): string {
   $venda = ($p['tipo'] ?? 'blog') === 'infoproduto';
-  $capa = !empty($p['capa'])
-    ? '<img src="' . blogEsc($p['capa']) . '" alt="' . blogEsc($p['capaAlt'] ?: $p['titulo']) . '" loading="' . ($destaque ? 'eager' : 'lazy') . '" decoding="async">'
-    : '<span class="c-capa-vazia" aria-hidden="true">' . blogEsc(mb_strtoupper(mb_substr($p['categoria'] ?: ($venda ? 'Material' : 'CM'), 0, 22))) . '</span>';
+  // Sem imagem de capa o cartão fica só com texto (a categoria já aparece acima do título): nada de bloco decorativo vazio.
+  $temCapa = !empty($p['capa']);
+  $capa = $temCapa
+    ? '<span class="c-capa"><img src="' . blogEsc($p['capa']) . '" alt="' . blogEsc($p['capaAlt'] ?: $p['titulo']) . '" loading="' . ($destaque ? 'eager' : 'lazy') . '" decoding="async"></span>'
+    : '';
   $selo = '';
   if ($venda) $selo = '<span class="badge ' . (!empty($p['gratuito']) ? 'badge-free' : 'badge-paid') . '">' . blogEsc(!empty($p['gratuito']) ? 'Grátis' : ($p['precoLabel'] ?: 'Infoproduto')) . '</span>';
   $meta = [];
   if ($p['categoria']) $meta[] = '<span class="c-categoria">' . blogEsc($p['categoria']) . '</span>';
   if ($p['publicadoEm']) $meta[] = '<time datetime="' . blogEsc(substr($p['publicadoEm'], 0, 10)) . '">' . blogEsc(blogData($p['publicadoEm'])) . '</time>';
   if (!$venda) $meta[] = '<span>' . blogEsc((string)$p['tempoLeitura']) . ' min de leitura</span>';
-  return '<a class="c-card' . ($destaque ? ' c-destaque' : '') . '" href="' . blogEsc($p['url']) . '">'
-    . '<span class="c-capa">' . $capa . '</span>'
+  return '<a class="c-card' . ($destaque ? ' c-destaque' : '') . ($temCapa ? '' : ' sem-capa') . '" href="' . blogEsc($p['url']) . '">'
+    . $capa
     . '<span class="c-corpo">' . $selo
     . '<span class="c-meta">' . implode('', $meta) . '</span>'
     . '<strong class="c-titulo">' . blogEsc($p['titulo']) . '</strong>'

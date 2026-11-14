@@ -49,11 +49,13 @@
 .c-capa { display: block; aspect-ratio: 16 / 9; overflow: hidden; background: var(--h-sage); }
 .c-capa img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s ease; }
 .c-card:hover .c-capa img { transform: scale(1.03); }
-.c-capa-vazia {
-  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 16px; text-align: center;
-  font-family: 'Fraunces', serif; font-size: 1.25rem; letter-spacing: .12em; color: var(--color-olive);
-  background: radial-gradient(circle at 80% 15%, rgba(177, 138, 82, .18), transparent 55%), linear-gradient(135deg, var(--h-sage), var(--h-soft));
+/* Sem imagem de capa: só texto, com o mesmo fundo suave de antes e um filete dourado (em vez de repetir a categoria em letras grandes) */
+.c-card.sem-capa {
+  position: relative;
+  background: radial-gradient(circle at 94% 6%, rgba(177, 138, 82, .15), transparent 52%), linear-gradient(135deg, #fff 0%, var(--h-sage) 135%);
 }
+.c-card.sem-capa::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 4px; background: linear-gradient(90deg, var(--color-gold), rgba(177, 138, 82, .25)); }
+.c-card.sem-capa .c-corpo { padding-top: 28px; }
 .c-corpo { display: flex; flex-direction: column; gap: 8px; padding: 22px 24px 24px; flex: 1; position: relative; }
 .c-corpo .badge { position: static; align-self: flex-start; }
 .c-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: .78rem; color: var(--color-text-light); }
@@ -65,6 +67,9 @@
 .c-card:hover .c-ler { color: var(--color-gold); }
 
 .c-destaque { display: grid; grid-template-columns: 1.2fr 1fr; }
+.c-destaque.sem-capa { grid-template-columns: 1fr; }
+.c-destaque.sem-capa::before { right: auto; left: 0; top: 0; bottom: 0; width: 5px; height: auto; background: linear-gradient(180deg, var(--color-gold), rgba(177, 138, 82, .25)); }
+.c-destaque.sem-capa .c-corpo { padding: 46px 56px 48px 60px; max-width: 880px; }
 .c-destaque .c-capa { aspect-ratio: auto; min-height: 340px; }
 .c-destaque .c-corpo { padding: 40px 42px; justify-content: center; gap: 12px; }
 .c-destaque .c-titulo { font-size: clamp(1.5rem, 2.6vw, 2.1rem); line-height: 1.2; }
@@ -272,6 +277,7 @@
   .c-destaque { grid-template-columns: 1fr; }
   .c-destaque .c-capa { min-height: 0; aspect-ratio: 16 / 9; }
   .c-destaque .c-corpo { padding: 26px 26px 28px; }
+  .c-destaque.sem-capa .c-corpo { padding: 32px 26px 32px 32px; }
   .venda-grid { grid-template-columns: 1fr; gap: 34px; }
   .venda-capa { order: -1; }
   .b-imgtexto { grid-template-columns: 1fr; gap: 20px; }
