@@ -16,14 +16,16 @@ const NAV_INF = ['inicio', 'agenda', 'pacientes', 'receber'];
 const ROTULO = Object.fromEntries(NAV.flatMap((g) => g.itens));
 /* Telas já construídas (cada uma é um módulo em telas/). As demais mostram "Em construção" sem fazer pedido ao servidor;
    ao construir uma tela, acrescente-a aqui. Se uma tela listada falhar ao carregar, o erro aparece de verdade (não vira "em construção"). */
-const PRONTAS = new Set(['inicio', 'config']);
+const PRONTAS = new Set(['inicio', 'config', 'pacientes']);
 const PUBLICAS = new Set(['entrar', 'cadastro', 'esqueci', 'redefinir', 'verificar']);
 let limpar = null;
 let casca = false;
 
+/* "#/pacientes/12?busca=x" → { seg: 'pacientes', resto: ['12'], consulta: URLSearchParams } */
 const rota = () => {
-  const partes = location.hash.replace(/^#\/?/, '').split('/');
-  return { seg: partes[0] || '', resto: partes.slice(1).filter((x) => x !== '') };
+  const [caminho, query = ''] = location.hash.replace(/^#\/?/, '').split('?');
+  const partes = caminho.split('/');
+  return { seg: partes[0] || '', resto: partes.slice(1).filter((x) => x !== ''), consulta: new URLSearchParams(query) };
 };
 
 async function iniciar() {
@@ -67,7 +69,7 @@ async function rotear() {
   }
   try {
     const mod = await import(`./telas/${seg}.js`);
-    const aoSair = await mod.abrir(alvo, rota().resto);
+    const r = rota(); const aoSair = await mod.abrir(alvo, r.resto, r.consulta);
     if (typeof aoSair === 'function') limpar = aoSair;
   } catch (e) {
     console.error(e);

@@ -89,6 +89,8 @@ export function abrirModal({ titulo, corpo, acoes = [], largo = false, aoFechar 
     ${acoes.length ? html`<footer class="modal-acoes">${acoes.map((a) => html`<button type="${a.submit ? 'submit' : 'button'}" class="btn ${a.classe || 'btn-sec'}" data-acao="${a.id}" ${a.desligado ? raw('disabled') : ''}>${a.rotulo}</button>`)}</footer>` : ''}
   </form>`);
   document.body.appendChild(dlg);
+  // Enter dentro de um campo aciona a ação principal (em vez de fechar o diálogo, que é o padrão de <form method="dialog">).
+  dlg.querySelector('form').addEventListener('submit', (e) => { e.preventDefault(); const pri = dlg.querySelector('[data-acao].btn-pri'); if (pri && !pri.disabled) pri.click(); });
   const fechar = () => { try { dlg.close(); } catch { /* já fechado */ } };
   dlg.addEventListener('close', () => { dlg.remove(); aoFechar && aoFechar(); });
   dlg.addEventListener('click', (e) => { if (e.target === dlg || e.target.closest('[data-fechar]')) fechar(); });
@@ -111,6 +113,8 @@ export const campo = ({ id, rotulo, tipo = 'text', valor = '', obrig = false, aj
     : tipo === 'textarea' ? html`<textarea id="${id}" name="${id}" rows="3" ${raw(extra)} placeholder="${placeholder}">${valor}</textarea>`
       : html`<input id="${id}" name="${id}" type="${tipo}" value="${valor}" ${obrig ? raw('required') : ''} placeholder="${placeholder}" ${raw(extra)}>`}
   ${ajuda ? html`<small class="ajuda">${ajuda}</small>` : ''}</div>`;
+/** Campo de valor em reais (o formulário devolve texto; converta com lerReais). */
+export const campoDinheiro = ({ id, rotulo, valor = 0, obrig = false, ajuda = '', placeholder = '0,00' }) => html`<div class="campo"><label for="${id}">${rotulo}${obrig ? raw(' <span class="obrig" aria-hidden="true">*</span>') : ''}</label><div class="dinheiro"><span>R$</span><input id="${id}" name="${id}" inputmode="decimal" value="${valor ? num2(valor) : ''}" placeholder="${placeholder}"></div>${ajuda ? html`<small class="ajuda">${ajuda}</small>` : ''}</div>`;
 export function dadosForm(form) { const o = {}; new FormData(form).forEach((v, k) => { o[k] = typeof v === 'string' ? v.trim() : v; }); form.querySelectorAll('input[type=checkbox]').forEach((c) => { o[c.name] = c.checked; }); return o; }
 export const opcoesDe = (lista, vazio) => (vazio ? [['', vazio]] : []).concat(lista.map((x) => [x.id, x.nome]));
 export const selo = (texto, tom = 'neutro') => html`<span class="selo selo-${tom}">${texto}</span>`;

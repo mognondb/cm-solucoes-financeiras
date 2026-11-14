@@ -15,12 +15,15 @@ Pense em um "Conta Azul" feito para essa rotina, com a agenda no centro: o que a
 | Fase | Conteúdo | Situação |
 |---|---|---|
 | F0 | Base: API, segurança, acesso restrito, cadastro/login/teste grátis, configurações, painel admin | feito |
-| F1 | Pacientes, tipos de atendimento, agenda, contas a receber, baixas, inadimplência, cobrança | a fazer |
+| F1 | Pacientes e tipos de atendimento | feito |
+| F1 | Agenda (calendário, recorrência, status das sessões) | a fazer |
+| F1 | Contas a receber, baixas, inadimplência, cobrança | a fazer |
 | F2 | Contas a pagar, contas bancárias, cartão e fatura, despesas fixas, fluxo de caixa | a fazer |
 | F3 | Importar extrato (OFX/CSV/Excel) e conciliar | a fazer |
 | F4 | Recibos em PDF, relatórios, apoio ao carnê-leão, exportar dados, excluir conta (LGPD) | a fazer |
 
-Rotas do aplicativo que ainda não têm tela aparecem como "Em construção" (lista `PRONTAS` em `app/main.js`).
+Rotas do aplicativo que ainda não têm tela aparecem como "Em construção" (lista `PRONTAS` em `app/main.js`: ao criar uma tela, acrescente-a ali).
+O hash aceita parâmetros (`#/agenda?paciente=12`): a tela recebe `abrir(el, resto, consulta)`.
 
 ## Arquitetura
 

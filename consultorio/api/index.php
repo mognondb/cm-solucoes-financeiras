@@ -13,6 +13,7 @@ require __DIR__ . '/lib/roteador.php';
 require __DIR__ . '/lib/email.php';
 require __DIR__ . '/lib/rotas_auth.php';
 require __DIR__ . '/lib/rotas_conta.php';
+require __DIR__ . '/lib/rotas_pacientes.php';
 require __DIR__ . '/lib/rotas_admin.php';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -39,5 +40,6 @@ psi_migrar(psi_db());
 $roteador = new PsiRoteador();
 psi_registrar_rotas_auth($roteador);
 psi_registrar_rotas_conta($roteador);
+psi_registrar_rotas_pacientes($roteador);
 psi_registrar_rotas_admin($roteador);
 $roteador->despachar($metodo, $caminho);
