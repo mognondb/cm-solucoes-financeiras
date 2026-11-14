@@ -31,7 +31,7 @@ function psi_lancamento_json(array $l): array {
     'vencimento' => $l['vencimento'], 'competencia' => $l['competencia'], 'situacao' => $l['situacao'], 'estado' => $estado, 'atraso' => $atraso, 'canceladoMotivo' => $l['cancelado_motivo'],
     'forma' => $l['forma'], 'contaFinId' => $n($l['conta_fin_id']), 'origem' => $l['origem'], 'agendamentoId' => $n($l['agendamento_id']), 'sessaoEm' => $l['ag_inicio'] ?? null,
     'grupoId' => $n($l['grupo_id']), 'parcela' => $n($l['parcela']), 'parcelas' => $n($l['parcelas']), 'categoriaId' => $n($l['categoria_id']), 'categoria' => $l['cat_nome'],
-    'contraparte' => $l['contraparte'], 'obs' => $l['obs'], 'pacienteId' => $n($l['paciente_id']), 'ultimaBaixa' => $l['ultima_baixa'],
+    'contraparte' => $l['contraparte'], 'obs' => $l['obs'], 'pacienteId' => $n($l['paciente_id']), 'ultimaBaixa' => $l['ultima_baixa'], 'social' => (bool)($l['social'] ?? 0), 'valorCheio' => (int)($l['valor_cheio'] ?? 0),
     'paciente' => $l['paciente_id'] === null ? null : ['id' => (int)$l['paciente_id'], 'nome' => $l['p_nome'], 'apelido' => $l['p_apelido'], 'telefone' => $l['p_tel'], 'respNome' => $l['p_resp_nome'], 'respTelefone' => $l['p_resp_tel'], 'tipo' => $l['p_tipo'], 'forma' => $l['p_forma']],
   ];
 }
@@ -108,6 +108,8 @@ function psi_sincronizar_cobranca(int $agId): array {
     return ['acao' => ($a['status'] === 'realizada' && (int)$a['cobrar'] && (int)$a['valor'] <= 0) ? 'sem_valor' : null];
   }
 
+  // preço social: o valor de tabela acompanha a mesma proporção cobrada (uma falta cobrada a 50% leva 50% do valor de tabela)
+  $social = (int)($a['social'] ?? 0); $cheio = ($social && (int)$a['valor'] > 0 && (int)$a['valor_cheio'] > 0) ? (int)round((int)$a['valor_cheio'] * $devido['valor'] / (int)$a['valor']) : 0;
   $p = null;
   if ($a['paciente_id'] !== null) { $q2 = $db->prepare('SELECT * FROM psi_pacientes WHERE id = ? AND conta_id = ?'); $q2->execute([(int)$a['paciente_id'], $c]); $p = $q2->fetch() ?: null; }
   $dia = substr($a['inicio'], 0, 10);
@@ -116,17 +118,17 @@ function psi_sincronizar_cobranca(int $agId): array {
 
   if ($l) {
     if (psi_pago_do_lancamento((int)$l['id']) > 0) return ['acao' => 'mantida', 'lancamentoId' => (int)$l['id']];
-    $db->prepare("UPDATE psi_lancamentos SET valor = ?, descricao = ?, vencimento = ?, competencia = ?, situacao = 'aberto', cancelado_motivo = NULL, atualizado_em = ? WHERE id = ? AND conta_id = ?")
-      ->execute([$devido['valor'], $devido['descricao'], $venc, $dia, $agora, (int)$l['id'], $c]);
+    $db->prepare("UPDATE psi_lancamentos SET valor = ?, descricao = ?, vencimento = ?, competencia = ?, social = ?, valor_cheio = ?, situacao = 'aberto', cancelado_motivo = NULL, atualizado_em = ? WHERE id = ? AND conta_id = ?")
+      ->execute([$devido['valor'], $devido['descricao'], $venc, $dia, $social, $cheio, $agora, (int)$l['id'], $c]);
     return ['acao' => $l['situacao'] === 'cancelado' ? 'reaberta' : 'atualizada', 'lancamentoId' => (int)$l['id'], 'valor' => $devido['valor'], 'vencimento' => $venc];
   }
   $catServ = null;
   if ($a['servico_id'] !== null) { $r = $db->prepare('SELECT categoria_id FROM psi_servicos WHERE id = ? AND conta_id = ?'); $r->execute([(int)$a['servico_id'], $c]); $v = $r->fetchColumn(); $catServ = ($v === false || $v === null) ? null : (int)$v; }
   $cat = $p ? psi_categoria_da_cobranca($p, $catServ) : $catServ;
   $contraparte = $p && $p['modalidade_cobranca'] === 'convenio' ? $p['convenio_nome'] : null;
-  $db->prepare("INSERT IGNORE INTO psi_lancamentos (conta_id, tipo, descricao, categoria_id, paciente_id, contraparte, valor, vencimento, competencia, situacao, origem, agendamento_id, chave_unica, criado_em, atualizado_em)
-    VALUES (?,?,?,?,?,?,?,?,?,'aberto',?,?,?,?,?)")
-    ->execute([$c, 'receber', $devido['descricao'], $cat, $a['paciente_id'], $contraparte, $devido['valor'], $venc, $dia, $p && $p['modalidade_cobranca'] === 'convenio' ? 'convenio' : 'sessao', $agId, $chave, $agora, $agora]);
+  $db->prepare("INSERT IGNORE INTO psi_lancamentos (conta_id, tipo, descricao, categoria_id, paciente_id, contraparte, valor, vencimento, competencia, social, valor_cheio, situacao, origem, agendamento_id, chave_unica, criado_em, atualizado_em)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,'aberto',?,?,?,?,?)")
+    ->execute([$c, 'receber', $devido['descricao'], $cat, $a['paciente_id'], $contraparte, $devido['valor'], $venc, $dia, $social, $cheio, $p && $p['modalidade_cobranca'] === 'convenio' ? 'convenio' : 'sessao', $agId, $chave, $agora, $agora]);
   $id = (int)$db->lastInsertId(); if ($id > 0) psi_auditar('criar', 'lancamento', $id, ['origem' => 'sessao']);
   return ['acao' => 'criada', 'lancamentoId' => $id, 'valor' => $devido['valor'], 'vencimento' => $venc];
 }
@@ -139,7 +141,7 @@ function psi_gerar_mensalidades(): void {
   $s = $db->prepare("SELECT * FROM psi_pacientes WHERE conta_id = ? AND status = 'ativo' AND modalidade_cobranca = 'mensal' AND valor_mensal > 0 AND dia_vencimento IS NOT NULL"); $s->execute([$c]);
   $pacientes = $s->fetchAll(); if (!$pacientes) return;
   $meses = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
-  $ins = $db->prepare("INSERT IGNORE INTO psi_lancamentos (conta_id, tipo, descricao, categoria_id, paciente_id, valor, vencimento, competencia, situacao, origem, chave_unica, criado_em, atualizado_em) VALUES (?,?,?,?,?,?,?,?,'aberto','mensalidade',?,?,?)");
+  $ins = $db->prepare("INSERT IGNORE INTO psi_lancamentos (conta_id, tipo, descricao, categoria_id, paciente_id, valor, vencimento, competencia, social, situacao, origem, chave_unica, criado_em, atualizado_em) VALUES (?,?,?,?,?,?,?,?,?,'aberto','mensalidade',?,?,?)");
   $agora = psi_agora();
   foreach ([psi_inicio_mes($hoje), psi_inicio_mes(psi_somar_meses(psi_inicio_mes($hoje), 1))] as $mes) {
     $ano = (int)substr($mes, 0, 4); $m = (int)substr($mes, 5, 2); $fimMes = psi_data_no_mes($ano, $m, 31);
@@ -147,7 +149,7 @@ function psi_gerar_mensalidades(): void {
       $venc = psi_data_no_mes($ano, $m, (int)$p['dia_vencimento']);
       /* quem começou depois do vencimento daquele mês não nasce devendo: a primeira mensalidade é a do mês seguinte */
       if ($p['desde'] !== null && ($p['desde'] > $fimMes || $venc < $p['desde'])) continue;
-      $ins->execute([$c, 'receber', 'Mensalidade de ' . $meses[$m - 1] . '/' . $ano, psi_categoria_da_cobranca($p, null), (int)$p['id'], (int)$p['valor_mensal'], $venc, $mes, 'mensal:' . $p['id'] . ':' . substr($mes, 0, 7), $agora, $agora]);
+      $ins->execute([$c, 'receber', 'Mensalidade de ' . $meses[$m - 1] . '/' . $ano, psi_categoria_da_cobranca($p, null), (int)$p['id'], (int)$p['valor_mensal'], $venc, $mes, (int)($p['social'] ?? 0), 'mensal:' . $p['id'] . ':' . substr($mes, 0, 7), $agora, $agora]);
     }
   }
 }

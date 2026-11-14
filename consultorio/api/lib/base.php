@@ -141,7 +141,7 @@ function psi_conta_id(): int { return (int)PsiSessao::$conta['id']; }
 function psi_config(): array {
   $padrao = [
     'duracao_padrao' => 50, 'hora_ini' => 7, 'hora_fim' => 21, 'dias_semana' => [1, 2, 3, 4, 5],
-    'cobrar_falta' => false, 'falta_percentual' => 100, 'prazo_padrao_dias' => 0,
+    'cobrar_falta' => false, 'falta_percentual' => 100, 'prazo_padrao_dias' => 0, 'social_percentual' => 50,
     'msg_cobranca' => "Olá, {nome}! Tudo bem? Passando para lembrar do pagamento de {descricao}, no valor de {valor}, com vencimento em {vencimento}. Se já pagou, desconsidere. Qualquer dúvida é só me chamar. {profissional}",
     'msg_confirmacao' => "Olá, {nome}! Confirmando nossa sessão de {dia} às {hora}. Pode confirmar sua presença? {profissional}",
   ];

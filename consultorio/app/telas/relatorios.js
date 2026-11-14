@@ -45,6 +45,12 @@ function resultado(d) {
       <div class="kpi"><span>Sessões realizadas</span><strong>${t.sessoesRealizadas}</strong><small class="suave">${t.ticketMedio ? `Ticket médio ${brl(t.ticketMedio)}` : 'Sem sessões'}</small></div></div>
     <div class="cols"><div class="cartao"><div class="cartao-t"><h3>De onde veio o dinheiro</h3></div>${barras(d.receitas, t.receitas, 'var(--ok)')}</div>
       <div class="cartao"><div class="cartao-t"><h3>Para onde foi</h3></div>${barras(d.despesas, t.despesas, 'var(--atencao)')}</div></div>
+    ${d.social && d.social.sessoes ? html`<div class="cartao" data-social><div class="cartao-t"><h3>Preço social</h3></div><div class="kpis">
+        <div class="kpi"><span>Sessões com preço social</span><strong>${d.social.sessoes}</strong><small class="suave">${d.social.percentual}% das ${d.social.sessoesTotal} sessões realizadas</small></div>
+        <div class="kpi"><span>Desconto concedido</span><strong>${brl(d.social.descontoConcedido)}</strong><small class="suave">${d.social.comValorDeTabela < d.social.sessoes ? `Só ${d.social.comValorDeTabela} de ${d.social.sessoes} têm valor de tabela informado` : 'Valor de tabela − valor cobrado'}</small></div>
+        <div class="kpi"><span>Cobrado nessas sessões</span><strong>${brl(d.social.cobrado)}</strong></div>
+        <div class="kpi ok"><span>Recebido de cobranças sociais</span><strong>${brl(d.social.recebido)}</strong><small class="suave">Dinheiro que entrou no mês</small></div></div>
+      <p class="suave peq" style="margin:4px 0 0">O desconto concedido é o que você deixou de cobrar em relação ao valor de tabela. Não é despesa: não entra no resultado acima.</p></div>` : ''}
     <div class="cartao"><div class="cartao-t"><h3>Quem mais pagou no mês</h3></div>${d.topPacientes.length ? html`<ul class="lista">${d.topPacientes.map((p) => html`<li class="linha"><div class="corpo"><span class="tit"><a href="#/pacientes/${p.id}" style="text-decoration:none">${p.nome}</a></span></div><strong class="num">${brl(p.valor)}</strong></li>`)}</ul>` : html`<p class="suave" style="margin:0">Sem recebimentos de pacientes neste mês.</p>`}</div>
     <div class="pac-acoes"><button class="btn btn-sec btn-peq" data-csv-resultado>Baixar CSV</button><button class="btn btn-ghost btn-peq" data-imprimir>Imprimir</button></div>
     <p class="suave peq" style="margin:10px 4px">Regime de caixa: conta o que foi efetivamente recebido e pago no mês (compras no cartão contam no dia da compra). Cobranças em aberto aparecem em "A receber" e "A pagar".</p>`;
@@ -72,7 +78,7 @@ async function clique(e) {
   if (t.closest('[data-imprimir]')) return window.print();
   if (t.closest('[data-csv-resultado]')) {
     const d = await api.get(`relatorios/resultado?mes=${est.mes}`);
-    baixarCsv(`resultado-${est.mes}.csv`, ['Tipo', 'Categoria', 'Grupo', 'Valor (R$)'], [...d.receitas.map((x) => ['Receita', x.nome, '', reais(x.valor)]), ...d.despesas.map((x) => ['Despesa', x.nome, x.grupo === 'fixa' ? 'fixa' : 'variável', reais(x.valor)]), ['Resultado', '', '', reais(d.totais.resultado)]]);
+    baixarCsv(`resultado-${est.mes}.csv`, ['Tipo', 'Categoria', 'Grupo', 'Valor (R$)'], [...d.receitas.map((x) => ['Receita', x.nome, '', reais(x.valor)]), ...d.despesas.map((x) => ['Despesa', x.nome, x.grupo === 'fixa' ? 'fixa' : 'variável', reais(x.valor)]), ['Resultado', '', '', reais(d.totais.resultado)], ...(d.social && d.social.sessoes ? [['Preço social: sessões', '', '', d.social.sessoes], ['Preço social: desconto concedido', '', '', reais(d.social.descontoConcedido)]] : [])]);
   }
   if (t.closest('[data-csv-carne]')) {
     const d = await api.get(`relatorios/carne-leao?mes=${est.mes}`);

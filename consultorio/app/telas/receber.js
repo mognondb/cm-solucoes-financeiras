@@ -62,7 +62,7 @@ function lancamentos(lista) {
   const total = est.aba === 'quitado' ? itens.reduce((a, l) => a + l.pago, 0) : lista.totais.restante;
   return html`${filtros}<div class="cartao rc-lista" style="padding:6px 14px"><ul class="lista">${itens.map((l) => { const d = dataDe(l.vencimento); return html`<li class="linha linha-link" data-id="${l.id}" tabindex="0" role="button" aria-label="${l.descricao}">
       <div class="rc-data"><b>${dataCurta(l.vencimento)}</b><small>${DIAS_CURTOS[d.getDay()]}</small></div>
-      <div class="corpo"><span class="tit">${l.descricao}</span><span class="sub">${l.paciente ? l.paciente.nome : l.contraparte || 'Sem paciente'}${l.categoria ? ` · ${l.categoria}` : ''}${l.situacao === 'aberto' && l.pago > 0 ? ` · já pagou ${brl(l.pago)} de ${brl(l.valor)}` : ''}</span></div>
+      <div class="corpo"><span class="tit">${l.descricao}</span><span class="sub">${l.paciente ? l.paciente.nome : l.contraparte || 'Sem paciente'}${l.categoria ? ` · ${l.categoria}` : ''}${l.social ? ' · preço social' : ''}${l.situacao === 'aberto' && l.pago > 0 ? ` · já pagou ${brl(l.pago)} de ${brl(l.valor)}` : ''}</span></div>
       <span class="dir"><strong class="num">${brl(est.aba === 'quitado' ? l.pago : l.restante || l.valor)}</strong>${selo(...seloLancamento(l))}</span>
       ${pode && l.situacao === 'aberto' ? html`<button class="btn btn-sec btn-peq" data-receber="${l.id}">Receber</button>` : ''}</li>`; })}</ul></div>
     <p class="suave peq" style="margin:10px 4px">${est.aba === 'quitado' ? 'Recebido no período' : 'Total em aberto'}: <strong>${brl(total)}</strong> · ${itens.length} lançamento${itens.length === 1 ? '' : 's'}${lista.cortou ? ' (mostrando os primeiros; refine a busca)' : ''}</p>`;

@@ -22,7 +22,7 @@ function psi_agendamento_json(array $a): array {
   $n = fn($v) => $v === null ? null : (int)$v;
   return [
     'id' => (int)$a['id'], 'tipo' => $a['tipo'], 'titulo' => $a['titulo'], 'pacienteId' => $n($a['paciente_id']), 'profissionalId' => $n($a['profissional_id']), 'servicoId' => $n($a['servico_id']),
-    'inicio' => $a['inicio'], 'fim' => $a['fim'], 'status' => $a['status'], 'modalidade' => $a['modalidade'], 'valor' => (int)$a['valor'], 'cobrar' => (bool)$a['cobrar'],
+    'inicio' => $a['inicio'], 'fim' => $a['fim'], 'status' => $a['status'], 'modalidade' => $a['modalidade'], 'valor' => (int)$a['valor'], 'cobrar' => (bool)$a['cobrar'], 'social' => (bool)($a['social'] ?? 0), 'valorCheio' => (int)($a['valor_cheio'] ?? 0),
     'serieId' => $n($a['serie_id']), 'frequencia' => $a['s_freq'] ?? null, 'obs' => $a['obs'],
     'pac' => $a['paciente_id'] === null ? null : ['id' => (int)$a['paciente_id'], 'nome' => $a['p_nome'], 'apelido' => $a['p_apelido'], 'telefone' => $a['p_tel'], 'respNome' => $a['p_resp_nome'], 'respTelefone' => $a['p_resp_tel'], 'tipo' => $a['p_tipo'], 'modalidade' => $a['p_modal']],
   ];
@@ -49,14 +49,36 @@ function psi_profissional_unica(): ?int {
   return count($ids) === 1 ? (int)$ids[0] : null;
 }
 
-/** Valor, cobrança e duração que uma sessão desse paciente costuma ter. */
+/** Valor, marca de preço social e valor de tabela de uma sessão nova: o que veio no pedido; senão o padrão do paciente (que já considera o preço social dele). Marcar uma sessão avulsa como social usa o valor social do tipo de atendimento. */
+function psi_resolver_preco_social(array $d, array $padrao): array {
+  $social = array_key_exists('social', $d) ? psi_bool($d['social']) : (int)$padrao['social'];
+  if (isset($d['valor']) && $d['valor'] !== '') $valor = psi_cent($d['valor'], 'valor', false, true) ?? 0;
+  elseif ($social !== (int)$padrao['social']) $valor = $social ? ((int)$padrao['valor_social'] ?: (int)$padrao['valor']) : ((int)$padrao['tabela'] ?: (int)$padrao['valor']);
+  else $valor = (int)$padrao['valor'];
+  $valorCheio = 0;
+  if ($social) $valorCheio = (array_key_exists('valorCheio', $d) && $d['valorCheio'] !== '') ? (psi_cent($d['valorCheio'], 'valor de tabela', false, true) ?? 0) : ((int)$padrao['valor_cheio'] ?: ((int)$padrao['tabela'] > $valor ? (int)$padrao['tabela'] : 0));
+  if ($valorCheio > 0 && $valor > $valorCheio) psi_erro('O valor com preço social não pode ser maior que o valor de tabela.', 422);
+  return [$valor, $social, $valorCheio];
+}
+
+/** Valor social de um valor de tabela: o do tipo de atendimento, se tiver, ou o desconto padrão da conta (Configurações → Agenda e cobrança). */
+function psi_valor_social(?array $serv, int $cheio): int {
+  if ($serv && (int)($serv['valor_social'] ?? 0) > 0) return (int)$serv['valor_social'];
+  if ($cheio <= 0) return 0;
+  $pct = max(0, min(90, (int)(psi_config()['social_percentual'] ?? 50)));
+  return intdiv($cheio * (100 - $pct) + 50, 100);
+}
+
+/** Valor, cobrança, duração e preço social que uma sessão desse paciente costuma ter. "tabela" é o valor cheio do tipo de atendimento; "valor_social" é o que ele seria com preço social. */
 function psi_padrao_sessao(array $pac): array {
   $serv = null;
-  if ($pac['servico_id'] !== null) { $s = psi_db()->prepare('SELECT duracao_min, valor FROM psi_servicos WHERE id = ? AND conta_id = ?'); $s->execute([(int)$pac['servico_id'], psi_conta_id()]); $serv = $s->fetch() ?: null; }
+  if ($pac['servico_id'] !== null) { $s = psi_db()->prepare('SELECT duracao_min, valor, valor_social FROM psi_servicos WHERE id = ? AND conta_id = ?'); $s->execute([(int)$pac['servico_id'], psi_conta_id()]); $serv = $s->fetch() ?: null; }
   $dur = $serv ? (int)$serv['duracao_min'] : (int)psi_config()['duracao_padrao'];
-  $valor = (int)$pac['valor_sessao'] ?: ($serv ? (int)$serv['valor'] : 0);
-  if ($pac['modalidade_cobranca'] === 'mensal') return ['valor' => 0, 'cobrar' => 0, 'duracao' => $dur];   // coberta pela mensalidade
-  return ['valor' => $valor, 'cobrar' => 1, 'duracao' => $dur];
+  $cheio = $serv ? (int)$serv['valor'] : 0; $social = (int)($pac['social'] ?? 0); $vSocial = psi_valor_social($serv, $cheio);
+  $valor = $social ? ((int)$pac['valor_sessao'] ?: $vSocial) : ((int)$pac['valor_sessao'] ?: $cheio);
+  $extra = ['social' => $social, 'valor_cheio' => ($social && $cheio > $valor) ? $cheio : 0, 'tabela' => $cheio, 'valor_social' => $vSocial];
+  if ($pac['modalidade_cobranca'] === 'mensal') return ['valor' => 0, 'cobrar' => 0, 'duracao' => $dur, 'valor_cheio' => 0] + $extra;   // coberta pela mensalidade
+  return ['valor' => $valor, 'cobrar' => 1, 'duracao' => $dur] + $extra;
 }
 
 /** Sessões e bloqueios que se sobrepõem ao intervalo, na agenda da mesma profissional (canceladas não contam). */
@@ -96,11 +118,11 @@ function psi_materializar_serie(array $s, string $ate): void {
   $ultimo = $s['gerado_ate']; $prox = $ultimo === null ? $s['inicio'] : psi_somar_dias($ultimo, $passo);
   if ($prox > $limite) return;
   $db = psi_db(); $agora = psi_agora();
-  $ins = $db->prepare('INSERT IGNORE INTO psi_agendamentos (conta_id, profissional_id, paciente_id, servico_id, tipo, titulo, inicio, fim, status, modalidade, valor, cobrar, serie_id, criado_em, atualizado_em)
-    VALUES (?,?,?,?,?,?,?,?,\'agendada\',?,?,?,?,?,?)');
+  $ins = $db->prepare('INSERT IGNORE INTO psi_agendamentos (conta_id, profissional_id, paciente_id, servico_id, tipo, titulo, inicio, fim, status, modalidade, valor, cobrar, social, valor_cheio, serie_id, criado_em, atualizado_em)
+    VALUES (?,?,?,?,?,?,?,?,\'agendada\',?,?,?,?,?,?,?,?)');
   for ($n = 0; $prox <= $limite && $n < 400; $n++, $prox = psi_somar_dias($prox, $passo)) {
     $ini = $prox . ' ' . $s['hora']; $fim = (new DateTimeImmutable($ini))->modify('+' . (int)$s['duracao_min'] . ' minutes')->format('Y-m-d H:i:s');
-    $ins->execute([$s['conta_id'], $s['profissional_id'], $s['paciente_id'], $s['servico_id'], $s['tipo'], $s['titulo'], $ini, $fim, $s['modalidade'], $s['valor'], $s['cobrar'], $s['id'], $agora, $agora]);
+    $ins->execute([$s['conta_id'], $s['profissional_id'], $s['paciente_id'], $s['servico_id'], $s['tipo'], $s['titulo'], $ini, $fim, $s['modalidade'], $s['valor'], $s['cobrar'], $s['social'] ?? 0, $s['valor_cheio'] ?? 0, $s['id'], $agora, $agora]);
     $ultimo = $prox;
   }
   $db->prepare('UPDATE psi_series SET gerado_ate = ? WHERE id = ? AND conta_id = ?')->execute([$ultimo, $s['id'], $s['conta_id']]);
@@ -143,13 +165,13 @@ function psi_registrar_rotas_agenda(PsiRoteador $r): void {
     $prof = psi_da_conta('psi_profissionais', $d['profissionalId'] ?? null, 'Profissional') ?? ($pac['profissional_id'] ?? null) ?? psi_profissional_unica();
     $prof = $prof === null ? null : (int)$prof;
     $servId = psi_da_conta('psi_servicos', $d['servicoId'] ?? null, 'Tipo de atendimento') ?? ($pac && $pac['servico_id'] !== null ? (int)$pac['servico_id'] : null);
-    $padrao = $pac ? psi_padrao_sessao($pac) : ['valor' => 0, 'cobrar' => 0, 'duracao' => (int)psi_config()['duracao_padrao']];
+    $padrao = $pac ? psi_padrao_sessao($pac) : ['valor' => 0, 'cobrar' => 0, 'duracao' => (int)psi_config()['duracao_padrao'], 'social' => 0, 'valor_cheio' => 0, 'tabela' => 0, 'valor_social' => 0];
     $dur = psi_int($d['duracaoMin'] ?? null, 10, 600, 'duração') ?? $padrao['duracao'];
     $fim = psi_fim_da_sessao($inicio, $dur);
     $modal = psi_opcao($d['modalidade'] ?? null, ['presencial', 'online'], 'presencial');
-    $valor = (isset($d['valor']) && $d['valor'] !== '') ? psi_cent($d['valor'], 'valor', false, true) : $padrao['valor'];
+    [$valor, $social, $valorCheio] = psi_resolver_preco_social($d, $padrao);
     $cobrar = array_key_exists('cobrar', $d) ? psi_bool($d['cobrar']) : $padrao['cobrar'];
-    if ($tipo === 'bloqueio') { $valor = 0; $cobrar = 0; }
+    if ($tipo === 'bloqueio') { $valor = 0; $cobrar = 0; $social = 0; $valorCheio = 0; }
     $obs = psi_txt($d['obs'] ?? null, 255); $ignorar = ($d['ignorarConflitos'] ?? false) === true;
     $rec = is_array($d['recorrencia'] ?? null) ? $d['recorrencia'] : null;
     $freq = $rec ? psi_opcao($rec['frequencia'] ?? null, ['semanal', 'quinzenal'], '') : ''; $ate = $rec ? psi_data($rec['ate'] ?? null, false, 'data final da repetição') : null;
@@ -157,8 +179,8 @@ function psi_registrar_rotas_agenda(PsiRoteador $r): void {
 
     if ($freq === '') {
       psi_exigir_sem_conflito($prof, [[$inicio, $fim]], $ignorar);
-      $db->prepare('INSERT INTO psi_agendamentos (conta_id, profissional_id, paciente_id, servico_id, tipo, titulo, inicio, fim, status, modalidade, valor, cobrar, obs, criado_em, atualizado_em) VALUES (?,?,?,?,?,?,?,?,\'agendada\',?,?,?,?,?,?)')
-        ->execute([$c, $prof, $pac ? (int)$pac['id'] : null, $servId, $tipo, $titulo, $inicio, $fim, $modal, $valor, $cobrar, $obs, $agora, $agora]);
+      $db->prepare('INSERT INTO psi_agendamentos (conta_id, profissional_id, paciente_id, servico_id, tipo, titulo, inicio, fim, status, modalidade, valor, cobrar, social, valor_cheio, obs, criado_em, atualizado_em) VALUES (?,?,?,?,?,?,?,?,\'agendada\',?,?,?,?,?,?,?,?)')
+        ->execute([$c, $prof, $pac ? (int)$pac['id'] : null, $servId, $tipo, $titulo, $inicio, $fim, $modal, $valor, $cobrar, $social, $valorCheio, $obs, $agora, $agora]);
       $id = (int)$db->lastInsertId(); psi_auditar('criar', 'sessao', $id);
       return ['id' => $id];
     }
@@ -167,8 +189,8 @@ function psi_registrar_rotas_agenda(PsiRoteador $r): void {
     $limite = psi_somar_dias(psi_hoje(), PSI_GERAR_AO_CRIAR_DIAS); if ($ate !== null && $ate < $limite) $limite = $ate; if ($limite < $dia) $limite = $dia;
     $intervalos = array_map(fn($x) => [$x . ' ' . $hora, psi_fim_da_sessao($x . ' ' . $hora, $dur)], psi_datas_serie($dia, $passo, $limite, 60));
     psi_exigir_sem_conflito($prof, $intervalos, $ignorar);
-    $db->prepare('INSERT INTO psi_series (conta_id, profissional_id, paciente_id, servico_id, tipo, titulo, frequencia, dia_semana, hora, duracao_min, modalidade, valor, cobrar, inicio, fim, ativa, criado_em) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?)')
-      ->execute([$c, $prof, $pac ? (int)$pac['id'] : null, $servId, $tipo, $titulo, $freq, (int)date('w', strtotime($dia)), $hora, $dur, $modal, $valor, $cobrar, $dia, $ate, $agora]);
+    $db->prepare('INSERT INTO psi_series (conta_id, profissional_id, paciente_id, servico_id, tipo, titulo, frequencia, dia_semana, hora, duracao_min, modalidade, valor, cobrar, social, valor_cheio, inicio, fim, ativa, criado_em) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?)')
+      ->execute([$c, $prof, $pac ? (int)$pac['id'] : null, $servId, $tipo, $titulo, $freq, (int)date('w', strtotime($dia)), $hora, $dur, $modal, $valor, $cobrar, $social, $valorCheio, $dia, $ate, $agora]);
     $serieId = (int)$db->lastInsertId();
     $sr = $db->prepare('SELECT * FROM psi_series WHERE id = ?'); $sr->execute([$serieId]); psi_materializar_serie($sr->fetch(), $limite);
     $n = $db->prepare('SELECT COUNT(*) FROM psi_agendamentos WHERE serie_id = ?'); $n->execute([$serieId]);
@@ -189,16 +211,19 @@ function psi_registrar_rotas_agenda(PsiRoteador $r): void {
     $prof = array_key_exists('profissionalId', $d) ? (psi_da_conta('psi_profissionais', $d['profissionalId'], 'Profissional') ?? null) : ($a['profissional_id'] === null ? null : (int)$a['profissional_id']);
     $modal = array_key_exists('modalidade', $d) ? psi_opcao($d['modalidade'], ['presencial', 'online'], $a['modalidade']) : $a['modalidade'];
     $valor = array_key_exists('valor', $d) ? psi_cent($d['valor'], 'valor', false, true) ?? 0 : (int)$a['valor'];
+    $social = array_key_exists('social', $d) ? psi_bool($d['social']) : (int)$a['social'];
+    $valorCheio = array_key_exists('valorCheio', $d) ? (psi_cent($d['valorCheio'], 'valor de tabela', false, true) ?? 0) : (int)$a['valor_cheio'];
+    if (!$social) $valorCheio = 0; elseif ($valorCheio > 0 && $valor > $valorCheio) psi_erro('O valor com preço social não pode ser maior que o valor de tabela.', 422);
     $cobrar = array_key_exists('cobrar', $d) ? psi_bool($d['cobrar']) : (int)$a['cobrar'];
     $obs = array_key_exists('obs', $d) ? psi_txt($d['obs'], 255) : $a['obs'];
     $titulo = $a['tipo'] === 'bloqueio' && array_key_exists('titulo', $d) ? psi_txt($d['titulo'], 120, true, 'motivo do bloqueio') : $a['titulo'];
-    if ($a['tipo'] === 'bloqueio') { $valor = 0; $cobrar = 0; }
+    if ($a['tipo'] === 'bloqueio') { $valor = 0; $cobrar = 0; $social = 0; $valorCheio = 0; }
 
     if ($escopo === 'este') {
       if ($a['status'] !== 'cancelada') psi_exigir_sem_conflito($prof, [[$inicio, $fim]], $ignorar, [$id]);
       try {
-        $db->prepare('UPDATE psi_agendamentos SET profissional_id = ?, titulo = ?, inicio = ?, fim = ?, modalidade = ?, valor = ?, cobrar = ?, obs = ?, atualizado_em = ? WHERE id = ? AND conta_id = ?')
-          ->execute([$prof, $titulo, $inicio, $fim, $modal, $valor, $cobrar, $obs, psi_agora(), $id, $c]);
+        $db->prepare('UPDATE psi_agendamentos SET profissional_id = ?, titulo = ?, inicio = ?, fim = ?, modalidade = ?, valor = ?, cobrar = ?, social = ?, valor_cheio = ?, obs = ?, atualizado_em = ? WHERE id = ? AND conta_id = ?')
+          ->execute([$prof, $titulo, $inicio, $fim, $modal, $valor, $cobrar, $social, $valorCheio, $obs, psi_agora(), $id, $c]);
       } catch (PDOException $e) { if ($e->getCode() === '23000') psi_erro('Já existe uma sessão desta série nesse horário.', 409); throw $e; }
       psi_auditar('alterar', 'sessao', $id);
       return ['ok' => true, 'cobranca' => in_array($a['status'], ['realizada', 'falta'], true) ? psi_sincronizar_cobranca($id) : ['acao' => null]];
@@ -212,14 +237,14 @@ function psi_registrar_rotas_agenda(PsiRoteador $r): void {
     try {
       $sr = $db->prepare('SELECT dia_semana, gerado_ate FROM psi_series WHERE id = ? AND conta_id = ? FOR UPDATE'); $sr->execute([$serieId, $c]); $serie = $sr->fetch();
       $novoDia = (($serie['dia_semana'] + $delta) % 7 + 7) % 7; $novoGerado = $serie['gerado_ate'] === null ? null : psi_somar_dias($serie['gerado_ate'], $delta);
-      $db->prepare('UPDATE psi_series SET profissional_id = ?, titulo = ?, dia_semana = ?, hora = ?, duracao_min = ?, modalidade = ?, valor = ?, cobrar = ?, gerado_ate = ? WHERE id = ? AND conta_id = ?')
-        ->execute([$prof, $titulo, $novoDia, $hora, $dur, $modal, $valor, $cobrar, $novoGerado, $serieId, $c]);
+      $db->prepare('UPDATE psi_series SET profissional_id = ?, titulo = ?, dia_semana = ?, hora = ?, duracao_min = ?, modalidade = ?, valor = ?, cobrar = ?, social = ?, valor_cheio = ?, gerado_ate = ? WHERE id = ? AND conta_id = ?')
+        ->execute([$prof, $titulo, $novoDia, $hora, $dur, $modal, $valor, $cobrar, $social, $valorCheio, $novoGerado, $serieId, $c]);
       /* a ordem evita choque temporário com o índice único (serie_id, inicio) ao deslocar a série */
       $ordem = $delta > 0 ? 'DESC' : 'ASC';
       /* "fim" vem antes de "inicio" no SET de propósito: o MySQL aplica as atribuições da esquerda para a direita, e o fim precisa do início antigo */
-      $db->prepare("UPDATE psi_agendamentos SET profissional_id = ?, titulo = ?, fim = DATE_ADD(CONCAT(DATE_ADD(DATE(inicio), INTERVAL ? DAY), ' ', ?), INTERVAL ? MINUTE), inicio = CONCAT(DATE_ADD(DATE(inicio), INTERVAL ? DAY), ' ', ?), modalidade = ?, valor = ?, cobrar = ?, atualizado_em = ?
+      $db->prepare("UPDATE psi_agendamentos SET profissional_id = ?, titulo = ?, fim = DATE_ADD(CONCAT(DATE_ADD(DATE(inicio), INTERVAL ? DAY), ' ', ?), INTERVAL ? MINUTE), inicio = CONCAT(DATE_ADD(DATE(inicio), INTERVAL ? DAY), ' ', ?), modalidade = ?, valor = ?, cobrar = ?, social = ?, valor_cheio = ?, atualizado_em = ?
         WHERE conta_id = ? AND serie_id = ? AND inicio >= ? AND status IN ('agendada','confirmada') ORDER BY inicio $ordem")
-        ->execute([$prof, $titulo, $delta, $hora, $dur, $delta, $hora, $modal, $valor, $cobrar, psi_agora(), $c, $serieId, $a['inicio']]);
+        ->execute([$prof, $titulo, $delta, $hora, $dur, $delta, $hora, $modal, $valor, $cobrar, $social, $valorCheio, psi_agora(), $c, $serieId, $a['inicio']]);
       $db->commit();
     } catch (Throwable $e) { $db->rollBack(); throw $e; }
     psi_auditar('alterar', 'serie', $serieId);

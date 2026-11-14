@@ -76,7 +76,7 @@ async function lista(el) {
     }
     montar(alvo, html`<div class="cartao" style="padding:6px 14px"><ul class="lista">${itens.map((p) => html`<li class="linha linha-link" data-id="${p.id}" tabindex="0" role="link" aria-label="Abrir ${p.nome}">
       ${avatar(p)}<div class="corpo"><span class="tit">${rotuloNome(p)}</span><span class="sub">${p.proxima ? `Próxima: ${quando(p.proxima)}` : p.status === 'ativo' ? 'Sem sessão marcada' : STATUS[p.status]} · ${resumoCobranca(p)}</span></div>
-      <span class="dir">${p.vencido > 0 ? selo(`Em atraso ${brl(p.vencido)}`, 'ruim') : p.aberto > 0 ? selo(`A receber ${brl(p.aberto)}`, 'aten') : ''}${p.status !== 'ativo' && p.status !== 'arquivado' ? selo(STATUS[p.status], 'neutro') : ''}</span></li>`)}</ul></div>`);
+      <span class="dir">${p.vencido > 0 ? selo(`Em atraso ${brl(p.vencido)}`, 'ruim') : p.aberto > 0 ? selo(`A receber ${brl(p.aberto)}`, 'aten') : ''}${p.social ? selo('Preço social', 'info') : ''}${p.status !== 'ativo' && p.status !== 'arquivado' ? selo(STATUS[p.status], 'neutro') : ''}</span></li>`)}</ul></div>`);
   };
 
   const novo = () => formulario(null, () => carregar());
@@ -109,7 +109,7 @@ async function ficha(el, id) {
 
   montar(el, html`<a class="voltar" href="#/pacientes">← Pacientes</a>
     <div class="cartao"><div class="pac-topo">${avatar(p)}<div class="corpo"><h1>${rotuloNome(p)}</h1>
-      <p class="suave" style="margin:2px 0 0">${(TIPOS.find(([k]) => k === p.tipo) || [])[1]} ${selo(STATUS[p.status], p.status === 'ativo' ? 'ok' : 'neutro')}${p.desde ? ` · desde ${dataBR(p.desde)}` : ''}${prof && (App.eu.profissionais || []).length > 1 ? ` · ${prof.nome}` : ''}</p></div></div>
+      <p class="suave" style="margin:2px 0 0">${(TIPOS.find(([k]) => k === p.tipo) || [])[1]} ${selo(STATUS[p.status], p.status === 'ativo' ? 'ok' : 'neutro')}${p.social ? html` ${selo('Preço social', 'info')}` : ''}${p.desde ? ` · desde ${dataBR(p.desde)}` : ''}${prof && (App.eu.profissionais || []).length > 1 ? ` · ${prof.nome}` : ''}</p></div></div>
       <div class="pac-acoes">${zap ? html`<a class="btn btn-sec btn-peq" href="${zap}" target="_blank" rel="noopener">WhatsApp</a>` : ''}
         ${podeEditar ? html`<button class="btn btn-sec btn-peq" data-editar>Editar cadastro</button>
           <a class="btn btn-pri btn-peq" href="#/agenda?paciente=${p.id}">Agendar sessão</a>` : ''}</div></div>
@@ -177,7 +177,8 @@ function formulario(p, depois) {
       <div class="grade-3">${campo({ id: 'respNome', rotulo: 'Nome', valor: v.respNome || '' })}${campo({ id: 'respTelefone', rotulo: 'Telefone', tipo: 'tel', valor: fmtTel(v.respTelefone) })}${campo({ id: 'respCpf', rotulo: 'CPF', valor: fmtCPF(v.respCpf), ajuda: 'O recibo sai neste CPF.' })}</div></details>
     <h3 style="margin-top:6px">Como este paciente paga</h3>
     <div class="grade-2">${campo({ id: 'modalidade', rotulo: 'Forma de cobrança', valor: v.modalidade, opcoes: MODALIDADES })}${campo({ id: 'servicoId', rotulo: 'Tipo de atendimento padrão', valor: v.servicoId || '', opcoes: [['', 'Sem tipo definido'], ...servicos.map((s) => [s.id, `${s.nome}${s.valor ? ` · ${brl(s.valor)}` : ''}`])] })}</div>
-    <div data-modal="sessao"><div class="grade-2">${campoDinheiro({ id: 'valorSessao', rotulo: 'Valor da sessão', valor: v.valorSessao, ajuda: 'Deixe em branco para usar o valor do tipo de atendimento.' })}${campo({ id: 'prazoDias', rotulo: 'Prazo de pagamento (dias após a sessão)', tipo: 'number', valor: v.prazoDias ?? 0, extra: 'min="0" max="365"', ajuda: '0 = vence no dia da sessão.' })}</div></div>
+    <label class="marca" style="margin:4px 0 10px"><input type="checkbox" name="social" ${v.social ? raw('checked') : ''}><span><strong>Preço social</strong> <small class="suave">Atendido com valor reduzido (vulnerabilidade socioeconômica). As sessões já nascem com o valor social do tipo de atendimento. Marca só o preço: não registre o motivo nem documentos.</small></span></label>
+    <div data-modal="sessao"><div class="grade-2">${campoDinheiro({ id: 'valorSessao', rotulo: 'Valor da sessão', valor: v.valorSessao, ajuda: 'Deixe em branco para usar o valor do tipo de atendimento (com preço social, o valor social).' })}${campo({ id: 'prazoDias', rotulo: 'Prazo de pagamento (dias após a sessão)', tipo: 'number', valor: v.prazoDias ?? 0, extra: 'min="0" max="365"', ajuda: '0 = vence no dia da sessão.' })}</div></div>
     <div data-modal="mensal"><div class="grade-2">${campoDinheiro({ id: 'valorMensal', rotulo: 'Valor da mensalidade', valor: v.valorMensal, obrig: true })}${campo({ id: 'diaVencimento', rotulo: 'Dia do vencimento', tipo: 'number', valor: v.diaVencimento || '', obrig: true, extra: 'min="1" max="31"' })}</div></div>
     <div data-modal="convenio"><div class="grade-3">${campo({ id: 'convenioNome', rotulo: 'Convênio', valor: v.convenioNome || '', obrig: true, placeholder: 'Ex.: Unimed' })}${campoDinheiro({ id: 'valorSessaoConv', rotulo: 'Valor por sessão', valor: v.valorSessao })}${campo({ id: 'convenioPrazoDias', rotulo: 'Prazo de repasse (dias)', tipo: 'number', valor: v.convenioPrazoDias ?? 30, extra: 'min="0" max="365"' })}</div></div>
     <div class="grade-2">${campo({ id: 'formaPagamento', rotulo: 'Forma de pagamento preferida', valor: v.formaPagamento || '', opcoes: FORMAS })}${profs.length > 1 ? campo({ id: 'profissionalId', rotulo: 'Profissional', valor: v.profissionalId || '', opcoes: [['', 'Sem profissional definida'], ...profs.map((x) => [x.id, x.nome])] }) : ''}</div>
@@ -197,7 +198,7 @@ function formulario(p, depois) {
     const d = dadosForm(form); const mod = d.modalidade;
     const corpo = {
       nome: d.nome, apelido: d.apelido, tipo: d.tipo, telefone: d.telefone, email: d.email, cpf: d.cpf, nascimento: d.nascimento, desde: d.desde,
-      respNome: d.respNome, respTelefone: d.respTelefone, respCpf: d.respCpf, modalidade: mod, servicoId: d.servicoId ? Number(d.servicoId) : null,
+      respNome: d.respNome, respTelefone: d.respTelefone, respCpf: d.respCpf, social: !!d.social, modalidade: mod, servicoId: d.servicoId ? Number(d.servicoId) : null,
       valorSessao: lerReais(mod === 'convenio' ? d.valorSessaoConv : d.valorSessao) ?? 0, valorMensal: lerReais(d.valorMensal) ?? 0,
       diaVencimento: d.diaVencimento ? Number(d.diaVencimento) : null, prazoDias: d.prazoDias === '' || d.prazoDias == null ? 0 : Number(d.prazoDias),
       convenioNome: d.convenioNome, convenioPrazoDias: d.convenioPrazoDias === '' || d.convenioPrazoDias == null ? null : Number(d.convenioPrazoDias),

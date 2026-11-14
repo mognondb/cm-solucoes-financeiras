@@ -168,3 +168,6 @@ details.bloco { border: 1px solid var(--linha); border-radius: 12px; padding: 10
 .linha.ex .sug-cat { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 3px; line-height: 1.35; }
 .linha.ex [data-lancar-sug] { max-width: min(100%, 340px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cartao-t > .btn { flex: none; white-space: nowrap; }
+
+/* preço social */
+.ag-ev .ag-social { background: var(--info-bg); color: var(--info); border-radius: 999px; padding: 0 5px; font-size: .66rem; font-weight: 600; margin-left: 3px; }

@@ -23,7 +23,7 @@ function psi_paciente_json(array $p): array {
     'telefone' => $p['telefone'], 'email' => $p['email'], 'respNome' => $p['resp_nome'], 'respCpf' => $p['resp_cpf'], 'respTelefone' => $p['resp_telefone'],
     'tipo' => $p['tipo'], 'servicoId' => $n($p['servico_id']), 'modalidade' => $p['modalidade_cobranca'], 'valorSessao' => (int)$p['valor_sessao'], 'valorMensal' => (int)$p['valor_mensal'],
     'diaVencimento' => $n($p['dia_vencimento']), 'prazoDias' => (int)$p['prazo_dias'], 'formaPagamento' => $p['forma_pagamento'], 'convenioNome' => $p['convenio_nome'],
-    'convenioPrazoDias' => $n($p['convenio_prazo_dias']), 'status' => $p['status'], 'obs' => $p['obs'], 'desde' => $p['desde'],
+    'convenioPrazoDias' => $n($p['convenio_prazo_dias']), 'status' => $p['status'], 'obs' => $p['obs'], 'desde' => $p['desde'], 'social' => (bool)($p['social'] ?? 0),
   ];
 }
 
@@ -60,7 +60,7 @@ function psi_ler_paciente(array $d): array {
     'modalidade_cobranca' => $modal, 'valor_sessao' => psi_cent($d['valorSessao'] ?? 0, 'valor da sessão', false, true) ?? 0, 'valor_mensal' => $valorMensal,
     'dia_vencimento' => $dia, 'prazo_dias' => psi_int($d['prazoDias'] ?? 0, 0, 365, 'prazo de pagamento') ?? 0, 'forma_pagamento' => $forma,
     'convenio_nome' => $convNome, 'convenio_prazo_dias' => $convPrazo, 'status' => psi_opcao($d['status'] ?? null, PSI_STATUS_PACIENTE, 'ativo'),
-    'obs' => psi_txt($d['obs'] ?? null, 500), 'desde' => psi_data($d['desde'] ?? null, false, 'data de início'),
+    'obs' => psi_txt($d['obs'] ?? null, 500), 'desde' => psi_data($d['desde'] ?? null, false, 'data de início'), 'social' => psi_bool($d['social'] ?? false),
   ];
 }
 

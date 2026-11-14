@@ -46,6 +46,9 @@ function agenda(alvo) {
     ${campo({ id: 'prazo_padrao_dias', rotulo: 'Prazo para pagar cada sessão (dias após a sessão)', tipo: 'number', valor: cf.prazo_padrao_dias, extra: 'min="0" max="365"', ajuda: '0 = vence no próprio dia da sessão.' })}
     <label class="marca"><input type="checkbox" name="cobrar_falta" ${cf.cobrar_falta ? raw('checked') : ''}><span>Cobrar falta sem aviso (cancelamento sem justificativa)</span></label>
     ${campo({ id: 'falta_percentual', rotulo: 'Quanto cobrar da falta (% do valor da sessão)', tipo: 'number', valor: cf.falta_percentual, extra: 'min="0" max="100"' })}
+    <h3 style="margin-top:20px">Preço social</h3>
+    <p class="suave peq" style="margin-top:0">Para atender com valor reduzido pessoas em vulnerabilidade socioeconômica. Você marca o paciente ou a sessão como "preço social"; o valor vem do tipo de atendimento (campo "Valor social") ou, se ele não tiver, deste desconto sobre o valor de tabela.</p>
+    ${campo({ id: 'social_percentual', rotulo: 'Desconto padrão do preço social (%)', tipo: 'number', valor: cf.social_percentual ?? 50, extra: 'min="0" max="90"', ajuda: 'Ex.: 50 = metade do valor de tabela.' })}
     <h3 style="margin-top:20px">Mensagens prontas (WhatsApp)</h3>
     <p class="suave peq">Você pode usar: {nome}, {descricao}, {valor}, {vencimento}, {profissional}, {dia}, {hora}.</p>
     ${campo({ id: 'msg_cobranca', rotulo: 'Cobrança de pagamento', tipo: 'textarea', valor: cf.msg_cobranca })}
@@ -57,7 +60,7 @@ function agenda(alvo) {
     enviar(form, async (d) => {
       const diasSel = DIAS_CURTOS.map((_, i) => (d['dia' + i] ? i : -1)).filter((i) => i >= 0);
       defineEu(await api.put('conta/config', { duracao_padrao: Number(d.duracao_padrao), hora_ini: Number(d.hora_ini), hora_fim: Number(d.hora_fim), dias_semana: diasSel,
-        prazo_padrao_dias: Number(d.prazo_padrao_dias), cobrar_falta: d.cobrar_falta, falta_percentual: Number(d.falta_percentual), msg_cobranca: d.msg_cobranca, msg_confirmacao: d.msg_confirmacao }));
+        prazo_padrao_dias: Number(d.prazo_padrao_dias), cobrar_falta: d.cobrar_falta, falta_percentual: Number(d.falta_percentual), social_percentual: Number(d.social_percentual), msg_cobranca: d.msg_cobranca, msg_confirmacao: d.msg_confirmacao }));
     });
   });
 }
@@ -92,19 +95,20 @@ async function atendimentos(alvo) {
   montar(alvo, html`<div class="cartao"><div class="cartao-t"><h3>Tipos de atendimento</h3><button class="btn btn-sec btn-peq" data-novo>Adicionar</button></div>
     <p class="suave peq">Aqui ficam seus valores padrão. Cada paciente pode ter um valor próprio, mas começar daqui economiza digitação.</p>
     <ul class="lista">${lista.map((s) => html`<li class="linha"><div class="corpo"><span class="tit">${s.nome}</span><span class="sub">${s.duracaoMin} min · ${nomeCat(s.categoriaId)}</span></div>
-      <strong class="num ${s.valor ? '' : 'aten'}">${s.valor ? brl(s.valor) : 'Defina o valor'}</strong>${s.ativo ? '' : selo('Inativo')}<button class="btn btn-ghost btn-peq" data-edit="${s.id}">Editar</button></li>`)}</ul></div>`);
+      <strong class="num ${s.valor ? '' : 'aten'}">${s.valor ? brl(s.valor) : 'Defina o valor'}</strong>${s.valorSocial ? html`<span class="suave peq" style="margin-left:8px">social ${brl(s.valorSocial)}</span>` : ''}${s.ativo ? '' : selo('Inativo')}<button class="btn btn-ghost btn-peq" data-edit="${s.id}">Editar</button></li>`)}</ul></div>`);
   const abrirForm = (s) => {
     const m = abrirModal({ titulo: s ? 'Editar atendimento' : 'Novo atendimento', corpo: html`<form novalidate><p class="erro-form" role="alert" hidden></p>
       ${campo({ id: 'nome', rotulo: 'Nome', valor: s?.nome || '', obrig: true })}
       <div class="grade-2">${campo({ id: 'duracaoMin', rotulo: 'Duração (min)', tipo: 'number', valor: s?.duracaoMin || App.eu.config.duracao_padrao, extra: 'min="10" max="480"' })}
         <div class="campo"><label for="valor">Valor padrão</label><div class="dinheiro"><span>R$</span><input id="valor" name="valor" inputmode="decimal" value="${s?.valor ? num2(s.valor) : ''}" placeholder="0,00"></div></div></div>
+      <div class="campo"><label for="valorSocial">Valor social (opcional)</label><div class="dinheiro"><span>R$</span><input id="valorSocial" name="valorSocial" inputmode="decimal" value="${s?.valorSocial ? num2(s.valorSocial) : ''}" placeholder="0,00"></div><small class="ajuda">Preço para quem é atendido com preço social. Em branco: usa o desconto padrão das configurações (${App.eu.config.social_percentual ?? 50}%).</small></div>
       ${campo({ id: 'categoriaId', rotulo: 'Categoria de receita', valor: s?.categoriaId || '', opcoes: [['', 'Sem categoria'], ...cats.map((c) => [c.id, c.nome])] })}
       ${s ? html`<label class="marca"><input type="checkbox" name="ativo" ${s.ativo ? raw('checked') : ''}><span>Ativo</span></label>` : ''}</form>`,
       acoes: [{ id: 'cancelar', rotulo: 'Cancelar' }, { id: 'salvar', rotulo: 'Salvar', classe: 'btn-pri' }] });
     m.el.addEventListener('click', async (e) => {
       const b = e.target.closest('[data-acao]'); if (!b) return; if (b.dataset.acao === 'cancelar') return m.fechar();
       if (b.dataset.acao === 'salvar') { const f = $('form', m.el); const d = dadosForm(f);
-        const corpo = { nome: d.nome, duracaoMin: Number(d.duracaoMin), valor: lerReais(d.valor) ?? 0, categoriaId: d.categoriaId ? Number(d.categoriaId) : null, ativo: d.ativo !== false };
+        const corpo = { nome: d.nome, duracaoMin: Number(d.duracaoMin), valor: lerReais(d.valor) ?? 0, valorSocial: d.valorSocial ? (lerReais(d.valorSocial) ?? null) : null, categoriaId: d.categoriaId ? Number(d.categoriaId) : null, ativo: d.ativo !== false };
         try { if (s) await api.put('servicos/' + s.id, corpo); else await api.post('servicos', corpo); m.fechar(); aviso('Salvo.'); await atendimentos(alvo); } catch (er) { erroEm(f, er.message); } }
     });
   };

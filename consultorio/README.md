@@ -23,6 +23,8 @@ Pense em um "Conta Azul" feito para essa rotina, com a agenda no centro: o que a
 | F3 | Importar extrato (OFX/CSV/Excel) e conciliar | feito |
 | F4 | Recibos em PDF, relatórios, apoio ao carnê-leão, exportar dados, excluir conta (LGPD) | feito |
 | G1 | Portal CLINCM: novo nome, fornecedores, importação de pacientes, fornecedores e categorias por planilha | feito |
+| G2 | Extrato: sugestão de categoria pela descrição (fornecedor, paciente, histórico, dicionário) e lançamento em lote | feito |
+| G3 | Preço social: marca no paciente, na sessão e na cobrança, valor social por atendimento e desconto concedido nos relatórios | feito |
 
 Rotas do aplicativo que ainda não têm tela aparecem como "Em construção" (lista `PRONTAS` em `app/main.js`: ao criar uma tela, acrescente-a ali).
 O hash aceita parâmetros (`#/agenda?paciente=12`): a tela recebe `abrir(el, resto, consulta)`.
@@ -112,7 +114,7 @@ validar a entrega de e-mail (SPF/DKIM do domínio) e então usar "Abrir ao públ
 | `psi_recibos`, `psi_recibo_baixas` | Recibos numerados (com cópia dos dados do emitente e do pagador no momento da emissão) e os pagamentos que cada um cobre |
 | `psi_auditoria` | Quem fez o quê |
 
-Migrações: v1 base · v2 agenda (índice único das séries) · v3 `psi_transferencias` e `psi_recorrentes`. · v4 `psi_extratos` e `psi_extrato_itens` · v5 `psi_recibos` e `psi_recibo_baixas` · v6 `psi_fornecedores`.
+Migrações: v1 base · v2 agenda (índice único das séries) · v3 `psi_transferencias` e `psi_recorrentes`. · v4 `psi_extratos` e `psi_extrato_itens` · v5 `psi_recibos` e `psi_recibo_baixas` · v6 `psi_fornecedores` · v7 colunas do preço social.
 
 ### Agenda (F1)
 
@@ -199,6 +201,20 @@ Um lançamento (`psi_lancamentos`) é uma conta a receber ou a pagar; `psi_baixa
 - Na tela: selo com a sugestão e o motivo, botão **"Lançar como {categoria}"** (um clique; só quando não há par em aberto para conciliar, para não duplicar a despesa), formulário "Lançar" já preenchido (categoria,
   fornecedor, aviso) e o cartão **"Lançar N"** em lote, só para confiança **alta** e com confirmação. O lote (`POST extrato-itens/lancar-sugeridas`) **recalcula a sugestão no servidor** (o navegador só manda os ids),
   pula linhas sem categoria, de confiança menor ou com par exato em aberto, e grava na trilha de auditoria. A sugestão nunca grava nada sozinha.
+
+### Preço social (G3)
+
+- Para atender com valor reduzido pessoas em vulnerabilidade socioeconômica. Guarda **só a marca e os valores** (`social`, `valor_cheio`): **nunca o motivo nem documentos** (a situação socioeconômica é informação delicada;
+  os termos e a política pedem que não se registre nada disso, e a tela repete o aviso).
+- **Valor social** por tipo de atendimento (`psi_servicos.valor_social`, opcional). Sem ele, vale o **desconto padrão da conta** (`config.social_percentual`, padrão 50%) sobre o valor de tabela. Mesmo cálculo no servidor
+  (`psi_valor_social`) e na tela.
+- **Paciente** com preço social (`psi_pacientes.social`): as sessões dele já nascem sociais, com o valor próprio do paciente (se houver) ou o valor social do atendimento, e guardam o **valor de tabela** (`valor_cheio`).
+  **Sessão** avulsa ou série pode ser marcada/desmarcada (na agenda: caixa "Preço social"; marcar troca o valor sugerido, dá para ajustar). "Esta e as seguintes" propaga a marca às sessões futuras da série.
+  Preço social nunca fica acima do valor de tabela (422). Bloqueios e despesas ignoram a marca.
+- **Cobrança**: a sessão realizada (ou a falta cobrada, na mesma proporção) gera o lançamento com `social` e `valor_cheio`; mensalidade de paciente social recebe a marca (valor de tabela desconhecido); cobrança manual também
+  aceita a marca e o valor de tabela (parcelas dividem os dois igualmente).
+- **Relatório do mês** (`social` em `GET relatorios/resultado`): sessões realizadas com preço social (e % do total), **desconto concedido** (valor de tabela − valor cobrado, só onde o valor de tabela é conhecido), cobrado e recebido
+  dessas cobranças. O desconto **não é despesa** e não entra no resultado. Importação de pacientes aceita a coluna "Preço social" (sim/não).
 
 ## Testar localmente
 

@@ -2,6 +2,14 @@
 /** Rotas da conta: dados do consultório, preferências, profissionais, categorias e tipos de atendimento. */
 declare(strict_types=1);
 
+/** Valor social do tipo de atendimento (opcional): em centavos, nunca acima do valor de tabela. */
+function psi_ler_valor_social(array $d, int $valor): ?int {
+  if (!isset($d['valorSocial']) || $d['valorSocial'] === '') return null;
+  $v = psi_cent($d['valorSocial'], 'valor social', false, true);
+  if ($v !== null && $valor > 0 && $v > $valor) psi_erro('O valor social não pode ser maior que o valor do atendimento.', 422);
+  return $v === 0 ? null : $v;
+}
+
 function psi_registrar_rotas_conta(PsiRoteador $r): void {
   $r->add('GET', 'conta', fn() => psi_eu());
 
@@ -30,6 +38,7 @@ function psi_registrar_rotas_conta(PsiRoteador $r): void {
     if (isset($d['cobrar_falta'])) $novo['cobrar_falta'] = (bool)psi_bool($d['cobrar_falta']);
     if (isset($d['falta_percentual'])) $novo['falta_percentual'] = psi_int($d['falta_percentual'], 0, 100, 'percentual da falta');
     if (isset($d['prazo_padrao_dias'])) $novo['prazo_padrao_dias'] = psi_int($d['prazo_padrao_dias'], 0, 365, 'prazo padrão');
+    if (isset($d['social_percentual'])) $novo['social_percentual'] = psi_int($d['social_percentual'], 0, 90, 'desconto do preço social');
     foreach (['msg_cobranca', 'msg_confirmacao'] as $k) if (isset($d[$k])) $novo[$k] = psi_txt($d[$k], 600, true, 'mensagem');
     psi_db()->prepare('UPDATE psi_contas SET config_json = ?, atualizado_em = ? WHERE id = ?')->execute([json_encode($novo, JSON_UNESCAPED_UNICODE), psi_agora(), psi_conta_id()]);
     PsiSessao::$conta['config_json'] = json_encode($novo, JSON_UNESCAPED_UNICODE);
@@ -113,20 +122,20 @@ function psi_registrar_rotas_conta(PsiRoteador $r): void {
 
   /* ---- tipos de atendimento ---- */
   $r->add('GET', 'servicos', function () {
-    $s = psi_db()->prepare('SELECT id, nome, duracao_min, valor, categoria_id, ativo FROM psi_servicos WHERE conta_id = ? ORDER BY ordem, nome'); $s->execute([psi_conta_id()]);
-    return ['itens' => array_map(fn($x) => ['id' => (int)$x['id'], 'nome' => $x['nome'], 'duracaoMin' => (int)$x['duracao_min'], 'valor' => (int)$x['valor'], 'categoriaId' => $x['categoria_id'] === null ? null : (int)$x['categoria_id'], 'ativo' => (bool)$x['ativo']], $s->fetchAll())];
+    $s = psi_db()->prepare('SELECT id, nome, duracao_min, valor, valor_social, categoria_id, ativo FROM psi_servicos WHERE conta_id = ? ORDER BY ordem, nome'); $s->execute([psi_conta_id()]);
+    return ['itens' => array_map(fn($x) => ['id' => (int)$x['id'], 'nome' => $x['nome'], 'duracaoMin' => (int)$x['duracao_min'], 'valor' => (int)$x['valor'], 'valorSocial' => $x['valor_social'] === null ? null : (int)$x['valor_social'], 'categoriaId' => $x['categoria_id'] === null ? null : (int)$x['categoria_id'], 'ativo' => (bool)$x['ativo']], $s->fetchAll())];
   });
   $r->add('POST', 'servicos', function () {
-    $d = psi_corpo();
-    psi_db()->prepare('INSERT INTO psi_servicos (conta_id, nome, duracao_min, valor, categoria_id, ordem) VALUES (?,?,?,?,?,999)')->execute([
-      psi_conta_id(), psi_txt($d['nome'] ?? null, 80, true, 'nome'), psi_int($d['duracaoMin'] ?? 50, 10, 480, 'duração'), psi_cent($d['valor'] ?? 0, 'valor', false, true), psi_categoria_id($d['categoriaId'] ?? null, 'receita'),
+    $d = psi_corpo(); $valor = psi_cent($d['valor'] ?? 0, 'valor', false, true) ?? 0;
+    psi_db()->prepare('INSERT INTO psi_servicos (conta_id, nome, duracao_min, valor, valor_social, categoria_id, ordem) VALUES (?,?,?,?,?,?,999)')->execute([
+      psi_conta_id(), psi_txt($d['nome'] ?? null, 80, true, 'nome'), psi_int($d['duracaoMin'] ?? 50, 10, 480, 'duração'), $valor, psi_ler_valor_social($d, $valor), psi_categoria_id($d['categoriaId'] ?? null, 'receita'),
     ]);
     return ['id' => (int)psi_db()->lastInsertId()];
   });
   $r->add('PUT', 'servicos/{id}', function ($p) {
-    $d = psi_corpo();
-    psi_db()->prepare('UPDATE psi_servicos SET nome = ?, duracao_min = ?, valor = ?, categoria_id = ?, ativo = ? WHERE id = ? AND conta_id = ?')->execute([
-      psi_txt($d['nome'] ?? null, 80, true, 'nome'), psi_int($d['duracaoMin'] ?? 50, 10, 480, 'duração'), psi_cent($d['valor'] ?? 0, 'valor', false, true), psi_categoria_id($d['categoriaId'] ?? null, 'receita'), psi_bool($d['ativo'] ?? true), (int)$p['id'], psi_conta_id(),
+    $d = psi_corpo(); $valor = psi_cent($d['valor'] ?? 0, 'valor', false, true) ?? 0;
+    psi_db()->prepare('UPDATE psi_servicos SET nome = ?, duracao_min = ?, valor = ?, valor_social = ?, categoria_id = ?, ativo = ? WHERE id = ? AND conta_id = ?')->execute([
+      psi_txt($d['nome'] ?? null, 80, true, 'nome'), psi_int($d['duracaoMin'] ?? 50, 10, 480, 'duração'), $valor, psi_ler_valor_social($d, $valor), psi_categoria_id($d['categoriaId'] ?? null, 'receita'), psi_bool($d['ativo'] ?? true), (int)$p['id'], psi_conta_id(),
     ]);
     return ['ok' => true];
   });

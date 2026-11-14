@@ -118,6 +118,7 @@ export async function detalheLancamento(id, depois) {
   const m = abrirModal({ titulo: l.descricao, largo: true, corpo: html`<div>
     <p style="margin:0 0 8px">${selo(...seloLancamento(l))} <span class="suave peq">${ORIGEM[l.origem] || ''}${l.sessaoEm ? ` de ${dataBR(l.sessaoEm.slice(0, 10))} às ${hhmm(l.sessaoEm)}` : ''}${l.parcelas ? ` · parcela ${l.parcela}/${l.parcelas}` : ''}</span></p>
     <div class="kpis" style="grid-template-columns:repeat(3,1fr);margin:10px 0"><div class="kpi"><span>Valor</span><strong>${brl(l.valor)}</strong></div><div class="kpi ok"><span>${pagar ? 'Pago' : 'Recebido'}</span><strong>${brl(l.pago)}</strong></div><div class="kpi ${l.estado === 'atrasado' ? 'alerta' : ''}"><span>Falta</span><strong>${brl(l.restante)}</strong></div></div>
+    ${l.social ? html`<p style="margin:0 0 10px">${selo('Preço social', 'info')}${l.valorCheio > l.valor ? html` <span class="suave peq">valor de tabela ${brl(l.valorCheio)} · desconto de ${brl(l.valorCheio - l.valor)}</span>` : ''}</p>` : ''}
     <dl class="detalhes"><dt>Vencimento</dt><dd>${dataBR(l.vencimento)}</dd><dt>Competência</dt><dd>${dataBR(l.competencia)}</dd>
       ${l.paciente ? html`<dt>Paciente</dt><dd><a href="#/pacientes/${l.paciente.id}" data-fechar>${l.paciente.nome}</a></dd>` : ''}${l.contraparte ? html`<dt>${pagar ? 'Fornecedor' : 'Contraparte'}</dt><dd>${l.contraparte}</dd>` : ''}
       ${l.categoria ? html`<dt>Categoria</dt><dd>${l.categoria}</dd>` : ''}${l.canceladoMotivo ? html`<dt>Motivo do cancelamento</dt><dd>${l.canceladoMotivo}</dd>` : ''}</dl>
@@ -185,18 +186,21 @@ export async function abrirLancamento({ editar, tipo = 'receber', pacienteId, co
     <div class="grade-2">${receber ? campo({ id: 'pacienteId', rotulo: 'Paciente (opcional)', valor: l ? l.pacienteId || '' : pacienteId || '', opcoes: [['', 'Sem paciente'], ...pacientes.map((p) => [p.id, p.nome])] }) : campo({ id: 'contraparte', rotulo: 'Fornecedor (opcional)', valor: l ? l.contraparte || '' : contraparteInicial || '', extra: 'list="dl-fornecedores" autocomplete="off" maxlength="120"' })}${datalistFornecedores()}
       ${campo({ id: 'categoriaId', rotulo: 'Categoria', valor: l ? l.categoriaId || '' : categoriaInicial || '', opcoes: [['', 'Sem categoria'], ...cats.map((c) => [c.id, c.nome])] })}</div>
     ${receber && l ? campo({ id: 'contraparte', rotulo: 'Contraparte (ex.: convênio)', valor: l.contraparte || '' }) : ''}
+    ${receber ? html`<label class="marca" style="margin-bottom:8px"><input type="checkbox" name="social" ${l && l.social ? raw('checked') : ''}><span><strong>Preço social</strong> <small class="suave">cobrança com valor reduzido (vulnerabilidade socioeconômica). Marca só o preço: não registre o motivo.</small></span></label>
+      <div id="bloco-cheio" ${l && l.social ? '' : raw('hidden')}>${campoDinheiro({ id: 'valorCheio', rotulo: 'Valor de tabela (sem desconto)', valor: l ? l.valorCheio : 0, ajuda: 'Para medir o desconto concedido. Pode ficar em branco.' })}</div>` : ''}
     ${l ? '' : html`<label class="marca" style="margin-bottom:10px"><input type="checkbox" name="jaPago" id="jaPago"><span>${receber ? 'Já recebi' : 'Já paguei'} (registrar o pagamento agora)</span></label>
       <div id="bloco-pago" hidden><div class="grade-3">${campo({ id: 'dataPago', rotulo: 'Data', tipo: 'date', valor: App.hoje, extra: `max="${App.hoje}"` })}${campo({ id: 'formaPago', rotulo: 'Forma', valor: '', opcoes: FORMAS })}${campo({ id: 'contaPago', rotulo: receber ? 'Entrou em' : 'Saiu de', valor: contas[0] ? contas[0].id : '', opcoes: contas.map((c) => [c.id, c.nome]) })}</div></div>`}
     ${campo({ id: 'obs', rotulo: 'Observação', tipo: 'textarea', valor: l ? l.obs || '' : '', extra: 'maxlength="300"' })}</div>`,
     acoes: [{ id: 'cancelar', rotulo: 'Cancelar' }, { id: 'salvar', rotulo: l ? 'Salvar' : 'Lançar', classe: 'btn-pri' }] });
   const form = $('form', m.el); if (!receber) ligarFornecedorACategoria(form);
+  if (receber && form.elements.social) form.elements.social.addEventListener('change', () => { $('#bloco-cheio', form).hidden = !form.elements.social.checked; });
   const pago = form.elements.jaPago; if (pago) pago.addEventListener('change', () => { $('#bloco-pago', form).hidden = !pago.checked; if (pago.checked && form.elements.parcelas) form.elements.parcelas.value = 1; });
   m.el.addEventListener('click', async (e) => {
     const b = e.target.closest('[data-acao]'); if (!b) return; if (b.dataset.acao === 'cancelar') return m.fechar();
     const d = dadosForm(form); const falha = (msg) => { const x = $('.erro-form', form); x.textContent = msg; x.hidden = false; b.disabled = false; }; b.disabled = true;
     const valor = lerReais(d.valor); if (!valor || valor <= 0) return falha('Informe o valor.');
     const corpo = { descricao: d.descricao, valor, vencimento: d.vencimento, categoriaId: d.categoriaId ? Number(d.categoriaId) : null, contraparte: d.contraparte, obs: d.obs };
-    if (receber) corpo.pacienteId = d.pacienteId ? Number(d.pacienteId) : null;
+    if (receber) { corpo.pacienteId = d.pacienteId ? Number(d.pacienteId) : null; corpo.social = !!d.social; if (d.social && d.valorCheio) corpo.valorCheio = lerReais(d.valorCheio) ?? 0; }
     try {
       if (l) await api.put('lancamentos/' + l.id, corpo);
       else {

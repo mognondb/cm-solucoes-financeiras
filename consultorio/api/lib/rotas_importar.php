@@ -34,6 +34,7 @@ function psi_imp_campos(string $tipo): array {
     $c('convenioPrazoDias', 'Prazo do convênio (dias)', false, 'Em quantos dias o convênio paga.', ['prazo do convenio', 'prazo convenio', 'prazo de repasse'], ['', '']),
     $c('status', 'Situação', false, 'Ativo, pausado, alta ou arquivado.', ['situacao', 'status', 'situacao do paciente'], ['ativo', 'ativo']),
     $c('desde', 'Paciente desde', false, 'Data de início do atendimento (dd/mm/aaaa).', ['desde', 'data de inicio', 'inicio', 'data de cadastro', 'primeira consulta', 'data inicio', 'inicio do atendimento'], ['02/02/2024', '']),
+    $c('social', 'Preço social', false, 'Sim para quem é atendido com preço social. Só a marca: não registre o motivo.', ['preco social', 'social', 'valor social', 'tarifa social', 'sessao social'], ['', 'sim']),
     $c('obs', 'Observações administrativas', false, 'Não use para dados clínicos.', ['observacao', 'observacoes', 'obs', 'observacao administrativa'], ['Prefere horário da manhã', '']),
   ];
   if ($tipo === 'fornecedores') return [
@@ -148,6 +149,7 @@ function psi_imp_paciente(array $r): array {
   foreach (['tipo' => [PSI_IMP_TIPO_PAC, 'Tipo de atendimento'], 'modalidade' => [PSI_IMP_MODAL, 'Forma de cobrança'], 'status' => [PSI_IMP_STATUS, 'Situação'], 'formaPagamento' => [PSI_IMP_FORMAS, 'Forma de pagamento']] as $k => [$mapa, $rot]) {
     [$x, $er] = psi_imp_enum($r[$k] ?? null, $mapa, $rot); if ($er) $erros[] = $er; elseif ($x !== null) $d[$k] = $x;
   }
+  [$sx, $er] = psi_imp_simnao($r['social'] ?? null); if ($er) $erros[] = 'Preço social: ' . $er; elseif ($sx !== null) $d['social'] = $sx;
   foreach (['valorSessao' => 'Valor da sessão', 'valorMensal' => 'Valor da mensalidade'] as $k => $rot) { [$x, $er] = psi_imp_reais($r[$k] ?? null, $rot); if ($er) $erros[] = $er; elseif ($x !== null) $d[$k] = $x; }
   foreach (['diaVencimento' => ['Dia do vencimento', 1, 31], 'prazoDias' => ['Prazo para pagar', 0, 365], 'convenioPrazoDias' => ['Prazo do convênio', 0, 365]] as $k => [$rot, $mn, $mx]) {
     [$x, $er] = psi_imp_inteiro($r[$k] ?? null, $rot, $mn, $mx); if ($er) $erros[] = $er; elseif ($x !== null) $d[$k] = $x;
@@ -175,7 +177,7 @@ function psi_imp_categoria(array $r): array {
 /* ------------------------------------------------------------------ rotas */
 const PSI_IMP_COLUNAS_PAC = ['nome' => 'nome', 'apelido' => 'apelido', 'cpf' => 'cpf', 'nascimento' => 'nascimento', 'telefone' => 'telefone', 'email' => 'email', 'respNome' => 'resp_nome', 'respCpf' => 'resp_cpf',
   'respTelefone' => 'resp_telefone', 'tipo' => 'tipo', 'modalidade' => 'modalidade_cobranca', 'valorSessao' => 'valor_sessao', 'valorMensal' => 'valor_mensal', 'diaVencimento' => 'dia_vencimento', 'prazoDias' => 'prazo_dias',
-  'formaPagamento' => 'forma_pagamento', 'convenioNome' => 'convenio_nome', 'convenioPrazoDias' => 'convenio_prazo_dias', 'status' => 'status', 'obs' => 'obs', 'desde' => 'desde'];
+  'formaPagamento' => 'forma_pagamento', 'convenioNome' => 'convenio_nome', 'convenioPrazoDias' => 'convenio_prazo_dias', 'status' => 'status', 'obs' => 'obs', 'desde' => 'desde', 'social' => 'social'];
 
 function psi_registrar_rotas_importar(PsiRoteador $r): void {
   $r->add('GET', 'importar/campos/{tipo}', function ($p) { return ['campos' => psi_imp_campos((string)$p['tipo']), 'limite' => PSI_IMPORTAR_MAX_LINHAS]; });

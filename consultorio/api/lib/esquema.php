@@ -11,6 +11,12 @@ const PSI_TABELAS_DA_CONTA = [ // tudo o que tem conta_id: usado ao excluir uma 
   'psi_contas_fin', 'psi_fornecedores', 'psi_categorias', 'psi_profissionais', 'psi_sessoes', 'psi_usuarios',
 ];
 
+/** Adiciona uma coluna se ainda não existir (migrações idempotentes: rodar de novo não faz nada). */
+function psi_add_coluna(PDO $db, string $tabela, string $coluna, string $definicao): void {
+  $s = $db->prepare('SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?'); $s->execute([$tabela, $coluna]);
+  if ((int)$s->fetchColumn() === 0) $db->exec("ALTER TABLE $tabela ADD COLUMN $coluna $definicao");
+}
+
 function psi_migracoes(): array {
   $t = 'ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci';
   return [
@@ -166,6 +172,18 @@ function psi_migracoes(): array {
         email VARCHAR(160) NULL, telefone VARCHAR(30) NULL, categoria_id BIGINT UNSIGNED NULL, obs VARCHAR(300) NULL, ativo TINYINT(1) NOT NULL DEFAULT 1,
         criado_em DATETIME NOT NULL, atualizado_em DATETIME NOT NULL, UNIQUE KEY uq_forn (conta_id, nome), KEY k_doc (conta_id, documento)
       ) $t",
+    ],
+    /* v7 (preço social): valor social por tipo de atendimento e a MARCA no paciente, na sessão, na série e na cobrança, com o valor de tabela (valor_cheio) para medir o desconto concedido.
+       Só a marca e os valores: nada sobre o motivo (a situação socioeconômica da pessoa é informação delicada e não é guardada). */
+    7 => [
+      fn(PDO $db) => psi_add_coluna($db, 'psi_servicos', 'valor_social', 'INT NULL'),
+      fn(PDO $db) => psi_add_coluna($db, 'psi_pacientes', 'social', 'TINYINT(1) NOT NULL DEFAULT 0'),
+      fn(PDO $db) => psi_add_coluna($db, 'psi_series', 'social', 'TINYINT(1) NOT NULL DEFAULT 0'),
+      fn(PDO $db) => psi_add_coluna($db, 'psi_series', 'valor_cheio', 'INT NOT NULL DEFAULT 0'),
+      fn(PDO $db) => psi_add_coluna($db, 'psi_agendamentos', 'social', 'TINYINT(1) NOT NULL DEFAULT 0'),
+      fn(PDO $db) => psi_add_coluna($db, 'psi_agendamentos', 'valor_cheio', 'INT NOT NULL DEFAULT 0'),
+      fn(PDO $db) => psi_add_coluna($db, 'psi_lancamentos', 'social', 'TINYINT(1) NOT NULL DEFAULT 0'),
+      fn(PDO $db) => psi_add_coluna($db, 'psi_lancamentos', 'valor_cheio', 'INT NOT NULL DEFAULT 0'),
     ],
   ];
 }

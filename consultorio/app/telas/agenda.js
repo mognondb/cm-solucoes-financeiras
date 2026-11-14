@@ -99,7 +99,7 @@ function grade(diasMostrados, { cabecalho = true } = {}) {
           const top = (minutos(a.inicio) - h0 * 60) * PX_HORA / 60; const alt = Math.max((minutos(a.fim) - minutos(a.inicio)) * PX_HORA / 60, 24);
           const cor = (App.eu.profissionais || []).length > 1 && a.profissionalId ? (profissionalPorId(a.profissionalId) || {}).cor : '';
           return html`<button type="button" class="ag-ev ag-${a.tipo === 'bloqueio' ? 'bloqueio' : a.status}" data-id="${a.id}" style="top:${top}px;height:${alt}px;left:calc(${col * 100 / cols}% + 2px);width:calc(${100 / cols}% - 4px);${cor ? `border-left-color:${cor}` : ''}" aria-label="${hhmm(a.inicio)}, ${nomeCurto(a)}, ${a.tipo === 'bloqueio' ? 'horário bloqueado' : SESSAO[a.status][0]}">
-            <b>${hhmm(a.inicio)}</b> ${nomeCurto(a)}${a.modalidade === 'online' && a.tipo === 'sessao' ? raw(' <small>· online</small>') : ''}${a.serieId ? raw(' <small>↻</small>') : ''}</button>`;
+            <b>${hhmm(a.inicio)}</b> ${nomeCurto(a)}${a.modalidade === 'online' && a.tipo === 'sessao' ? raw(' <small>· online</small>') : ''}${a.serieId ? raw(' <small>↻</small>') : ''}${a.tipo === 'sessao' && a.social ? raw(' <small class="ag-social" title="Preço social">social</small>') : ''}</button>`;
         })}</div>`)}
     </div></div></div>`;
 }
@@ -155,7 +155,7 @@ document.addEventListener('change', (e) => { if (raiz && raiz.isConnected && e.t
 function textoCobranca(a) {
   if (a.tipo === 'bloqueio') return 'Horário bloqueado: ninguém é agendado aqui.';
   if (!a.cobrar) return a.pac.modalidade === 'mensal' ? 'Coberta pela mensalidade.' : 'Sem cobrança.';
-  return a.valor ? `${brl(a.valor)} · gera cobrança quando for realizada.` : 'Valor não definido.';
+  return a.valor ? `${brl(a.valor)}${a.social ? ` · preço social${a.valorCheio > a.valor ? ` (desconto de ${brl(a.valorCheio - a.valor)})` : ''}` : ''} · gera cobrança quando for realizada.` : 'Valor não definido.';
 }
 function detalhe(a) {
   if (!a) return;
@@ -206,8 +206,15 @@ async function formSessao({ data, hora, pacienteId, editar }) {
   if (!a && !pacientes.length) { aviso('Cadastre um paciente antes de marcar uma sessão.', 'erro'); location.hash = '#/pacientes'; return; }
   const profs = (App.eu.profissionais || []).filter((p) => p.ativo || (a && p.id === a.profissionalId));
   const cfg = App.eu.config; const v = a ? { data: a.inicio.slice(0, 10), hora: hhmm(a.inicio), dur: (minutos(a.fim) - minutos(a.inicio)) } : { data: data || App.hoje, hora: hora || '09:00', dur: cfg.duracao_padrao };
-  const padraoDe = (p) => { const s = servicoPorId(p.servicoId); const dur = s ? s.duracaoMin : cfg.duracao_padrao; return p.modalidade === 'mensal' ? { valor: 0, cobrar: false, dur } : { valor: p.valorSessao || (s ? s.valor : 0), cobrar: true, dur }; };
+  const valorSocialDe = (s) => (s && s.valorSocial ? s.valorSocial : s && s.valor ? Math.round((s.valor * (100 - (cfg.social_percentual ?? 50))) / 100) : 0);   // o mesmo cálculo do servidor
+  const padraoDe = (p) => {
+    const s = servicoPorId(p.servicoId); const dur = s ? s.duracaoMin : cfg.duracao_padrao; const tabela = s ? s.valor : 0; const social = !!p.social;
+    const valor = social ? (p.valorSessao || valorSocialDe(s)) : (p.valorSessao || tabela);
+    return p.modalidade === 'mensal' ? { valor: 0, cobrar: false, dur, social, cheio: 0 } : { valor, cobrar: true, dur, social, cheio: social && tabela > valor ? tabela : 0 };
+  };
+  const centavosEmTexto = (c) => (c ? (c / 100).toFixed(2).replace('.', ',') : '');
   const ini = a ? a : null; const pacIni = a ? null : (pacientes.find((p) => p.id === pacienteId) || null);
+  const social0 = a ? !!a.social : !!(pacIni && padraoDe(pacIni).social); const cheio0 = a ? a.valorCheio : (pacIni ? padraoDe(pacIni).cheio : 0);
 
   const m = abrirModal({ titulo: a ? (a.tipo === 'bloqueio' ? 'Editar bloqueio' : 'Remarcar / editar sessão') : 'Nova sessão', largo: true, corpo: html`<div id="ag-form"><p class="erro-form" role="alert" hidden></p>
     ${!a ? html`<div class="chips" role="group" aria-label="O que marcar" style="margin-bottom:14px"><button type="button" class="chip" data-tipo="sessao" aria-pressed="true">Sessão com paciente</button><button type="button" class="chip" data-tipo="bloqueio" aria-pressed="false">Bloquear horário</button></div>` : ''}
@@ -216,7 +223,9 @@ async function formSessao({ data, hora, pacienteId, editar }) {
     <div data-so="bloqueio" hidden>${campo({ id: 'titulo', rotulo: 'Motivo do bloqueio', valor: a && a.tipo === 'bloqueio' ? a.titulo || '' : '', placeholder: 'Ex.: almoço, reunião, folga' })}</div>
     <div class="grade-3">${campo({ id: 'data', rotulo: 'Dia', tipo: 'date', valor: v.data, obrig: true })}${campo({ id: 'hora', rotulo: 'Hora', tipo: 'time', valor: v.hora, obrig: true, extra: 'step="300"' })}${campo({ id: 'duracaoMin', rotulo: 'Duração (min)', tipo: 'number', valor: v.dur, extra: 'min="10" max="600" step="5"' })}</div>
     <div data-so="sessao"><div class="grade-2">${campo({ id: 'modalidade', rotulo: 'Modalidade', valor: a ? a.modalidade : 'presencial', opcoes: [['presencial', 'Presencial'], ['online', 'Online']] })}${campoDinheiro({ id: 'valor', rotulo: 'Valor desta sessão', valor: a ? a.valor : (pacIni ? padraoDe(pacIni).valor : 0) })}</div>
-      <label class="marca" style="margin-bottom:12px"><input type="checkbox" name="cobrar" ${(a ? a.cobrar : pacIni ? padraoDe(pacIni).cobrar : true) ? raw('checked') : ''}><span>Cobrar esta sessão <small class="suave" id="ag-cobrar-dica"></small></span></label></div>
+      <label class="marca" style="margin-bottom:12px"><input type="checkbox" name="cobrar" ${(a ? a.cobrar : pacIni ? padraoDe(pacIni).cobrar : true) ? raw('checked') : ''}><span>Cobrar esta sessão <small class="suave" id="ag-cobrar-dica"></small></span></label>
+      <label class="marca" style="margin-bottom:8px"><input type="checkbox" name="social" ${social0 ? raw('checked') : ''}><span><strong>Preço social</strong> <small class="suave">valor reduzido para quem está em vulnerabilidade socioeconômica. Marca só o preço: não registre o motivo.</small></span></label>
+      <div id="ag-cheio" ${social0 ? '' : raw('hidden')}>${campoDinheiro({ id: 'valorCheio', rotulo: 'Valor de tabela (sem desconto)', valor: cheio0, ajuda: 'Serve para medir o desconto concedido nos relatórios. Pode ficar em branco.' })}</div></div>
     ${profs.length > 1 ? campo({ id: 'profissionalId', rotulo: 'Profissional', valor: a ? a.profissionalId || '' : (pacIni && pacIni.profissionalId) || (profs[0] && profs[0].id), opcoes: profs.map((p) => [p.id, p.nome]) }) : ''}
     ${a && a.serieId ? html`<fieldset class="campo" style="border:1px solid var(--linha);border-radius:12px;padding:10px 14px"><legend class="peq forte">Esta sessão é de um horário fixo</legend><label class="marca"><input type="radio" name="escopo" value="este" checked><span>Mudar só esta sessão</span></label><label class="marca"><input type="radio" name="escopo" value="seguintes"><span>Mudar esta e as próximas (o horário fixo também muda)</span></label></fieldset>` : ''}
     ${!a ? html`<div class="grade-2">${campo({ id: 'repetir', rotulo: 'Repetir', valor: '', opcoes: [['', 'Não repete'], ['semanal', 'Toda semana'], ['quinzenal', 'A cada 15 dias']] })}<div data-so="repetir" hidden>${campo({ id: 'ate', rotulo: 'Até (opcional)', tipo: 'date', ajuda: 'Em branco = continua até você encerrar.' })}</div></div>` : ''}
@@ -231,14 +240,21 @@ async function formSessao({ data, hora, pacienteId, editar }) {
   if (el('repetir')) el('repetir').addEventListener('change', alternar);
   if (el('pacienteId')) el('pacienteId').addEventListener('change', () => {
     const p = pacientes.find((x) => x.id === Number(el('pacienteId').value)); dica(); if (!p) return;
-    const d = padraoDe(p); el('valor').value = d.valor ? (d.valor / 100).toFixed(2).replace('.', ',') : ''; el('cobrar').checked = d.cobrar; el('duracaoMin').value = d.dur;
+    const d = padraoDe(p); el('valor').value = centavosEmTexto(d.valor); el('cobrar').checked = d.cobrar; el('duracaoMin').value = d.dur; el('social').checked = d.social; $('#ag-cheio', form).hidden = !d.social; el('valorCheio').value = centavosEmTexto(d.cheio);
     if (el('profissionalId') && p.profissionalId) el('profissionalId').value = p.profissionalId;
+  });
+  /* marcar/desmarcar o preço social troca o valor sugerido (o social do tipo de atendimento ou o de tabela); depois dá para ajustar à mão */
+  el('social').addEventListener('change', () => {
+    const p = pacientes.find((x) => x.id === Number(el('pacienteId') ? el('pacienteId').value : a && a.pacienteId)); const s = servicoPorId(p ? p.servicoId : a && a.servicoId); const tabela = s ? s.valor : 0; const ligou = el('social').checked;
+    $('#ag-cheio', form).hidden = !ligou;
+    if (ligou) { const v = valorSocialDe(s); if (v) el('valor').value = centavosEmTexto(v); const atual = lerReais(el('valor').value) ?? 0; el('valorCheio').value = centavosEmTexto(tabela > atual ? tabela : 0); }
+    else { const base = tabela || (p && p.valorSessao) || 0; if (base) el('valor').value = centavosEmTexto(base); el('valorCheio').value = ''; }
   });
   alternar(); dica();
 
   const salvar = async (ignorarConflitos = false) => {
     const d = dadosForm(form); const bloq = d.tipo === 'bloqueio'; const corpo = { inicio: `${d.data} ${d.hora}`, duracaoMin: Number(d.duracaoMin) || undefined, obs: d.obs };
-    if (bloq) corpo.titulo = d.titulo; else { corpo.modalidade = d.modalidade; corpo.cobrar = d.cobrar; if (d.valor !== '') corpo.valor = lerReais(d.valor) ?? 0; }
+    if (bloq) corpo.titulo = d.titulo; else { corpo.modalidade = d.modalidade; corpo.cobrar = d.cobrar; if (d.valor !== '') corpo.valor = lerReais(d.valor) ?? 0; corpo.social = !!d.social; if (d.social && d.valorCheio !== '') corpo.valorCheio = lerReais(d.valorCheio) ?? 0; }
     if (d.profissionalId) corpo.profissionalId = Number(d.profissionalId);
     if (ignorarConflitos) corpo.ignorarConflitos = true;
     const btn = $('[data-acao="salvar"]', m.el); btn.disabled = true; $('.erro-form', form).hidden = true;

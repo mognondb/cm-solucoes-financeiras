@@ -109,6 +109,8 @@ function psi_registrar_rotas_lancamentos(PsiRoteador $r): void {
     $pac = $tipo === 'receber' ? psi_da_conta('psi_pacientes', $d['pacienteId'] ?? null, 'Paciente') : null;
     $contraparte = psi_txt($d['contraparte'] ?? null, 120); $obs = psi_txt($d['obs'] ?? null, 300);
     $n = psi_int($d['parcelas'] ?? 1, 1, 60, 'parcelas') ?? 1;
+    $social = $tipo === 'receber' ? psi_bool($d['social'] ?? false) : 0; $cheioTotal = $social && isset($d['valorCheio']) && $d['valorCheio'] !== '' ? (psi_cent($d['valorCheio'], 'valor de tabela', false, true) ?? 0) : 0;
+    if ($cheioTotal > 0 && $total > $cheioTotal) psi_erro('O valor com preço social não pode ser maior que o valor de tabela.', 422);
     $quitar = is_array($d['quitar'] ?? null) ? $d['quitar'] : null;
     if ($quitar !== null && $n > 1) psi_erro('Não dá para marcar como já pago um lançamento parcelado. Registre o pagamento de cada parcela.', 422);
     $qData = $qConta = $qForma = null;
@@ -118,12 +120,12 @@ function psi_registrar_rotas_lancamentos(PsiRoteador $r): void {
       $qForma = psi_txt($quitar['forma'] ?? null, 30); if ($qForma !== null && !array_key_exists($qForma, PSI_FORMAS)) psi_erro('Forma de pagamento inválida.', 422);
     }
     $base = intdiv($total, $n); $resto = $total - $base * $n; $agora = psi_agora(); $ids = [];
-    $ins = $db->prepare("INSERT INTO psi_lancamentos (conta_id, tipo, descricao, categoria_id, paciente_id, contraparte, valor, vencimento, competencia, situacao, origem, parcela, parcelas, obs, criado_em, atualizado_em) VALUES (?,?,?,?,?,?,?,?,?,?,'manual',?,?,?,?,?)");
+    $ins = $db->prepare("INSERT INTO psi_lancamentos (conta_id, tipo, descricao, categoria_id, paciente_id, contraparte, valor, social, valor_cheio, vencimento, competencia, situacao, origem, parcela, parcelas, obs, criado_em, atualizado_em) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'manual',?,?,?,?,?)");
     $db->beginTransaction();
     try {
       for ($i = 0; $i < $n; $i++) {
-        $v = $base + ($i === $n - 1 ? $resto : 0); $vc = $i === 0 ? $venc : psi_somar_meses($venc, $i); $cp = $i === 0 ? $comp : psi_somar_meses($comp, $i);
-        $ins->execute([$c, $tipo, $n > 1 ? "$desc (" . ($i + 1) . "/$n)" : $desc, $cat, $pac, $contraparte, $v, $vc, $cp, $quitar !== null ? 'quitado' : 'aberto', $n > 1 ? $i + 1 : null, $n > 1 ? $n : null, $obs, $agora, $agora]);
+        $v = $base + ($i === $n - 1 ? $resto : 0); $vcheio = $cheioTotal > 0 ? intdiv($cheioTotal, $n) + ($i === $n - 1 ? $cheioTotal - intdiv($cheioTotal, $n) * $n : 0) : 0; $vc = $i === 0 ? $venc : psi_somar_meses($venc, $i); $cp = $i === 0 ? $comp : psi_somar_meses($comp, $i);
+        $ins->execute([$c, $tipo, $n > 1 ? "$desc (" . ($i + 1) . "/$n)" : $desc, $cat, $pac, $contraparte, $v, $social, $vcheio, $vc, $cp, $quitar !== null ? 'quitado' : 'aberto', $n > 1 ? $i + 1 : null, $n > 1 ? $n : null, $obs, $agora, $agora]);
         $ids[] = (int)$db->lastInsertId();
       }
       if ($n > 1) $db->prepare('UPDATE psi_lancamentos SET grupo_id = ? WHERE conta_id = ? AND id IN (' . psi_marcadores($ids) . ')')->execute(array_merge([$ids[0], $c], $ids));
@@ -144,8 +146,11 @@ function psi_registrar_rotas_lancamentos(PsiRoteador $r): void {
     $comp = array_key_exists('competencia', $d) ? (psi_data_lanc($d['competencia'], false, 'competência') ?? $venc) : $l['competencia'];
     $cat = array_key_exists('categoriaId', $d) ? psi_categoria_id($d['categoriaId'], $l['tipo'] === 'receber' ? 'receita' : 'despesa') : ($l['categoria_id'] === null ? null : (int)$l['categoria_id']);
     $pac = $l['tipo'] === 'receber' && array_key_exists('pacienteId', $d) ? psi_da_conta('psi_pacientes', $d['pacienteId'], 'Paciente') : ($l['paciente_id'] === null ? null : (int)$l['paciente_id']);
-    $db->prepare('UPDATE psi_lancamentos SET descricao = ?, valor = ?, vencimento = ?, competencia = ?, categoria_id = ?, paciente_id = ?, contraparte = ?, obs = ?, atualizado_em = ? WHERE id = ? AND conta_id = ?')->execute([
-      array_key_exists('descricao', $d) ? psi_txt($d['descricao'], 150, true, 'descrição') : $l['descricao'], $valor, $venc, $comp, $cat, $pac,
+    $social = $l['tipo'] === 'receber' && array_key_exists('social', $d) ? psi_bool($d['social']) : (int)($l['social'] ?? 0);
+    $cheio = !$social ? 0 : (array_key_exists('valorCheio', $d) ? (psi_cent($d['valorCheio'], 'valor de tabela', false, true) ?? 0) : (int)($l['valor_cheio'] ?? 0));
+    if ($cheio > 0 && $valor > $cheio) psi_erro('O valor com preço social não pode ser maior que o valor de tabela.', 422);
+    $db->prepare('UPDATE psi_lancamentos SET descricao = ?, valor = ?, social = ?, valor_cheio = ?, vencimento = ?, competencia = ?, categoria_id = ?, paciente_id = ?, contraparte = ?, obs = ?, atualizado_em = ? WHERE id = ? AND conta_id = ?')->execute([
+      array_key_exists('descricao', $d) ? psi_txt($d['descricao'], 150, true, 'descrição') : $l['descricao'], $valor, $social, $cheio, $venc, $comp, $cat, $pac,
       array_key_exists('contraparte', $d) ? psi_txt($d['contraparte'], 120) : $l['contraparte'], array_key_exists('obs', $d) ? psi_txt($d['obs'], 300) : $l['obs'], psi_agora(), $id, $c]);
     psi_recalcular_situacao($id); psi_auditar('alterar', 'lancamento', $id, ['valor' => $valor]);
     return ['ok' => true];
