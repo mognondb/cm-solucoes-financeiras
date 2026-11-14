@@ -182,20 +182,6 @@ img { max-width: 100%; display: block; }
   transition: color .15s;
 }
 .nav a:hover { color: var(--color-olive-dark); }
-.nav a.nav-destaque {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 14px;
-  border: 1px solid #e8d9bd;
-  border-radius: 999px;
-  background: #f6eedf;
-  color: var(--color-olive-dark);
-  font-weight: 500;
-  white-space: nowrap;
-}
-.nav a.nav-destaque::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--color-gold); }
-.nav a.nav-destaque:hover { background: #efe2c8; }
 .nav .nav-cta-m { display: none; } /* cópia do botão do portal para dentro do menu aberto (celular) */
 .home .nav-cta {
   white-space: nowrap;
@@ -270,26 +256,6 @@ img { max-width: 100%; display: block; }
 }
 .hero-actions { display: flex; justify-content: center; gap: 14px; margin-top: 36px; flex-wrap: wrap; }
 .hero-micro { margin: 18px 0 0; font-size: 0.86rem; color: var(--color-text-light); }
-.hero-aviso { margin: 0 0 30px; }
-.hero-novo {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 16px 6px 6px;
-  background: #fff;
-  border: 1px solid var(--h-sage-line);
-  border-radius: 999px;
-  box-shadow: var(--h-shadow);
-  font-size: 0.86rem;
-  font-weight: 500;
-  color: var(--color-olive-dark);
-  text-decoration: none;
-  transition: transform .15s ease, border-color .15s ease;
-}
-.hero-novo:hover { transform: translateY(-1px); border-color: var(--color-gold); }
-.hero-novo-tag { background: var(--color-gold); color: #fff; font-size: 0.68rem; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; padding: 4px 11px; border-radius: 999px; }
-.hero-novo-seta { color: var(--h-gold-text); transition: transform .15s ease; }
-.hero-novo:hover .hero-novo-seta { transform: translateX(3px); }
 
 /* Seções */
 .section { padding: 120px 0; }
@@ -610,7 +576,6 @@ img { max-width: 100%; display: block; }
     border-bottom: 1px solid var(--color-border);
   }
   .site-header.open .nav a { color: var(--color-text); }
-  .site-header.open .nav a.nav-destaque { align-self: flex-start; color: var(--color-olive-dark); }
   .site-header.open .nav a.nav-cta-m {
     display: inline-block;
     align-self: flex-start;
