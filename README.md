@@ -28,13 +28,21 @@ legacy-jekyll-boilerplate/  Arquivos antigos do scaffold padrão do GitHub Pages
 
 1. **Hero** — apresentação rápida da CM.
 2. **Sobre** — quem é a CM e como ela trabalha.
-3. **Serviços** — BPO Financeiro (a partir de R$ 797/mês, com o que está incluso) e Emissão de notas fiscais
-   (valor por faixa de notas/mês), mais o CM Diagnóstico gratuito (página própria em `/diagnostico/` — veja mais abaixo).
+3. **Plataformas digitais** (`#plataformas`, logo depois do Sobre) — o CM Diagnóstico em destaque (selos
+   "Disponível agora" e "Gratuito", benefícios, prévia do painel e botões para `/diagnostico/`) e, abaixo, "A caminho",
+   com as próximas plataformas. Para anunciar uma nova (por exemplo uma de gestão por assinatura), copie um bloco
+   `.plat-card` dentro de `.plat-grid` no `index.html`: troque o selo ("Em breve"/"Disponível"), o nome, o resumo e o
+   link do botão. A grade se reorganiza sozinha. Se o diagnóstico deixar de ser gratuito, altere o selo "Gratuito"
+   (e o botão "Fazer o diagnóstico gratuito" do topo). A imagem `assets/img/diagnostico-painel.png` é uma captura do
+   relatório de exemplo (dados fictícios); ao mudar o visual do painel, gere outra a partir de `/diagnostico/?exemplo=preciso`.
 4. **Conteúdos** — o conteúdo mais recente (some enquanto nada foi publicado); a lista completa fica em `/conteudos/`.
-5. **Infoprodutos** — planilhas gratuitas e produtos pagos (Hotmart), carregados do
+5. **Painel** — dashboard interativo de demonstração.
+6. **Serviços** — BPO Financeiro (a partir de R$ 797/mês, com o que está incluso) e Emissão de notas fiscais
+   (valor por faixa de notas/mês).
+7. **Infoprodutos** — planilhas gratuitas e produtos pagos (Hotmart), carregados do
    servidor do painel (ou de `assets/data/infoprodutos.json` como fallback), mais as páginas de venda
    criadas na aba "Conteúdos" com o tipo "Infoproduto".
-6. **Contato / Relatório** — formulário para o cliente interessado preencher.
+8. **Contato / Relatório** — formulário para o cliente interessado preencher.
 
 ## Painel administrativo (`/admin/`)
 
@@ -165,7 +173,7 @@ excluir usuários exige estar logado como administrador.
 
 ### CM Diagnóstico (plataforma de análise e captação de leads qualificados)
 
-Os botões "Fazer o diagnóstico grátis" da home levam a `/diagnostico/` (`diagnostico/index.php`).
+O botão principal do topo da home e a seção "Plataformas digitais" levam a `/diagnostico/` (`diagnostico/index.php`).
 Não é um questionário genérico: o percurso se adapta ao perfil de quem responde, uma pergunta por tela.
 
 1. **Perfil** (segmento, tempo, porte, equipe, modelo) — com um resumo de como o percurso será adaptado

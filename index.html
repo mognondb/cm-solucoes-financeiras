@@ -8,13 +8,13 @@
 <link rel="icon" type="image/png" sizes="32x32" href="assets/img/icon-32.png?v=1">
 <link rel="icon" type="image/png" sizes="192x192" href="assets/img/icon-192.png?v=1">
 <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png?v=1">
-<meta name="description" content="A CM Soluções Financeiras ajuda empresas a terem mais organização, clareza e controle sobre o financeiro. Diagnóstico gratuito, BPO financeiro e emissão de notas fiscais sob medida.">
+<meta name="description" content="A CM Soluções Financeiras ajuda empresas a terem mais organização, clareza e controle sobre o financeiro. CM Diagnóstico gratuito, plataformas digitais, BPO financeiro e emissão de notas fiscais sob medida.">
 <link rel="canonical" href="https://cmfinanceiro.com/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="CM Soluções Financeiras">
 <meta property="og:locale" content="pt_BR">
 <meta property="og:title" content="CM Soluções Financeiras | Transformamos números em decisões">
-<meta property="og:description" content="A CM Soluções Financeiras ajuda empresas a terem mais organização, clareza e controle sobre o financeiro. Diagnóstico gratuito, BPO financeiro e emissão de notas fiscais sob medida.">
+<meta property="og:description" content="A CM Soluções Financeiras ajuda empresas a terem mais organização, clareza e controle sobre o financeiro. CM Diagnóstico gratuito, plataformas digitais, BPO financeiro e emissão de notas fiscais sob medida.">
 <meta property="og:url" content="https://cmfinanceiro.com/">
 <meta property="og:image" content="https://cmfinanceiro.com/assets/img/capa-padrao.png">
 <meta property="og:image:width" content="1200">
@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css?v=11">
+<link rel="stylesheet" href="assets/css/style.css?v=14">
 <link rel="stylesheet" href="assets/css/dashboard.css?v=5">
 <link rel="stylesheet" href="assets/css/conteudos.css?v=5">
 </head>
@@ -39,11 +39,13 @@
 
     <nav class="nav" id="nav">
       <a href="#sobre">Sobre</a>
+      <a href="#plataformas">Plataformas</a>
       <a href="conteudos/" data-conteudos-link hidden>Conteúdos</a>
       <a href="#painel">Painel</a>
       <a href="#servicos">Serviços</a>
       <a href="#infoprodutos">Infoprodutos</a>
       <a href="#contato">Contato</a>
+      <a href="portal/index.html" class="btn btn-primary nav-cta-m">Portal do Cliente</a>
     </nav>
 
     <a href="portal/index.html" class="btn btn-primary nav-cta">Portal do Cliente</a>
@@ -67,8 +69,8 @@
         seja tomada com confiança, não no achismo.
       </p>
       <div class="hero-actions">
-        <a href="#painel" class="btn btn-primary">Ver o painel na prática</a>
-        <a href="diagnostico/" class="btn btn-outline">Fazer o diagnóstico gratuito</a>
+        <a href="diagnostico/" class="btn btn-primary">Fazer o diagnóstico gratuito</a>
+        <a href="#painel" class="btn btn-outline">Ver o painel na prática</a>
       </div>
     </div>
   </section>
@@ -120,6 +122,60 @@
         </div>
       </div>
       <p class="callout">O financeiro deixa de ser apenas uma obrigação e passa a ser uma ferramenta de gestão.</p>
+    </div>
+  </section>
+
+  <!-- PLATAFORMAS DIGITAIS: o CM Diagnóstico em destaque + as próximas plataformas.
+       Para anunciar uma nova, copie um bloco .plat-card dentro de .plat-grid. -->
+  <section id="plataformas" class="section section-plataformas">
+    <div class="container">
+      <p class="section-eyebrow">Plataformas digitais</p>
+      <h2 class="section-title">Gestão financeira para usar quando você quiser</h2>
+      <p class="section-sub">
+        Além do trabalho feito junto com você, a CM desenvolve plataformas digitais para
+        entender e acompanhar o financeiro do seu negócio. A primeira já está no ar.
+      </p>
+
+      <article class="plat-destaque">
+        <div class="plat-texto">
+          <p class="plat-selos"><span class="plat-selo plat-selo-on">Disponível agora</span><span class="plat-selo">Gratuito</span></p>
+          <h3>CM Diagnóstico</h3>
+          <p class="plat-lead">
+            Uma análise financeira que se adapta ao seu negócio. Ela entende o seu segmento, pergunta
+            o que importa para ele e entrega três leituras separadas: saúde financeira, maturidade
+            de gestão e eficiência operacional.
+          </p>
+          <ul class="card-lista">
+            <li>Perguntas que mudam conforme o segmento e as suas respostas, sem formulário genérico</li>
+            <li>Modo preciso: importe o extrato do banco (OFX, CSV ou Excel) e receba um painel em gráficos</li>
+            <li>Relatório com indicadores, pontos de atenção e por onde começar, pronto para salvar em PDF</li>
+            <li>O extrato é lido no seu navegador: o arquivo não é enviado, só os totais da análise</li>
+          </ul>
+          <div class="plat-acoes">
+            <a href="diagnostico/" class="btn btn-primary">Fazer o meu diagnóstico</a>
+            <a href="diagnostico/?exemplo=preciso" class="btn btn-outline">Ver um exemplo</a>
+          </div>
+          <p class="plat-nota">Modo rápido (cerca de 6 min) ou preciso (cerca de 12 min).</p>
+        </div>
+        <figure class="plat-fig">
+          <img src="assets/img/diagnostico-painel.png?v=3" width="912" height="887" loading="lazy"
+               alt="Painel do CM Diagnóstico: vendas, resultado, ponto de equilíbrio e gráfico da venda até o que sobra no mês">
+          <figcaption>Painel gerado pelo diagnóstico. Exemplo ilustrativo, com dados fictícios.</figcaption>
+        </figure>
+      </article>
+
+      <h3 class="subtitulo-sm plat-prox-t">A caminho</h3>
+      <div class="plat-grid">
+        <article class="plat-card">
+          <p class="plat-selos"><span class="plat-selo">Em breve</span><span class="plat-selo">Por assinatura</span></p>
+          <h4>Plataformas de gestão por assinatura</h4>
+          <p>
+            Estamos desenvolvendo plataformas para você acompanhar o financeiro do negócio todo mês,
+            com mensalidade. Quer saber assim que a primeira abrir?
+          </p>
+          <a href="https://wa.me/554888766576?text=Ol%C3%A1!%20Quero%20ser%20avisado%20quando%20as%20plataformas%20de%20gest%C3%A3o%20por%20assinatura%20da%20CM%20estiverem%20dispon%C3%ADveis." class="btn btn-outline" target="_blank" rel="noopener">Quero ser avisado</a>
+        </article>
+      </div>
     </div>
   </section>
 
@@ -193,16 +249,6 @@
           <button class="btn btn-ghost card-btn">Quero esse serviço</button>
         </div>
 
-      </div>
-
-      <div class="diagnostico-banner">
-        <div>
-          <p class="section-eyebrow" style="margin-bottom:6px;">CM Diagnóstico</p>
-          <h3>Descubra a saúde financeira do seu negócio</h3>
-          <p>Uma análise gratuita, adaptada ao seu segmento: saúde financeira, maturidade de gestão
-             e eficiência operacional. Cerca de 6 minutos, e o relatório sai na hora.</p>
-        </div>
-        <a href="diagnostico/" class="btn btn-primary">Fazer o diagnóstico grátis</a>
       </div>
     </div>
   </section>
@@ -311,6 +357,7 @@
     <div class="footer-col">
       <h5>Navegação</h5>
       <a href="#sobre">Sobre</a>
+      <a href="#plataformas">Plataformas</a>
       <a href="conteudos/" data-conteudos-link hidden>Conteúdos</a>
       <a href="#painel">Painel</a>
       <a href="#servicos">Serviços</a>

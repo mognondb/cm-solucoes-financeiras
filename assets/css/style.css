@@ -182,6 +182,7 @@ img { max-width: 100%; display: block; }
   transition: color .15s;
 }
 .nav a:hover { color: var(--color-olive-dark); }
+.nav .nav-cta-m { display: none; } /* cópia do botão do portal para dentro do menu aberto (celular) */
 .home .nav-cta {
   white-space: nowrap;
   background: transparent;
@@ -405,20 +406,35 @@ img { max-width: 100%; display: block; }
   margin: 6px 0 0 !important;
 }
 
-.diagnostico-banner {
-  margin-top: 48px;
-  background: var(--h-sage);
-  border: 1px solid var(--h-sage-line);
-  border-radius: 24px;
-  padding: 44px 48px;
-  display: flex;
+/* Plataformas digitais */
+.section-plataformas { background: var(--h-bg); }
+.plat-destaque {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr);
+  gap: 56px;
   align-items: center;
-  justify-content: space-between;
-  gap: 30px;
-  flex-wrap: wrap;
+  background: #fff;
+  border: 1px solid var(--h-line);
+  border-radius: 24px;
+  padding: 52px;
+  box-shadow: var(--h-shadow);
 }
-.diagnostico-banner h3 { color: var(--color-olive-dark); margin-bottom: 8px; font-size: 1.4rem; }
-.diagnostico-banner p { color: var(--color-text-light); margin: 0; max-width: 500px; }
+.plat-selos { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+.plat-selo { font-size: 0.72rem; font-weight: 600; letter-spacing: .2px; padding: 4px 12px; border-radius: 999px; background: #f4ece0; color: var(--h-gold-text); }
+.plat-selo-on { background: var(--h-sage); color: var(--color-olive-dark); }
+.plat-texto h3 { font-size: clamp(1.7rem, 3vw, 2.2rem); margin-bottom: 14px; }
+.plat-lead { color: var(--color-text-light); font-size: 1.02rem; margin-bottom: 22px; }
+.plat-texto .card-lista { flex: none; margin-bottom: 28px; }
+.plat-acoes { display: flex; flex-wrap: wrap; gap: 12px; }
+.plat-nota { font-size: 0.84rem; color: var(--color-text-light); margin: 16px 0 0; }
+.plat-fig { margin: 0; min-width: 0; }
+.plat-fig img { width: 100%; height: auto; border-radius: 16px; border: 1px solid var(--h-sage-line); background: var(--h-bg); }
+.plat-fig figcaption { font-size: 0.8rem; color: var(--color-text-light); margin-top: 12px; text-align: center; }
+.plat-prox-t { margin-top: 56px; }
+.plat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+.plat-card { background: var(--h-sage); border: 1px solid var(--h-sage-line); border-radius: 20px; padding: 30px 32px; display: flex; flex-direction: column; align-items: flex-start; }
+.plat-card h4 { font-size: 1.15rem; margin-bottom: 8px; }
+.plat-card p:not(.plat-selos) { color: var(--color-text-light); font-size: 0.94rem; margin-bottom: 20px; flex: 1; }
 
 /* Contato */
 .contato-grid { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 64px; align-items: start; }
@@ -522,16 +538,13 @@ img { max-width: 100%; display: block; }
 .whatsapp-float svg { width: 28px; height: 28px; fill: #fff; }
 
 /* Responsivo */
-@media (max-width: 900px) {
-  .contato-grid { grid-template-columns: 1fr; gap: 44px; }
-  .cards-grid { grid-template-columns: repeat(2, 1fr); }
-  .jornada { grid-template-columns: repeat(3, 1fr); row-gap: 36px; }
-  .jornada-linha { display: none; }
-  .servicos-grid { grid-template-columns: 1fr; }
-  .section { padding: 92px 0; }
+/* Menu: com 6 a 7 links o cabeçalho precisa de ~940 a 1040px; abaixo disso vira "hambúrguer".
+   O botão do portal vai para dentro do menu aberto, no fluxo normal (sem posição calculada). */
+@media (max-width: 1100px) {
+  .nav { gap: 20px; }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 1000px) {
   .nav, .nav-cta { display: none; }
   .nav-toggle { display: flex; }
 
@@ -544,18 +557,33 @@ img { max-width: 100%; display: block; }
     left: 0;
     right: 0;
     background: #fff;
-    padding: 20px 24px 88px;
+    padding: 20px 24px 28px;
     border-bottom: 1px solid var(--color-border);
   }
   .site-header.open .nav a { color: var(--color-text); }
-  .site-header.open .nav-cta {
+  .site-header.open .nav a.nav-cta-m {
     display: inline-block;
-    position: absolute;
-    top: 100%;
-    left: 24px;
-    margin-top: 224px;
+    align-self: flex-start;
+    margin-top: 6px;
+    padding: 10px 22px;
+    font-size: 0.88rem;
+    white-space: nowrap;
+    color: var(--color-olive-dark);
   }
+  .home .site-header.open .nav a.nav-cta-m { background: transparent; border-color: #c9d0bd; }
+}
 
+@media (max-width: 900px) {
+  .contato-grid { grid-template-columns: 1fr; gap: 44px; }
+  .cards-grid { grid-template-columns: repeat(2, 1fr); }
+  .jornada { grid-template-columns: repeat(3, 1fr); row-gap: 36px; }
+  .jornada-linha { display: none; }
+  .servicos-grid { grid-template-columns: 1fr; }
+  .plat-destaque { grid-template-columns: 1fr; gap: 36px; padding: 40px 34px; }
+  .section { padding: 92px 0; }
+}
+
+@media (max-width: 720px) {
   .cards-grid, .servicos-grid { grid-template-columns: 1fr; }
   .jornada { grid-template-columns: repeat(2, 1fr); }
   .form-row { grid-template-columns: 1fr; }
@@ -564,7 +592,9 @@ img { max-width: 100%; display: block; }
   .hero .eyebrow::before { display: none; }
   .card { padding: 28px; }
   .form-relatorio { padding: 28px 22px; }
-  .diagnostico-banner { flex-direction: column; align-items: flex-start; padding: 34px 28px; }
+  .plat-destaque { padding: 30px 22px; border-radius: 20px; }
+  .plat-card { padding: 26px 24px; }
+  .plat-acoes .btn { width: 100%; text-align: center; }
   .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px 20px; }
   .footer-brand { grid-column: 1 / -1; }
   .whatsapp-float { right: 16px; bottom: 16px; width: 52px; height: 52px; }
