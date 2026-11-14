@@ -2,7 +2,7 @@
 import { api, qs } from '../api.js';
 import { App, carregarBase, categoriasDe, somenteLeitura } from '../estado.js';
 import { html, raw, montar, $, abrirModal, confirmar, aviso, campo, campoDinheiro, dadosForm, lerReais, brl, selo, vazio, dataBR, dataCurta, dataDe, somarDias, somarMeses, inicioMes, fimMes, mesAno, DIAS_CURTOS, MESES } from '../ui.js';
-import { seloLancamento, abrirPagamento, detalheLancamento, abrirLancamento, datalistFornecedores, ligarFornecedorACategoria } from '../financeiro.js';
+import { seloLancamento, abrirPagamento, detalheLancamento, abrirLancamento, comboCategoria, comboFornecedor, ligarSeletores, ligarFornecedorACategoria } from '../financeiro.js';
 
 const ABAS = [['aberto', 'Em aberto'], ['atrasado', 'Atrasadas'], ['quitado', 'Pagas'], ['fixas', 'Despesas fixas'], ['cancelado', 'Canceladas']];
 const est = { aba: 'aberto', busca: '', periodo: 'todos', mes: null };
@@ -70,16 +70,16 @@ function fixas(lista) {
 
 /* ---------------------------------------------------------------- formulário da despesa fixa */
 async function formFixa(g) {
-  await carregarBase(['categorias', 'fornecedores']); const cats = categoriasDe('despesa');
+  await carregarBase(['categorias', 'fornecedores']);
   const m = abrirModal({ titulo: g ? 'Editar despesa fixa' : 'Nova despesa fixa', largo: true, corpo: html`<div><p class="erro-form" role="alert" hidden></p>
     ${campo({ id: 'descricao', rotulo: 'Descrição', valor: g ? g.descricao : '', obrig: true, placeholder: 'Ex.: aluguel da sala, internet' })}
     <div class="grade-3">${campoDinheiro({ id: 'valor', rotulo: 'Valor', valor: g ? g.valor : 0, obrig: true })}${campo({ id: 'frequencia', rotulo: 'Repete', valor: g ? g.frequencia : 'mensal', opcoes: [['mensal', 'Todo mês'], ['anual', 'Todo ano']] })}${campo({ id: 'dia', rotulo: 'Dia do vencimento', tipo: 'number', valor: g ? g.dia : '', obrig: true, extra: 'min="1" max="31"' })}</div>
     <div id="bloco-mes" hidden>${campo({ id: 'mes', rotulo: 'Mês do vencimento', valor: g && g.mes ? g.mes : 1, opcoes: MESES.map((n, i) => [i + 1, n]) })}</div>
-    <div class="grade-2">${campo({ id: 'categoriaId', rotulo: 'Categoria', valor: g ? g.categoriaId || '' : '', opcoes: [['', 'Sem categoria'], ...cats.map((c) => [c.id, c.nome])] })}${campo({ id: 'contraparte', rotulo: 'Fornecedor (opcional)', valor: g ? g.contraparte || '' : '', extra: 'list="dl-fornecedores" autocomplete="off" maxlength="120"' })}${datalistFornecedores()}</div>
+    <div class="grade-2">${comboCategoria({ tipo: 'despesa', valor: g ? g.categoriaId || '' : '' })}${comboFornecedor({ valor: g ? g.contraparte || '' : '' })}</div>
     <div class="grade-2">${campo({ id: 'inicio', rotulo: 'Começa em', tipo: 'date', valor: g ? g.inicio : App.hoje })}${campo({ id: 'fim', rotulo: 'Termina em (opcional)', tipo: 'date', valor: g ? g.fim || '' : '' })}</div>
     ${g ? html`<label class="marca"><input type="checkbox" name="ativa" ${g.ativa ? raw('checked') : ''}><span>Ativa (gera as contas dos próximos meses)</span></label>` : ''}</div>`,
     acoes: [...(g ? [{ id: 'apagar', rotulo: 'Apagar', classe: 'btn-perigo' }] : []), { id: 'cancelar', rotulo: 'Cancelar' }, { id: 'salvar', rotulo: 'Salvar', classe: 'btn-pri' }] });
-  const form = $('form', m.el); ligarFornecedorACategoria(form); const alternar = () => { $('#bloco-mes', form).hidden = form.elements.frequencia.value !== 'anual'; }; form.elements.frequencia.addEventListener('change', alternar); alternar();
+  const form = $('form', m.el); ligarSeletores(m.el); ligarFornecedorACategoria(form); const alternar = () => { $('#bloco-mes', form).hidden = form.elements.frequencia.value !== 'anual'; }; form.elements.frequencia.addEventListener('change', alternar); alternar();
   m.el.addEventListener('click', async (e) => {
     const b = e.target.closest('[data-acao]'); if (!b) return; const ac = b.dataset.acao; if (ac === 'cancelar') return m.fechar();
     const falha = (msg) => { const x = $('.erro-form', form); x.textContent = msg; x.hidden = false; b.disabled = false; };

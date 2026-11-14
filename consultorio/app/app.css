@@ -186,3 +186,27 @@ details.bloco { border: 1px solid var(--linha); border-radius: 12px; padding: 10
 
 /* preço social */
 .ag-ev .ag-social { background: var(--info-bg); color: var(--info); border-radius: 999px; padding: 0 5px; font-size: .66rem; font-weight: 600; margin-left: 3px; }
+
+/* ---- seletor com busca (combo.js) ---- */
+.combo-caixa { position: relative; } .combo-caixa .combo-txt { padding-right: 34px; text-overflow: ellipsis; }
+.combo-seta { position: absolute; right: 3px; top: 50%; transform: translateY(-50%); border: 0; background: none; width: 30px; height: 38px; cursor: pointer; color: var(--suave); font-size: .85rem; }
+.combo-lista { z-index: 1000; margin: 0; padding: 4px; list-style: none; overflow-y: auto; background: #fff; border: 1.5px solid #d9d2c3; border-radius: 12px; box-shadow: 0 14px 34px -10px rgba(46, 46, 46, .32); } .combo-lista[hidden] { display: none; }
+.combo-lista li { padding: 9px 11px; border-radius: 8px; cursor: pointer; font-size: .92rem; line-height: 1.3; } .combo-lista li small { color: var(--suave); margin-left: 6px; }
+.combo-lista li.ativo, .combo-lista li:hover { background: var(--salvia); } .combo-lista li[aria-selected="true"] { font-weight: 600; color: var(--oliva-esc); }
+.combo-lista .combo-vazio { color: var(--suave); font-style: italic; } .combo-lista .combo-criar { color: var(--oliva-esc); font-weight: 500; } .combo-lista .combo-nada { color: var(--suave); cursor: default; }
+
+/* ---- extrato: busca, seleção em massa, grupos, importações ---- */
+.filtros .campo.busca { flex: 1; min-width: 220px; margin: 0; }
+.ex-ferramentas { display: flex; gap: 6px 18px; flex-wrap: wrap; align-items: center; margin: 4px 2px 10px; } .ex-ferramentas .marca { margin: 0; }
+.linha.ex > .ex-sel, .grupo-cab > .ex-sel { flex: none; width: 20px; height: 20px; accent-color: var(--oliva-esc); cursor: pointer; }
+.linha.ex .acoes-rapidas { padding-left: 90px; }
+.grupo-cab { display: flex; align-items: center; gap: 12px; padding: 10px 6px; margin: 6px -14px 0; padding-left: 14px; padding-right: 14px; background: var(--salvia); border-top: 0 !important; border-radius: 10px; }
+.grupo-cab .corpo { flex: 1; min-width: 0; } .grupo-cab .corpo strong { display: block; font-family: 'Fraunces', Georgia, serif; font-weight: 500; color: var(--oliva-esc); } .grupo-cab .sub { color: var(--suave); font-size: .84rem; }
+.grupo-avulsas { background: var(--creme); }
+.ex-barra { position: sticky; bottom: 14px; z-index: 30; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-top: 12px; padding: 10px 14px; border-radius: 14px; background: var(--oliva-esc); color: #fff; box-shadow: 0 14px 34px -10px rgba(46, 46, 46, .5); }
+.ex-barra .suave-claro { color: rgba(255, 255, 255, .78); font-size: .85rem; } .ex-barra-acoes { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; } .ex-barra .btn-ghost { color: #fff; }
+@media (max-width: 959px) { .ex-barra { bottom: calc(var(--nav) + 12px); } }
+.ex-imp summary { cursor: pointer; font-weight: 600; color: var(--oliva-esc); } .ex-imp .linha { align-items: flex-start; }
+.btn-perigo-txt { color: var(--perigo); } .btn-perigo-txt:hover { background: var(--perigo-bg); }
+.ex-resumo-lote { max-height: 220px; overflow-y: auto; } .cc-lista .linha { flex-wrap: wrap; } .cc-lista .tit { white-space: normal; }
+.linha.ex .sug-cat .selo { white-space: normal; overflow-wrap: anywhere; max-width: 100%; }

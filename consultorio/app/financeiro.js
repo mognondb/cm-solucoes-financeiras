@@ -3,6 +3,7 @@
 import { api } from './api.js';
 import { App, carregarBase, categoriasDe, profissionalPorId, somenteLeitura } from './estado.js';
 import { baixarReciboPdf } from './recibo-pdf.js';
+import { combo, ligarCombos, definirCombo, valorCombo, temOpcaoCombo } from './combo.js';
 import { html, raw, montar, $, abrirModal, confirmar, aviso, campo, campoDinheiro, dadosForm, lerReais, brl, selo, dataBR, hhmm, linkWhats, preencher, primeiroNome, dataDe, DIAS, MESES } from './ui.js';
 
 export const FORMAS = [['', 'Não informar'], ['pix', 'PIX'], ['dinheiro', 'Dinheiro'], ['debito', 'Cartão de débito'], ['credito', 'Cartão de crédito'], ['transferencia', 'Transferência bancária'], ['boleto', 'Boleto'], ['convenio', 'Convênio'], ['debito_automatico', 'Débito automático'], ['outro', 'Outro']];
@@ -160,15 +161,24 @@ function perguntarMotivo() {
   });
 }
 
-/* ================================================================= fornecedores no formulário de despesa */
-export const datalistFornecedores = () => html`<datalist id="dl-fornecedores">${(App.cache.fornecedores || []).filter((f) => f.ativo).map((f) => html`<option value="${f.nome}"></option>`)}</datalist>`;
+/* ================================================================= categoria e fornecedor com busca */
+/** Seletor de categoria com busca (digitar para filtrar; "Criar categoria" quando não existe). tipo: 'receita' | 'despesa'. */
+export const comboCategoria = ({ id = 'categoriaId', rotulo = 'Categoria', tipo, valor = '', ajuda = '', classe = '' } = {}) =>
+  combo({ id, rotulo, valor, vazio: 'Sem categoria', criar: 'Criar categoria', ajuda, classe, dataset: { 'tipo-cat': tipo }, opcoes: categoriasDe(tipo).map((c) => [c.id, c.nome]) });
+/** Seletor de fornecedor com busca: escolhe um cadastrado ou digita um nome novo (que passa a valer como fornecedor da despesa). */
+export const comboFornecedor = ({ id = 'contraparte', rotulo = 'Fornecedor (opcional)', valor = '', ajuda = '', classe = '' } = {}) =>
+  combo({ id, rotulo, valor, livre: true, ajuda, classe, extra: 'maxlength="120"', opcoes: (App.cache.fornecedores || []).filter((f) => f.ativo).map((f) => [f.nome, f.nome]) });
+/** Liga os seletores de um formulário/diálogo; a opção "Criar categoria" grava a categoria nova (do tipo daquele seletor) e já a escolhe. */
+export function ligarSeletores(raiz) {
+  ligarCombos(raiz, { '*': async (nome, ds) => { const r = await api.post('categorias', { nome, tipo: ds.tipoCat }); await carregarBase(['categorias']); return { valor: r.id, texto: nome }; } });
+}
 const semAcentoMin = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 /** Ao escolher um fornecedor cadastrado, preenche a categoria padrão dele (se a categoria ainda estiver vazia). */
 export function ligarFornecedorACategoria(form) {
-  const campoForn = form.elements.contraparte; const campoCat = form.elements.categoriaId; if (!campoForn || !campoCat) return;
+  const campoForn = form.elements.contraparte; if (!campoForn || !form.querySelector('.combo[data-combo="categoriaId"]')) return;
   const aoMudar = () => {
     const f = (App.cache.fornecedores || []).find((x) => semAcentoMin(x.nome) === semAcentoMin(campoForn.value));
-    if (f && f.categoriaId && !campoCat.value && [...campoCat.options].some((o) => o.value === String(f.categoriaId))) { campoCat.value = String(f.categoriaId); campoCat.dataset.sugerida = '1'; }
+    if (f && f.categoriaId && !valorCombo(form, 'categoriaId') && temOpcaoCombo(form, 'categoriaId', f.categoriaId)) definirCombo(form, 'categoriaId', f.categoriaId);
   };
   campoForn.addEventListener('change', aoMudar); campoForn.addEventListener('blur', aoMudar);
 }
@@ -178,13 +188,13 @@ export async function abrirLancamento({ editar, tipo = 'receber', pacienteId, co
   const l = editar || null; const t = l ? l.tipo : tipo; const receber = t === 'receber';
   await carregarBase(['categorias', 'contas', 'fornecedores']); let pacientes = [];
   if (receber) { try { pacientes = (await api.get('pacientes?status=todos')).itens.filter((p) => p.status !== 'arquivado'); } catch (e) { aviso(e.message, 'erro'); return; } }
-  const cats = categoriasDe(receber ? 'receita' : 'despesa'); const contas = App.cache.contas.filter((c) => c.ativo && (!receber || c.tipo !== 'cartao'));
+  const contas = App.cache.contas.filter((c) => c.ativo && (!receber || c.tipo !== 'cartao'));
   const m = abrirModal({ titulo: l ? 'Editar lançamento' : receber ? 'Nova cobrança' : 'Nova conta a pagar', largo: true, corpo: html`<div><p class="erro-form" role="alert" hidden></p>
     ${campo({ id: 'descricao', rotulo: 'Descrição', valor: l ? l.descricao : '', obrig: true, placeholder: receber ? 'Ex.: Avaliação psicológica, palestra, aluguel de sala' : 'Ex.: aluguel, internet, supervisão', extra: 'maxlength="150"' })}
     <div class="grade-3">${campoDinheiro({ id: 'valor', rotulo: l ? 'Valor' : 'Valor total', valor: l ? l.valor : 0, obrig: true })}${campo({ id: 'vencimento', rotulo: 'Vencimento', tipo: 'date', valor: l ? l.vencimento : App.hoje, obrig: true })}
       ${l ? '' : campo({ id: 'parcelas', rotulo: 'Parcelas', tipo: 'number', valor: 1, extra: 'min="1" max="60"', ajuda: 'Mensais, com o valor dividido.' })}</div>
-    <div class="grade-2">${receber ? campo({ id: 'pacienteId', rotulo: 'Paciente (opcional)', valor: l ? l.pacienteId || '' : pacienteId || '', opcoes: [['', 'Sem paciente'], ...pacientes.map((p) => [p.id, p.nome])] }) : campo({ id: 'contraparte', rotulo: 'Fornecedor (opcional)', valor: l ? l.contraparte || '' : contraparteInicial || '', extra: 'list="dl-fornecedores" autocomplete="off" maxlength="120"' })}${datalistFornecedores()}
-      ${campo({ id: 'categoriaId', rotulo: 'Categoria', valor: l ? l.categoriaId || '' : categoriaInicial || '', opcoes: [['', 'Sem categoria'], ...cats.map((c) => [c.id, c.nome])] })}</div>
+    <div class="grade-2">${receber ? campo({ id: 'pacienteId', rotulo: 'Paciente (opcional)', valor: l ? l.pacienteId || '' : pacienteId || '', opcoes: [['', 'Sem paciente'], ...pacientes.map((p) => [p.id, p.nome])] }) : comboFornecedor({ valor: l ? l.contraparte || '' : contraparteInicial || '' })}
+      ${comboCategoria({ tipo: receber ? 'receita' : 'despesa', valor: l ? l.categoriaId || '' : categoriaInicial || '' })}</div>
     ${receber && l ? campo({ id: 'contraparte', rotulo: 'Contraparte (ex.: convênio)', valor: l.contraparte || '' }) : ''}
     ${receber ? html`<label class="marca" style="margin-bottom:8px"><input type="checkbox" name="social" ${l && l.social ? raw('checked') : ''}><span><strong>Preço social</strong> <small class="suave">cobrança com valor reduzido (vulnerabilidade socioeconômica). Marca só o preço: não registre o motivo.</small></span></label>
       <div id="bloco-cheio" ${l && l.social ? '' : raw('hidden')}>${campoDinheiro({ id: 'valorCheio', rotulo: 'Valor de tabela (sem desconto)', valor: l ? l.valorCheio : 0, ajuda: 'Para medir o desconto concedido. Pode ficar em branco.' })}</div>` : ''}
@@ -192,7 +202,7 @@ export async function abrirLancamento({ editar, tipo = 'receber', pacienteId, co
       <div id="bloco-pago" hidden><div class="grade-3">${campo({ id: 'dataPago', rotulo: 'Data', tipo: 'date', valor: App.hoje, extra: `max="${App.hoje}"` })}${campo({ id: 'formaPago', rotulo: 'Forma', valor: '', opcoes: FORMAS })}${campo({ id: 'contaPago', rotulo: receber ? 'Entrou em' : 'Saiu de', valor: contas[0] ? contas[0].id : '', opcoes: contas.map((c) => [c.id, c.nome]) })}</div></div>`}
     ${campo({ id: 'obs', rotulo: 'Observação', tipo: 'textarea', valor: l ? l.obs || '' : '', extra: 'maxlength="300"' })}</div>`,
     acoes: [{ id: 'cancelar', rotulo: 'Cancelar' }, { id: 'salvar', rotulo: l ? 'Salvar' : 'Lançar', classe: 'btn-pri' }] });
-  const form = $('form', m.el); if (!receber) ligarFornecedorACategoria(form);
+  const form = $('form', m.el); ligarSeletores(m.el); if (!receber) ligarFornecedorACategoria(form);
   if (receber && form.elements.social) form.elements.social.addEventListener('change', () => { $('#bloco-cheio', form).hidden = !form.elements.social.checked; });
   const pago = form.elements.jaPago; if (pago) pago.addEventListener('change', () => { $('#bloco-pago', form).hidden = !pago.checked; if (pago.checked && form.elements.parcelas) form.elements.parcelas.value = 1; });
   m.el.addEventListener('click', async (e) => {

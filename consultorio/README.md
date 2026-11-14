@@ -25,6 +25,7 @@ Pense em um "Conta Azul" feito para essa rotina, com a agenda no centro: o que a
 | G1 | Portal CLINCM: novo nome, fornecedores, importação de pacientes, fornecedores e categorias por planilha | feito |
 | G2 | Extrato: sugestão de categoria pela descrição (fornecedor, paciente, histórico, dicionário) e lançamento em lote | feito |
 | G3 | Preço social: marca no paciente, na sessão e na cobrança, valor social por atendimento e desconto concedido nos relatórios | feito |
+| G4 | Extrato: apagar importação errada, sugestões v2 (categoria, fornecedor, grupos), edição em massa, conciliação manual com busca e seletor de categoria/fornecedor com busca | feito |
 
 Rotas do aplicativo que ainda não têm tela aparecem como "Em construção" (lista `PRONTAS` em `app/main.js`: ao criar uma tela, acrescente-a ali).
 O hash aceita parâmetros (`#/agenda?paciente=12`): a tela recebe `abrir(el, resto, consulta)`.
@@ -215,6 +216,24 @@ Um lançamento (`psi_lancamentos`) é uma conta a receber ou a pagar; `psi_baixa
   aceita a marca e o valor de tabela (parcelas dividem os dois igualmente).
 - **Relatório do mês** (`social` em `GET relatorios/resultado`): sessões realizadas com preço social (e % do total), **desconto concedido** (valor de tabela − valor cobrado, só onde o valor de tabela é conhecido), cobrado e recebido
   dessas cobranças. O desconto **não é despesa** e não entra no resultado. Importação de pacientes aceita a coluna "Preço social" (sim/não).
+
+### Extrato em volume e seletor com busca (G4)
+
+- **Apagar uma importação** (`DELETE extratos/{id}`; `GET extratos` traz arquivo, período e quantas linhas estão pendentes/conciliadas/ignoradas): desfaz tudo o que foi conciliado a partir dela (a baixa; o lançamento
+  **se foi criado pela importação**, senão só reabre a conta; a transferência) e apaga as linhas, numa transação. Recusa (409, com o número) se houver **recibo emitido** para algum pagamento: cancele o recibo antes.
+  O mesmo arquivo pode ser importado de novo (as linhas voltam como novas). Fica na trilha de auditoria. Na tela: cartão "Importações desta conta" com "Apagar importação" e confirmação que conta o que será desfeito.
+- **Sugestões v2** (`api/lib/sugestao.php`, `psi_sugerir_extrato`): primeiro tira o ruído do banco (PIX, TED, compra no débito, datas, CPF mascarado, "internet banking") e fica com o **favorecido**. Sugere **categoria**
+  (fornecedor cadastrado, paciente, histórico, **nome das suas categorias** na descrição, dicionário bem maior de termos de extrato, e palpite de confiança baixa para entradas de pessoa física),
+  **fornecedor** (cadastrado, tolerante a nome cortado pelo banco e exigindo 2+ palavras em comum quando o nome tem várias; já usado antes; ou **novo**, com o nome extraído e cadastrado ao lançar),
+  a **ação** (`transferencia` para fatura de cartão, aplicação, entre contas; rendimento não conta) e o **grupo** (`grupo.chave`) para classificar linhas do mesmo favorecido de uma vez.
+  Numa conta nova, sem histórico, ~77% das linhas de um extrato realista já recebem categoria (antes ~1%): ver o teste de cobertura.
+- **Edição em massa** (`POST extrato-itens/lote`, até 500 linhas, cada linha tratada à parte com os motivos das puladas): `lancar` (categoria, fornecedor, paciente em comum; `usarSugestoes` completa o que ficou
+  em branco; `criarFornecedor` cadastra o fornecedor **uma vez**), `ignorar`, `desfazer` (pula as com recibo) e `alterar` (categoria, fornecedor ou paciente do que já foi lançado; categoria de outro tipo é recusada).
+  Na tela: busca (descrição, valor, categoria, fornecedor), caixas de seleção, "selecionar todas as encontradas", **agrupar por favorecido** com "Classificar o grupo…", barra de ações fixa, e no formulário de uma
+  linha "fazer o mesmo com as N parecidas". Conciliadas mostram como foram lançadas e têm "Mudar categoria".
+- **Conciliar à mão com busca**: "Conciliar com outra conta…" busca nas cobranças/contas a pagar em aberto por nome, descrição ou valor (as de saldo menor que a linha não aparecem: use "Lançar").
+- **Seletor com busca** (`app/combo.js`): digitar filtra sem diferenciar acento, ↑ ↓ Enter/Esc/Tab, lista aberta ao focar, "Criar categoria «…»" que grava e já escolhe. Dois modos: lista (valor em campo oculto, `dadosForm`
+  continua valendo) e livre (fornecedor: o texto é o valor). Usado no lançamento do extrato, em lote, na cobrança/conta a pagar, na despesa fixa e no cadastro de fornecedor. A lista usa posição fixa para não ser cortada pelo diálogo.
 
 ## Testar localmente
 

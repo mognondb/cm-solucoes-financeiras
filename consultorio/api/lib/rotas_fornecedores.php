@@ -19,6 +19,17 @@ function psi_ler_fornecedor(array $d): array {
   ];
 }
 
+/** Garante o cadastro de um fornecedor pelo nome (para quem lança direto do extrato): devolve o nome oficial. Já existindo (sem diferenciar maiúsculas/acentos), só o reaproveita. */
+function psi_fornecedor_garantir(string $nome, ?int $categoriaId): string {
+  $nome = trim(preg_replace('/\s+/', ' ', $nome)); if ($nome === '') return '';
+  $nome = mb_substr($nome, 0, 120); $c = psi_conta_id(); $db = psi_db();
+  $s = $db->prepare('SELECT nome FROM psi_fornecedores WHERE conta_id = ? AND nome = ?'); $s->execute([$c, $nome]); $ja = $s->fetchColumn(); if ($ja !== false) return (string)$ja;
+  $agora = psi_agora();
+  try { $db->prepare('INSERT INTO psi_fornecedores (conta_id, nome, categoria_id, ativo, criado_em, atualizado_em) VALUES (?,?,?,1,?,?)')->execute([$c, $nome, $categoriaId, $agora, $agora]); psi_auditar('criar', 'fornecedor', (int)$db->lastInsertId(), ['origem' => 'extrato']); }
+  catch (PDOException $e) { if ($e->getCode() !== '23000') throw $e; }
+  return $nome;
+}
+
 function psi_fornecedor_json(array $f): array {
   $n = fn($v) => $v === null ? null : (int)$v;
   $total = (int)($f['total'] ?? 0); $pago = (int)($f['pago'] ?? 0);

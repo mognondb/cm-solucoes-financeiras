@@ -16,10 +16,11 @@ function psi_norm_texto(string $s): string {
   return trim(preg_replace('/\s+/', ' ', mb_strtoupper($s, 'UTF-8')));
 }
 
-function psi_item_json(array $i, array $sugestoes = [], ?array $categoriaSugerida = null): array {
+function psi_item_json(array $i, array $sugestoes = [], array $sug = [], array $lanc = []): array {
   $n = fn($v) => $v === null ? null : (int)$v;
   return ['id' => (int)$i['id'], 'contaFinId' => (int)$i['conta_fin_id'], 'data' => $i['data'], 'valor' => (int)$i['valor'], 'descricao' => $i['descricao'], 'situacao' => $i['situacao'],
-    'baixaId' => $n($i['baixa_id']), 'lancamentoId' => $n($i['lancamento_id']), 'transferenciaId' => $n($i['transferencia_id']), 'sugestoes' => $sugestoes, 'categoriaSugerida' => $categoriaSugerida];
+    'baixaId' => $n($i['baixa_id']), 'lancamentoId' => $n($i['lancamento_id']), 'transferenciaId' => $n($i['transferencia_id']), 'sugestoes' => $sugestoes,
+    'categoriaSugerida' => $sug['categoriaSugerida'] ?? null, 'fornecedorSugerido' => $sug['fornecedorSugerido'] ?? null, 'acaoSugerida' => $sug['acaoSugerida'] ?? null, 'grupo' => $sug['grupo'] ?? null, 'lancamento' => $lanc];
 }
 function psi_carregar_item(int $id): array {
   $s = psi_db()->prepare('SELECT * FROM psi_extrato_itens WHERE id = ? AND conta_id = ?'); $s->execute([$id, psi_conta_id()]);
@@ -51,6 +52,28 @@ function psi_sugerir(array $itens): array {
     usort($cands, fn($a, $b) => $b['score'] <=> $a['score']); $saida[(int)$it['id']] = array_slice($cands, 0, 3);
   }
   return $saida;
+}
+
+/** Recusa desfazer pagamentos que já têm recibo emitido (cancele o recibo antes): senão o recibo ficaria sem o pagamento que ele comprova. */
+function psi_exigir_sem_recibo(array $itens): void {
+  $baixas = array_values(array_filter(array_map(fn($i) => $i['baixa_id'] === null ? null : (int)$i['baixa_id'], $itens)));
+  if (!$baixas) return;
+  $s = psi_db()->prepare('SELECT r.numero FROM psi_recibo_baixas rb JOIN psi_recibos r ON r.id = rb.recibo_id WHERE rb.conta_id = ? AND r.cancelado = 0 AND rb.baixa_id IN (' . psi_marcadores($baixas) . ') ORDER BY r.numero LIMIT 5');
+  $s->execute(array_merge([psi_conta_id()], $baixas)); $nums = $s->fetchAll(PDO::FETCH_COLUMN);
+  if ($nums) psi_erro('Há recibo emitido para ' . (count($nums) === 1 ? 'um pagamento' : 'pagamentos') . ' ligado' . (count($nums) === 1 ? '' : 's') . ' a esta conciliação (nº ' . implode(', ', array_map(fn($n) => str_pad((string)$n, 4, '0', STR_PAD_LEFT), $nums)) . '). Cancele o recibo antes de desfazer.', 409);
+}
+/** Desfaz o que uma linha conciliada criou: a baixa, o lançamento (se foi criado pela importação; senão só reabre a conta) e a transferência. Sem transação própria. */
+function psi_extrato_desfazer(array $it): void {
+  $db = psi_db(); $c = psi_conta_id();
+  if ($it['baixa_id'] !== null) {
+    $db->prepare('DELETE FROM psi_baixas WHERE id = ? AND conta_id = ?')->execute([(int)$it['baixa_id'], $c]);
+    $db->prepare('DELETE FROM psi_recibo_baixas WHERE baixa_id = ? AND conta_id = ?')->execute([(int)$it['baixa_id'], $c]);
+    if ($it['lancamento_id'] !== null) {
+      $l = $db->prepare('SELECT origem FROM psi_lancamentos WHERE id = ? AND conta_id = ?'); $l->execute([(int)$it['lancamento_id'], $c]); $o = $l->fetchColumn();
+      if ($o === 'importacao') $db->prepare('DELETE FROM psi_lancamentos WHERE id = ? AND conta_id = ?')->execute([(int)$it['lancamento_id'], $c]); else psi_recalcular_situacao((int)$it['lancamento_id']);
+    }
+  }
+  if ($it['transferencia_id'] !== null) $db->prepare('DELETE FROM psi_transferencias WHERE id = ? AND conta_id = ?')->execute([(int)$it['transferencia_id'], $c]);
 }
 
 /** Cria o lançamento já pago a partir de uma linha do extrato e concilia a linha com ele. Devolve o id do lançamento. */
@@ -103,7 +126,10 @@ function psi_registrar_rotas_extrato(PsiRoteador $r): void {
   $r->add('GET', 'extratos', function () {
     $conta = psi_int($_GET['contaFin'] ?? null, 1, null, 'conta'); $onde = 'e.conta_id = ?'; $par = [psi_conta_id()]; if ($conta !== null) { $onde .= ' AND e.conta_fin_id = ?'; $par[] = $conta; }
     $s = psi_db()->prepare("SELECT e.*, f.nome AS conta FROM psi_extratos e JOIN psi_contas_fin f ON f.id = e.conta_fin_id WHERE $onde ORDER BY e.id DESC LIMIT 50"); $s->execute($par);
-    return ['itens' => array_map(fn($e) => ['id' => (int)$e['id'], 'contaFinId' => (int)$e['conta_fin_id'], 'conta' => $e['conta'], 'arquivo' => $e['arquivo'], 'periodoIni' => $e['periodo_ini'], 'periodoFim' => $e['periodo_fim'], 'qtd' => (int)$e['qtd'], 'novos' => (int)$e['novos'], 'criadoEm' => $e['criado_em']], $s->fetchAll())];
+    $linhas = $s->fetchAll(); $cont = [];
+    if ($linhas) { $q = psi_db()->prepare('SELECT extrato_id, situacao, COUNT(*) AS n FROM psi_extrato_itens WHERE conta_id = ? AND extrato_id IN (' . psi_marcadores($linhas) . ') GROUP BY extrato_id, situacao'); $q->execute(array_merge([psi_conta_id()], array_map(fn($x) => (int)$x['id'], $linhas))); foreach ($q->fetchAll() as $x) $cont[(int)$x['extrato_id']][$x['situacao']] = (int)$x['n']; }
+    return ['itens' => array_map(fn($e) => ['id' => (int)$e['id'], 'contaFinId' => (int)$e['conta_fin_id'], 'conta' => $e['conta'], 'arquivo' => $e['arquivo'], 'periodoIni' => $e['periodo_ini'], 'periodoFim' => $e['periodo_fim'], 'qtd' => (int)$e['qtd'], 'novos' => (int)$e['novos'], 'criadoEm' => $e['criado_em'],
+      'pendentes' => $cont[(int)$e['id']]['pendente'] ?? 0, 'conciliadas' => $cont[(int)$e['id']]['conciliado'] ?? 0, 'ignoradas' => $cont[(int)$e['id']]['ignorado'] ?? 0, 'linhasAtuais' => array_sum($cont[(int)$e['id']] ?? [])], $linhas)];
   });
 
   /* ---- linhas do extrato, com sugestões para as pendentes ---- */
@@ -115,9 +141,16 @@ function psi_registrar_rotas_extrato(PsiRoteador $r): void {
     $lim = psi_int($_GET['limite'] ?? 300, 1, 1000, 'limite') ?? 300;
     $s = psi_db()->prepare('SELECT * FROM psi_extrato_itens WHERE ' . implode(' AND ', $onde) . " ORDER BY data DESC, id DESC LIMIT $lim"); $s->execute($par); $linhas = $s->fetchAll();
     $pendentes = array_values(array_filter($linhas, fn($l) => $l['situacao'] === 'pendente'));
-    $sug = $sit === 'pendente' || $sit === 'todos' ? psi_sugerir($pendentes) : []; $catSug = $pendentes ? psi_sugerir_categorias($pendentes) : [];
+    $sug = $sit === 'pendente' || $sit === 'todos' ? psi_sugerir($pendentes) : []; $catSug = $pendentes ? psi_sugerir_extrato($pendentes) : [];
     $cont = psi_db()->prepare('SELECT situacao, COUNT(*) FROM psi_extrato_itens WHERE conta_id = ? AND conta_fin_id = ? GROUP BY situacao'); $cont->execute([$c, $conta]);
-    return ['itens' => array_map(fn($l) => psi_item_json($l, $sug[(int)$l['id']] ?? [], $catSug[(int)$l['id']] ?? null), $linhas), 'contagem' => $cont->fetchAll(PDO::FETCH_KEY_PAIR)];
+    // o lançamento ligado a cada linha já tratada (para mostrar e mudar categoria/fornecedor em massa)
+    $lancs = []; $lids = array_values(array_unique(array_filter(array_map(fn($l) => $l['lancamento_id'] === null ? null : (int)$l['lancamento_id'], $linhas))));
+    if ($lids) {
+      $q = psi_db()->prepare('SELECT l.id, l.descricao, l.categoria_id, l.contraparte, l.paciente_id, l.origem, k.nome AS categoria, p.nome AS paciente FROM psi_lancamentos l LEFT JOIN psi_categorias k ON k.id = l.categoria_id AND k.conta_id = l.conta_id
+        LEFT JOIN psi_pacientes p ON p.id = l.paciente_id AND p.conta_id = l.conta_id WHERE l.conta_id = ? AND l.id IN (' . psi_marcadores($lids) . ')'); $q->execute(array_merge([$c], $lids));
+      foreach ($q->fetchAll() as $x) $lancs[(int)$x['id']] = ['id' => (int)$x['id'], 'descricao' => $x['descricao'], 'categoriaId' => $x['categoria_id'] === null ? null : (int)$x['categoria_id'], 'categoria' => $x['categoria'], 'contraparte' => $x['contraparte'], 'paciente' => $x['paciente'], 'criadoPelaImportacao' => $x['origem'] === 'importacao'];
+    }
+    return ['itens' => array_map(fn($l) => psi_item_json($l, $sug[(int)$l['id']] ?? [], $catSug[(int)$l['id']] ?? [], $l['lancamento_id'] !== null ? ($lancs[(int)$l['lancamento_id']] ?? []) : []), $linhas), 'contagem' => $cont->fetchAll(PDO::FETCH_KEY_PAIR)];
   });
 
   /* ---- conciliar com uma conta a receber/pagar em aberto (baixa total ou parcial) ---- */
@@ -147,7 +180,8 @@ function psi_registrar_rotas_extrato(PsiRoteador $r): void {
     $tipo = (int)$it['valor'] > 0 ? 'receber' : 'pagar';
     $desc = psi_txt($d['descricao'] ?? null, 150) ?? mb_substr((string)$it['descricao'], 0, 150);
     $cat = psi_categoria_id($d['categoriaId'] ?? null, $tipo === 'receber' ? 'receita' : 'despesa'); $pac = $tipo === 'receber' ? psi_da_conta('psi_pacientes', $d['pacienteId'] ?? null, 'Paciente') : null;
-    return ['ok' => true, 'lancamentoId' => psi_extrato_lancar($it, $desc, $cat, $pac, psi_txt($d['contraparte'] ?? null, 120))];
+    $contra = $tipo === 'pagar' ? psi_txt($d['contraparte'] ?? null, 120) : null; if ($contra !== null && psi_bool($d['criarFornecedor'] ?? false)) $contra = psi_fornecedor_garantir($contra, $cat);
+    return ['ok' => true, 'lancamentoId' => psi_extrato_lancar($it, $desc, $cat, $pac, $contra)];
   });
 
   /* ---- lançar de uma vez as linhas que têm categoria sugerida (a sugestão é recalculada aqui; o que vem do navegador é só a lista de linhas) ---- */
@@ -157,14 +191,14 @@ function psi_registrar_rotas_extrato(PsiRoteador $r): void {
     if (!$ids) psi_erro('Escolha ao menos uma linha.', 422); if (count($ids) > 500) psi_erro('Escolha no máximo 500 linhas por vez.', 422);
     $minimo = psi_opcao($d['minimo'] ?? null, ['alta', 'media'], 'alta'); $aceita = $minimo === 'alta' ? ['alta'] : ['alta', 'media'];
     $s = $db->prepare("SELECT * FROM psi_extrato_itens WHERE conta_id = ? AND situacao = 'pendente' AND id IN (" . psi_marcadores($ids) . ')'); $s->execute(array_merge([$c], $ids)); $linhas = $s->fetchAll();
-    $pares = psi_sugerir($linhas); $cats = psi_sugerir_categorias($linhas); $feitas = []; $puladas = 0;
+    $pares = psi_sugerir($linhas); $todas = psi_sugerir_extrato($linhas); $feitas = []; $puladas = 0;
     foreach ($linhas as $it) {
-      $sg = $cats[(int)$it['id']] ?? null;
+      $sg = $todas[(int)$it['id']]['categoriaSugerida'] ?? null; $fs = $todas[(int)$it['id']]['fornecedorSugerido'] ?? null;
       // com par em aberto (mesmo valor), o certo é conciliar, não criar outra despesa; sem categoria ou pouco segura, fica para a pessoa
       $temPar = false; foreach ($pares[(int)$it['id']] ?? [] as $pr) if ((int)$pr['restante'] === abs((int)$it['valor'])) $temPar = true;
       if (!$sg || $sg['categoriaId'] === null || !in_array($sg['confianca'], $aceita, true) || $temPar) { $puladas++; continue; }
       $entrada = (int)$it['valor'] > 0;
-      try { $feitas[] = psi_extrato_lancar($it, mb_substr((string)$it['descricao'], 0, 150), (int)$sg['categoriaId'], $entrada && $sg['pacienteId'] ? (int)$sg['pacienteId'] : null, !$entrada ? psi_txt($sg['contraparte'], 120) : null); }
+      try { $feitas[] = psi_extrato_lancar($it, mb_substr((string)$it['descricao'], 0, 150), (int)$sg['categoriaId'], $entrada && $sg['pacienteId'] ? (int)$sg['pacienteId'] : null, !$entrada ? psi_txt($sg['contraparte'] ?? ($fs && $fs['origem'] !== 'novo' ? $fs['nome'] : null), 120) : null); }
       catch (Throwable $e) { $puladas++; }
     }
     psi_auditar('lancar_sugeridas', 'extrato_item', null, ['lancadas' => count($feitas), 'puladas' => $puladas + (count($ids) - count($linhas))]);
@@ -196,19 +230,87 @@ function psi_registrar_rotas_extrato(PsiRoteador $r): void {
   /* ---- desfazer: remove o que a conciliação criou e a linha volta a ficar pendente ---- */
   $r->add('POST', 'extrato-itens/{id}/desfazer', function ($p) {
     $id = (int)$p['id']; $it = psi_carregar_item($id); $db = psi_db(); $c = psi_conta_id(); if ($it['situacao'] === 'pendente') return ['ok' => true];
+    psi_exigir_sem_recibo([$it]);
     $db->beginTransaction();
-    try {
-      if ($it['baixa_id'] !== null) {
-        $db->prepare('DELETE FROM psi_baixas WHERE id = ? AND conta_id = ?')->execute([(int)$it['baixa_id'], $c]);
-        if ($it['lancamento_id'] !== null) {
-          $l = $db->prepare('SELECT origem FROM psi_lancamentos WHERE id = ? AND conta_id = ?'); $l->execute([(int)$it['lancamento_id'], $c]); $o = $l->fetchColumn();
-          if ($o === 'importacao') $db->prepare('DELETE FROM psi_lancamentos WHERE id = ? AND conta_id = ?')->execute([(int)$it['lancamento_id'], $c]); else psi_recalcular_situacao((int)$it['lancamento_id']);
-        }
-      }
-      if ($it['transferencia_id'] !== null) $db->prepare('DELETE FROM psi_transferencias WHERE id = ? AND conta_id = ?')->execute([(int)$it['transferencia_id'], $c]);
-      $db->prepare("UPDATE psi_extrato_itens SET situacao = 'pendente', baixa_id = NULL, lancamento_id = NULL, transferencia_id = NULL WHERE id = ? AND conta_id = ?")->execute([$id, $c]); $db->commit();
-    } catch (Throwable $e) { if ($db->inTransaction()) $db->rollBack(); throw $e; }
+    try { psi_extrato_desfazer($it); $db->prepare("UPDATE psi_extrato_itens SET situacao = 'pendente', baixa_id = NULL, lancamento_id = NULL, transferencia_id = NULL WHERE id = ? AND conta_id = ?")->execute([$id, $c]); $db->commit(); }
+    catch (Throwable $e) { if ($db->inTransaction()) $db->rollBack(); throw $e; }
     psi_auditar('desfazer', 'extrato_item', $id);
     return ['ok' => true];
+  });
+
+  /* ---- ações em massa sobre várias linhas: lançar (categoria/fornecedor/paciente em comum), ignorar, desfazer, alterar categoria/fornecedor do que já foi lançado ---- */
+  $r->add('POST', 'extrato-itens/lote', function () {
+    $d = psi_corpo(); $c = psi_conta_id(); $db = psi_db();
+    $ids = array_values(array_unique(array_filter(array_map('intval', is_array($d['ids'] ?? null) ? $d['ids'] : []), fn($x) => $x > 0)));
+    if (!$ids) psi_erro('Escolha ao menos uma linha.', 422); if (count($ids) > 500) psi_erro('Escolha no máximo 500 linhas por vez.', 422);
+    $acao = psi_opcao($d['acao'] ?? null, ['lancar', 'ignorar', 'desfazer', 'alterar'], 'lancar');
+    $s = $db->prepare('SELECT * FROM psi_extrato_itens WHERE conta_id = ? AND id IN (' . psi_marcadores($ids) . ')'); $s->execute(array_merge([$c], $ids)); $linhas = $s->fetchAll();
+    $ausentes = count($ids) - count($linhas); $feitas = 0; $puladas = 0; $motivos = [];
+    $pula = function (string $m) use (&$puladas, &$motivos) { $puladas++; $motivos[$m] = ($motivos[$m] ?? 0) + 1; };
+    $temCat = array_key_exists('categoriaId', $d); $catId = $temCat && $d['categoriaId'] !== null && $d['categoriaId'] !== '' ? psi_int($d['categoriaId'], 1, null, 'categoria') : null;
+    $tipoCat = null; if ($catId !== null) { $q = $db->prepare('SELECT tipo FROM psi_categorias WHERE id = ? AND conta_id = ? AND ativo = 1'); $q->execute([$catId, $c]); $tipoCat = $q->fetchColumn(); if ($tipoCat === false) psi_erro('Categoria inválida.', 422); }
+    $pac = ($d['pacienteId'] ?? null) !== null && ($d['pacienteId'] ?? '') !== '' ? psi_da_conta('psi_pacientes', $d['pacienteId'], 'Paciente', true) : null;
+    $contra = psi_txt($d['contraparte'] ?? null, 120); $criar = (bool)psi_bool($d['criarFornecedor'] ?? false); $usarSug = (bool)psi_bool($d['usarSugestoes'] ?? false);
+    $sugs = $acao === 'lancar' && $usarSug ? psi_sugerir_extrato(array_values(array_filter($linhas, fn($l) => $l['situacao'] === 'pendente'))) : [];
+    $nomeFornecedor = null;   // cadastra uma única vez, não uma por linha
+    if (in_array($acao, ['lancar', 'alterar'], true) && $contra !== null && $criar) $nomeFornecedor = psi_fornecedor_garantir($contra, $tipoCat === 'despesa' ? $catId : null);
+
+    foreach ($linhas as $it) {
+      $entrada = (int)$it['valor'] > 0; $tipoLinha = $entrada ? 'receita' : 'despesa';
+      if ($acao === 'ignorar') {
+        if ($it['situacao'] !== 'pendente') { $pula('já tratada'); continue; }
+        $db->prepare("UPDATE psi_extrato_itens SET situacao = 'ignorado' WHERE id = ? AND conta_id = ?")->execute([(int)$it['id'], $c]); $feitas++; continue;
+      }
+      if ($acao === 'desfazer') {
+        if ($it['situacao'] === 'pendente') { $pula('já estava pendente'); continue; }
+        [, $erro] = psi_tentar(fn() => psi_exigir_sem_recibo([$it])); if ($erro !== null) { $pula('tem recibo emitido'); continue; }
+        $db->beginTransaction();
+        try { psi_extrato_desfazer($it); $db->prepare("UPDATE psi_extrato_itens SET situacao = 'pendente', baixa_id = NULL, lancamento_id = NULL, transferencia_id = NULL WHERE id = ? AND conta_id = ?")->execute([(int)$it['id'], $c]); $db->commit(); $feitas++; }
+        catch (Throwable $e) { if ($db->inTransaction()) $db->rollBack(); $pula('erro ao desfazer'); }
+        continue;
+      }
+      if ($acao === 'alterar') {
+        if ($it['situacao'] !== 'conciliado' || $it['lancamento_id'] === null) { $pula('sem lançamento para alterar'); continue; }
+        if ($temCat && $catId !== null && $tipoCat !== $tipoLinha) { $pula('categoria de outro tipo'); continue; }
+        $sets = []; $par = [];
+        if ($temCat) { $sets[] = 'categoria_id = ?'; $par[] = $catId; }
+        if (array_key_exists('contraparte', $d) && !$entrada) { $sets[] = 'contraparte = ?'; $par[] = $nomeFornecedor ?? $contra; }
+        if (array_key_exists('pacienteId', $d) && $entrada) { $sets[] = 'paciente_id = ?'; $par[] = $pac; }
+        if (!$sets) { $pula('nada a alterar'); continue; }
+        $sets[] = 'atualizado_em = ?'; $par[] = psi_agora(); array_push($par, (int)$it['lancamento_id'], $c);
+        $db->prepare('UPDATE psi_lancamentos SET ' . implode(', ', $sets) . " WHERE id = ? AND conta_id = ? AND situacao <> 'cancelado'")->execute($par); $feitas++; continue;
+      }
+      // lançar
+      if ($it['situacao'] !== 'pendente') { $pula('já tratada'); continue; }
+      $sg = $sugs[(int)$it['id']] ?? null; $cat = $catId; $contraLinha = null; $pacLinha = null; $sgCat = $sg['categoriaSugerida'] ?? null;
+      if ($cat !== null) { if ($tipoCat !== $tipoLinha) { $pula('categoria de outro tipo'); continue; } }
+      elseif ($usarSug && $sgCat && $sgCat['categoriaId'] !== null) $cat = (int)$sgCat['categoriaId'];
+      elseif (!$temCat && !$usarSug) { $pula('sem categoria'); continue; }
+      elseif ($usarSug) { $pula('sem categoria sugerida'); continue; }
+      if (!$entrada) {
+        $contraLinha = $nomeFornecedor ?? $contra;
+        if ($contraLinha === null && $usarSug && $sg) { $f = $sg['fornecedorSugerido'] ?? null; if ($f && ($f['origem'] !== 'novo' || $criar)) $contraLinha = $f['origem'] === 'novo' ? psi_fornecedor_garantir($f['nome'], $cat) : $f['nome']; }
+      } else $pacLinha = $pac ?? ($sgCat && $sgCat['pacienteId'] ? (int)$sgCat['pacienteId'] : null);
+      try { psi_extrato_lancar($it, mb_substr((string)$it['descricao'], 0, 150), $cat, $pacLinha, $contraLinha); $feitas++; } catch (Throwable $e) { $pula('erro ao lançar'); }
+    }
+    psi_auditar('lote_' . $acao, 'extrato_item', null, ['feitas' => $feitas, 'puladas' => $puladas + $ausentes]);
+    return ['feitas' => $feitas, 'puladas' => $puladas + $ausentes, 'motivos' => (object)$motivos];
+  });
+
+  /* ---- apagar uma importação errada: desfaz o que foi conciliado a partir dela e apaga as linhas (dá para importar o arquivo de novo) ---- */
+  $r->add('DELETE', 'extratos/{id}', function ($p) {
+    $c = psi_conta_id(); $db = psi_db(); $id = (int)$p['id'];
+    $e = $db->prepare('SELECT * FROM psi_extratos WHERE id = ? AND conta_id = ?'); $e->execute([$id, $c]); $ext = $e->fetch(); if (!$ext) psi_erro('Importação não encontrada.', 404);
+    $q = $db->prepare('SELECT * FROM psi_extrato_itens WHERE extrato_id = ? AND conta_id = ?'); $q->execute([$id, $c]); $itens = $q->fetchAll();
+    psi_exigir_sem_recibo($itens);
+    $desfeitas = 0;
+    $db->beginTransaction();
+    try {
+      foreach ($itens as $it) if ($it['situacao'] === 'conciliado') { psi_extrato_desfazer($it); $desfeitas++; }
+      $db->prepare('DELETE FROM psi_extrato_itens WHERE extrato_id = ? AND conta_id = ?')->execute([$id, $c]);
+      $db->prepare('DELETE FROM psi_extratos WHERE id = ? AND conta_id = ?')->execute([$id, $c]); $db->commit();
+    } catch (Throwable $e2) { if ($db->inTransaction()) $db->rollBack(); throw $e2; }
+    psi_auditar('apagar', 'extrato', $id, ['arquivo' => $ext['arquivo'], 'linhas' => count($itens), 'desfeitas' => $desfeitas]);
+    return ['ok' => true, 'linhas' => count($itens), 'desfeitas' => $desfeitas];
   });
 }

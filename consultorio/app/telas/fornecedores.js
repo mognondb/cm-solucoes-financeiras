@@ -2,7 +2,7 @@
 import { api, qs } from '../api.js';
 import { App, somenteLeitura, carregarBase, categoriasDe } from '../estado.js';
 import { html, raw, montar, $, abrirModal, confirmar, aviso, campo, dadosForm, brl, selo, vazio, dataBR, fmtCPF, fmtTel } from '../ui.js';
-import { abrirLancamento } from '../financeiro.js';
+import { abrirLancamento, comboCategoria, ligarSeletores } from '../financeiro.js';
 
 const est = { busca: '', arquivados: false };
 let raiz = null; let lista = [];
@@ -63,14 +63,13 @@ const corpoDe = (f, mudar = {}) => ({ nome: f.nome, documento: f.documento, emai
 
 /* ------------------------------------------------------------------ cadastro / edição */
 function formulario(f = null) {
-  const cats = categoriasDe('despesa');
   const m = abrirModal({ titulo: f ? 'Editar fornecedor' : 'Novo fornecedor', largo: true, corpo: html`<div><p class="erro-form" role="alert" hidden></p>
     ${campo({ id: 'nome', rotulo: 'Nome do fornecedor', valor: f ? f.nome : '', obrig: true, extra: 'maxlength="120"', ajuda: 'É o nome que aparece nas despesas.' })}
     <div class="grade-2">${campo({ id: 'documento', rotulo: 'CPF / CNPJ', valor: f && f.documento ? fmtCPF(f.documento) : '' })}${campo({ id: 'telefone', rotulo: 'Telefone', valor: f && f.telefone ? fmtTel(f.telefone) : '', extra: 'inputmode="tel"' })}</div>
-    <div class="grade-2">${campo({ id: 'email', rotulo: 'E-mail', tipo: 'email', valor: f ? f.email || '' : '' })}${campo({ id: 'categoriaId', rotulo: 'Categoria padrão da despesa', valor: f ? f.categoriaId || '' : '', opcoes: [['', 'Sem categoria'], ...cats.map((c) => [c.id, c.nome])], ajuda: 'Já vem preenchida ao lançar uma despesa dele.' })}</div>
+    <div class="grade-2">${campo({ id: 'email', rotulo: 'E-mail', tipo: 'email', valor: f ? f.email || '' : '' })}${comboCategoria({ tipo: 'despesa', rotulo: 'Categoria padrão da despesa', valor: f ? f.categoriaId || '' : '', ajuda: 'Já vem preenchida ao lançar uma despesa dele.' })}</div>
     ${campo({ id: 'obs', rotulo: 'Observações', tipo: 'textarea', valor: f ? f.obs || '' : '', extra: 'maxlength="300"' })}</div>`,
     acoes: [{ id: 'cancelar', rotulo: 'Cancelar' }, { id: 'ok', rotulo: 'Salvar', classe: 'btn-pri' }] });
-  const form = $('form', m.el);
+  const form = $('form', m.el); ligarSeletores(m.el);
   m.el.addEventListener('click', async (e) => {
     const b = e.target.closest('[data-acao]'); if (!b) return; if (b.dataset.acao === 'cancelar') return m.fechar();
     const d = dadosForm(form); const falha = (msg) => { const x = $('.erro-form', form); x.textContent = msg; x.hidden = false; b.disabled = false; }; b.disabled = true; $('.erro-form', form).hidden = true;
