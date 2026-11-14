@@ -6,6 +6,7 @@ import { App, carregarBase, somenteLeitura } from '../estado.js';
 import { html, raw, montar, $, abrirModal, confirmar, aviso, campo, dadosForm, brl, selo, vazio, dataBR, semAcento } from '../ui.js';
 import { combo, definirCombo } from '../combo.js';
 import { comboCategoria, comboFornecedor, ligarSeletores } from '../financeiro.js';
+import { carregarLeitor } from '../planilha.js';
 
 const est = { conta: null, situacao: 'pendente', busca: '', agrupar: false, sel: new Set() };
 let raiz = null; let dados = null; let importacoes = []; let contas = []; let pacientes = null;
@@ -34,17 +35,13 @@ async function garantirPacientes() {
 }
 
 /* ---------------------------------------------------------------- leitura do arquivo (no navegador) */
-function carregarLeitor() {
-  if (window.CMDiag && window.CMDiag.importar) return Promise.resolve(window.CMDiag.importar);
-  return new Promise((res, rej) => { const s = document.createElement('script'); s.src = '/assets/js/diagnostico-importar.js?v=2'; s.onload = () => (window.CMDiag && window.CMDiag.importar ? res(window.CMDiag.importar) : rej(new Error('Leitor indisponível.'))); s.onerror = () => rej(new Error('Não foi possível carregar o leitor de extratos.')); document.head.appendChild(s); });
-}
 async function lerArquivo(arquivo) {
   try {
     const leitor = await carregarLeitor(); const lido = await leitor.lerArquivo(arquivo.name, await arquivo.arrayBuffer());
     const trans = lido.transacoes.map((t) => ({ data: t.data, valor: Math.round(t.valor * 100), descricao: t.desc, id: t.id || '' })).filter((t) => t.valor !== 0);
     if (!trans.length) { aviso('Não encontrei lançamentos neste arquivo.', 'erro'); return; }
     confirmarImportacao(arquivo.name, trans);
-  } catch (e) { aviso(e.amigavel || /grande|vazio|PDF|Excel|encontrei/.test(e.message) ? e.message : 'Não consegui ler este arquivo. Baixe o extrato em OFX, CSV ou Excel (.xlsx) no site do banco.', 'erro', 7000); }
+  } catch (e) { aviso(e.amigavel || /grande|vazio|PDF|Excel|encontrei|leitor/.test(e.message) ? e.message : 'Não consegui ler este arquivo. Baixe o extrato em OFX, CSV ou Excel (.xlsx) no site do banco.', 'erro', 7000); }
 }
 function confirmarImportacao(nome, trans) {
   const datas = trans.map((t) => t.data).sort(); const entradas = trans.filter((t) => t.valor > 0).reduce((a, t) => a + t.valor, 0); const saidas = trans.filter((t) => t.valor < 0).reduce((a, t) => a - t.valor, 0);

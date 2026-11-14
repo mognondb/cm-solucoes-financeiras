@@ -1,19 +1,21 @@
 /* Leitura de planilhas (CSV e Excel) no navegador e ligação das colunas aos campos do sistema.
    O arquivo é lido aqui, na máquina da pessoa; ao servidor só vão as linhas já ligadas aos campos, na hora de conferir e importar. */
 
-const LEITOR = '/assets/js/diagnostico-importar.js?v=2';
+const LEITOR = '/assets/js/diagnostico-importar.js?v=3';
 let carregando = null;
+const leitorPronto = () => (window.CMDiag && window.CMDiag.importar && window.CMDiag.importar.lerMatriz ? window.CMDiag.importar : null);
+const injetar = (url) => new Promise((res, rej) => { const s = document.createElement('script'); s.src = url; s.onload = res; s.onerror = () => rej(new Error('Não foi possível carregar o leitor de planilhas.')); document.head.appendChild(s); });
 
-/** Carrega (uma vez) o leitor de arquivos que o site já usa no CM Diagnóstico. */
+/** Carrega (uma vez) o leitor de arquivos que o site já usa no CM Diagnóstico e nos extratos. Os arquivos do site ficam 7 dias no navegador:
+    se uma cópia antiga (sem a leitura de planilhas) estiver guardada, pede de novo com um parâmetro novo em vez de falhar. */
 export function carregarLeitor() {
-  if (window.CMDiag && window.CMDiag.importar && window.CMDiag.importar.lerMatriz) return Promise.resolve(window.CMDiag.importar);
+  if (leitorPronto()) return Promise.resolve(leitorPronto());
   if (carregando) return carregando;
-  carregando = new Promise((res, rej) => {
-    const s = document.createElement('script'); s.src = LEITOR;
-    s.onload = () => (window.CMDiag && window.CMDiag.importar && window.CMDiag.importar.lerMatriz ? res(window.CMDiag.importar) : rej(new Error('Leitor de planilhas indisponível.')));
-    s.onerror = () => { carregando = null; rej(new Error('Não foi possível carregar o leitor de planilhas.')); };
-    document.head.appendChild(s);
-  });
+  carregando = (async () => {
+    await injetar(LEITOR); if (leitorPronto()) return leitorPronto();
+    await injetar(LEITOR + '&r=' + Date.now()); if (leitorPronto()) return leitorPronto();
+    throw new Error('Não consegui carregar o leitor de planilhas. Atualize a página (Ctrl+F5) e tente de novo.');
+  })().catch((e) => { carregando = null; throw e; });
   return carregando;
 }
 

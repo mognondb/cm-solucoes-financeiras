@@ -63,6 +63,7 @@ consultorio/
 - Listeners em elementos que sobrevivem à re-renderização usam `elemento.onclick = ...` (não `addEventListener`), para não acumular
   a cada recarga da lista (isso já causou janelas duplicadas).
 - Telas são carregadas sob demanda (`import()`); uma tela listada em `PRONTAS` que falhar mostra o erro de verdade.
+- O leitor de planilhas/extratos (`assets/js/diagnostico-importar.js`) é compartilhado com o CM Diagnóstico e o site manda o navegador guardar `assets/` por 7 dias. **Sempre que esse arquivo ganhar função nova, suba o `?v=` em `app/planilha.js`** (`LEITOR`) e em `diagnostico/index.php`; `carregarLeitor()` também refaz o pedido com parâmetro novo se achar uma cópia antiga (sem `lerMatriz`) em vez de falhar.
 
 ## Acesso restrito
 
