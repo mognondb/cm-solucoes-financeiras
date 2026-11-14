@@ -7,7 +7,7 @@
 declare(strict_types=1);
 
 const PSI_TABELAS_DA_CONTA = [ // tudo o que tem conta_id: usado ao excluir uma conta
-  'psi_auditoria', 'psi_cobrancas', 'psi_transferencias', 'psi_recorrentes', 'psi_baixas', 'psi_lancamentos', 'psi_agendamentos', 'psi_series', 'psi_pacientes', 'psi_servicos',
+  'psi_auditoria', 'psi_cobrancas', 'psi_transferencias', 'psi_recorrentes', 'psi_extrato_itens', 'psi_extratos', 'psi_baixas', 'psi_lancamentos', 'psi_agendamentos', 'psi_series', 'psi_pacientes', 'psi_servicos',
   'psi_contas_fin', 'psi_categorias', 'psi_profissionais', 'psi_sessoes', 'psi_usuarios',
 ];
 
@@ -132,6 +132,19 @@ function psi_migracoes(): array {
         id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, conta_id BIGINT UNSIGNED NOT NULL, descricao VARCHAR(150) NOT NULL, valor INT NOT NULL, categoria_id BIGINT UNSIGNED NULL,
         contraparte VARCHAR(120) NULL, frequencia ENUM('mensal','anual') NOT NULL DEFAULT 'mensal', dia TINYINT NOT NULL, mes TINYINT NULL, inicio DATE NOT NULL, fim DATE NULL,
         ativa TINYINT(1) NOT NULL DEFAULT 1, obs VARCHAR(200) NULL, criado_em DATETIME NOT NULL, KEY k_conta (conta_id, ativa)
+      ) $t",
+    ],
+    /* v4 (extrato): lotes importados e as linhas do extrato, cada uma pendente, conciliada com um pagamento ou ignorada. O índice único impede importar a mesma linha duas vezes. */
+    4 => [
+      "CREATE TABLE IF NOT EXISTS psi_extratos (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, conta_id BIGINT UNSIGNED NOT NULL, conta_fin_id BIGINT UNSIGNED NOT NULL, arquivo VARCHAR(120) NULL,
+        periodo_ini DATE NULL, periodo_fim DATE NULL, qtd INT NOT NULL DEFAULT 0, novos INT NOT NULL DEFAULT 0, criado_em DATETIME NOT NULL, KEY k_conta (conta_id, conta_fin_id)
+      ) $t",
+      "CREATE TABLE IF NOT EXISTS psi_extrato_itens (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, conta_id BIGINT UNSIGNED NOT NULL, extrato_id BIGINT UNSIGNED NOT NULL, conta_fin_id BIGINT UNSIGNED NOT NULL,
+        data DATE NOT NULL, valor INT NOT NULL, descricao VARCHAR(200) NOT NULL, hash CHAR(40) NOT NULL, situacao ENUM('pendente','conciliado','ignorado') NOT NULL DEFAULT 'pendente',
+        baixa_id BIGINT UNSIGNED NULL, lancamento_id BIGINT UNSIGNED NULL, transferencia_id BIGINT UNSIGNED NULL, criado_em DATETIME NOT NULL,
+        UNIQUE KEY uq_item (conta_id, conta_fin_id, hash), KEY k_sit (conta_id, conta_fin_id, situacao, data), KEY k_extrato (extrato_id)
       ) $t",
     ],
   ];

@@ -18,6 +18,7 @@ require __DIR__ . '/lib/rotas_agenda.php';
 require __DIR__ . '/lib/cobrancas.php';
 require __DIR__ . '/lib/rotas_lancamentos.php';
 require __DIR__ . '/lib/rotas_contas.php';
+require __DIR__ . '/lib/rotas_extrato.php';
 require __DIR__ . '/lib/rotas_admin.php';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -48,5 +49,6 @@ psi_registrar_rotas_pacientes($roteador);
 psi_registrar_rotas_agenda($roteador);
 psi_registrar_rotas_lancamentos($roteador);
 psi_registrar_rotas_contas($roteador);
+psi_registrar_rotas_extrato($roteador);
 psi_registrar_rotas_admin($roteador);
 $roteador->despachar($metodo, $caminho);

@@ -19,7 +19,7 @@ Pense em um "Conta Azul" feito para essa rotina, com a agenda no centro: o que a
 | F1 | Agenda (dia/semana/mês, sessões fixas, conflitos, bloqueios, status, confirmação por WhatsApp) | feito |
 | F1 | Contas a receber, pagamentos parciais e estorno, inadimplência, cobrança por WhatsApp, painel do dia | feito |
 | F2 | Contas a pagar, contas bancárias, cartão e fatura, despesas fixas, fluxo de caixa | feito |
-| F3 | Importar extrato (OFX/CSV/Excel) e conciliar | a fazer |
+| F3 | Importar extrato (OFX/CSV/Excel) e conciliar | feito |
 | F4 | Recibos em PDF, relatórios, apoio ao carnê-leão, exportar dados, excluir conta (LGPD) | a fazer |
 
 Rotas do aplicativo que ainda não têm tela aparecem como "Em construção" (lista `PRONTAS` em `app/main.js`: ao criar uma tela, acrescente-a ali).
@@ -105,7 +105,7 @@ validar a entrega de e-mail (SPF/DKIM do domínio) e então usar "Abrir ao públ
 | `psi_categorias` | 13 de receita e 22 de despesa já sugeridas (fixa/variável; "pode entrar no livro-caixa"), editáveis |
 | `psi_auditoria` | Quem fez o quê |
 
-Migrações: v1 base · v2 agenda (índice único das séries) · v3 `psi_transferencias` e `psi_recorrentes`. Próximas: `psi_extratos`/`psi_extrato_itens` (F3) e `psi_recibos` (F4).
+Migrações: v1 base · v2 agenda (índice único das séries) · v3 `psi_transferencias` e `psi_recorrentes`. · v4 `psi_extratos` e `psi_extrato_itens`. Próxima: `psi_recibos` (F4).
 
 ### Agenda (F1)
 
@@ -142,6 +142,18 @@ Um lançamento (`psi_lancamentos`) é uma conta a receber ou a pagar; `psi_baixa
 - **Despesas fixas** (`psi_recorrentes`, mensais ou anuais) geram a conta a pagar do mês atual e do próximo (`chave_unica = "rec:ID:AAAA-MM"`); cancelada, não volta; a que começou depois do vencimento do mês não nasce atrasada.
 - **Fluxo de caixa** (`GET caixa?mes=AAAA-MM`): realizado do mês (só contas que não são cartão), previsto (em aberto, no vencimento), projeção de 60 dias (atrasadas a pagar entram hoje; atrasadas a receber ficam fora)
   e menor saldo previsto. Faturas de cartão entram como saída no vencimento.
+
+### Extrato bancário (F3)
+
+- O arquivo (OFX, CSV ou Excel) é **lido no navegador** com o mesmo leitor do CM Diagnóstico (`assets/js/diagnostico-importar.js`, `CMDiag.importar.lerArquivo`); o servidor recebe só as linhas
+  (`data`, `valor` em centavos inteiros, `descricao`, `id` do banco) em `POST extratos` (até 5.000 por pedido; a tela divide arquivos maiores sem separar um mesmo dia).
+- **Sem duplicar:** cada linha tem um hash (data, valor, descrição normalizada, id do banco, nº da ocorrência no arquivo) e há índice único por conta + conta financeira. Importar o mesmo arquivo de novo, ou
+  períodos que se sobrepõem, só traz o que é novo; duas linhas idênticas no mesmo arquivo continuam sendo dois lançamentos.
+- **Conciliar** com uma cobrança/conta em aberto (do mesmo sinal: entrada com a receber, saída com a pagar) cria a baixa **na data do extrato e na conta do extrato**, total ou parcial (nunca acima do saldo).
+  **Lançar** cria um lançamento já pago (origem "importação") para o que não estava previsto. **Transferência** registra a movimentação entre contas próprias (pagamento de fatura de cartão incluído).
+  **Ignorar** descarta. **Desfazer** remove o que foi criado e devolve a linha a "pendente". Cada linha só vira um movimento, então o dinheiro nunca é contado duas vezes.
+- **Sugestões:** valor igual ao restante (+50), nome do paciente/fornecedor na descrição (+20 por palavra, até 40) e vencimento próximo (+20/+10/+3). Só aparece sugestão com valor igual ou nome batendo.
+  "Conciliar todas" aplica só as de valor exato e pontuação ≥ 70.
 
 ## Testar localmente
 
