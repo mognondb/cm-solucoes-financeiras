@@ -21,8 +21,21 @@ function psi_json($dados, int $status = 200) {
   echo json_encode($dados, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
   exit;
 }
+/** Erro de validação capturado (usado pela importação, que precisa relatar linha por linha em vez de encerrar a requisição). */
+final class PsiErroValidacao extends RuntimeException {
+  public int $status;
+  public function __construct(string $mensagem, int $status = 422) { parent::__construct($mensagem); $this->status = $status; }
+}
 function psi_erro(string $mensagem, int $status = 400, array $extra = []) {
+  if (!empty($GLOBALS['psi_capturar_erros'])) throw new PsiErroValidacao($mensagem, $status);
   psi_json(array_merge(['erro' => true, 'message' => $mensagem], $extra), $status);
+}
+/** Roda $fn reaproveitando as validações da API; devolve [resultado, null] ou [null, "mensagem do primeiro erro"]. */
+function psi_tentar(callable $fn): array {
+  $GLOBALS['psi_capturar_erros'] = true;
+  try { return [$fn(), null]; }
+  catch (PsiErroValidacao $e) { return [null, $e->getMessage()]; }
+  finally { $GLOBALS['psi_capturar_erros'] = false; }
 }
 
 /** Corpo JSON da requisição (objeto). */

@@ -8,7 +8,7 @@ declare(strict_types=1);
 
 const PSI_TABELAS_DA_CONTA = [ // tudo o que tem conta_id: usado ao excluir uma conta
   'psi_auditoria', 'psi_cobrancas', 'psi_transferencias', 'psi_recorrentes', 'psi_extrato_itens', 'psi_extratos', 'psi_recibo_baixas', 'psi_recibos', 'psi_baixas', 'psi_lancamentos', 'psi_agendamentos', 'psi_series', 'psi_pacientes', 'psi_servicos',
-  'psi_contas_fin', 'psi_categorias', 'psi_profissionais', 'psi_sessoes', 'psi_usuarios',
+  'psi_contas_fin', 'psi_fornecedores', 'psi_categorias', 'psi_profissionais', 'psi_sessoes', 'psi_usuarios',
 ];
 
 function psi_migracoes(): array {
@@ -157,6 +157,14 @@ function psi_migracoes(): array {
       ) $t",
       "CREATE TABLE IF NOT EXISTS psi_recibo_baixas (
         recibo_id BIGINT UNSIGNED NOT NULL, baixa_id BIGINT UNSIGNED NOT NULL, conta_id BIGINT UNSIGNED NOT NULL, PRIMARY KEY (recibo_id, baixa_id), UNIQUE KEY uq_baixa (baixa_id), KEY k_conta (conta_id)
+      ) $t",
+    ],
+    /* v6 (cadastros): fornecedores. A ligação com as despesas é pelo nome (contraparte) do lançamento, então o que já foi lançado passa a aparecer no fornecedor sem migrar dados. */
+    6 => [
+      "CREATE TABLE IF NOT EXISTS psi_fornecedores (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, conta_id BIGINT UNSIGNED NOT NULL, nome VARCHAR(120) NOT NULL, documento VARCHAR(14) NULL,
+        email VARCHAR(160) NULL, telefone VARCHAR(30) NULL, categoria_id BIGINT UNSIGNED NULL, obs VARCHAR(300) NULL, ativo TINYINT(1) NOT NULL DEFAULT 1,
+        criado_em DATETIME NOT NULL, atualizado_em DATETIME NOT NULL, UNIQUE KEY uq_forn (conta_id, nome), KEY k_doc (conta_id, documento)
       ) $t",
     ],
   ];

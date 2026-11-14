@@ -286,6 +286,46 @@
     return r;
   };
 
+  /* ------------------------------------------------------------------ tabela genérica (sem interpretar como extrato) */
+  /* Usada pelo Portal CLINCM para importar cadastros (pacientes, fornecedores, categorias). Devolve { arquivo, abas: [{ nome, linhas }] },
+     em que linhas é uma matriz de células (texto ou número; datas do Excel chegam como número serial). Linhas totalmente vazias são descartadas. */
+  function matrizLimpa(linhas) {
+    return linhas.filter(function (l) { return l.some(function (c) { return c !== null && c !== undefined && String(c).trim() !== ''; }); });
+  }
+  async function matrizXLSX(bytes) {
+    var zip = lerZip(bytes), dec = new TextDecoder('utf-8'), strings = [];
+    var ss = await zip.ler('xl/sharedStrings.xml');
+    if (ss) { var xs = dec.decode(ss), re = /<si\b[^>]*>([\s\S]*?)<\/si>/g, m; while ((m = re.exec(xs))) strings.push(textoXml(m[1])); }
+    var arqs = zip.nomes.filter(function (n) { return /^xl\/worksheets\/sheet\d+\.xml$/.test(n); }).sort(function (a, b) { return parseInt(a.replace(/\D/g, ''), 10) - parseInt(b.replace(/\D/g, ''), 10); });
+    if (!arqs.length) throw erro('Não encontrei nenhuma aba nesta planilha.');
+    var nomes = [], wb = await zip.ler('xl/workbook.xml');
+    if (wb) { var xw = dec.decode(wb), rs = /<sheet\b[^>]*\bname="([^"]*)"/g, mm; while ((mm = rs.exec(xw))) nomes.push(entidades(mm[1])); }
+    var abas = [];
+    for (var i = 0; i < arqs.length; i++) {
+      var linhas = matrizLimpa(lerPlanilha(dec.decode(await zip.ler(arqs[i])), strings));
+      if (linhas.length) abas.push({ nome: nomes.length === arqs.length && nomes[i] ? nomes[i] : 'Aba ' + (i + 1), linhas: linhas });
+    }
+    if (!abas.length) throw erro('A planilha está vazia.');
+    return abas;
+  }
+  I.lerMatriz = async function (nome, buffer) {
+    var bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+    if (bytes.length > LIM_BYTES) throw erro('O arquivo é grande demais (limite de 15 MB).');
+    if (!bytes.length) throw erro('O arquivo está vazio.');
+    if (bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) throw erro('PDF não é aceito. Use uma planilha: Excel (.xlsx) ou CSV.');
+    if (bytes[0] === 0xD0 && bytes[1] === 0xCF && bytes[2] === 0x11 && bytes[3] === 0xE0) throw erro('Este é um Excel antigo (.xls). Abra e salve como .xlsx ou CSV e envie de novo.');
+    var abas;
+    if (bytes[0] === 0x50 && bytes[1] === 0x4B) abas = await matrizXLSX(bytes);
+    else {
+      var texto = decodificar(bytes);
+      if (/<OFX>|OFXHEADER/i.test(texto.slice(0, 4000))) throw erro('Este arquivo é um extrato bancário (OFX), não uma planilha de cadastro. Para extratos, use "Extrato bancário".');
+      var linhas = matrizLimpa(dividirCsv(texto, detectarDelim(texto)));
+      if (!linhas.length) throw erro('O arquivo está vazio.');
+      abas = [{ nome: 'Planilha', linhas: linhas }];
+    }
+    return { arquivo: String(nome || 'arquivo').slice(0, 120), abas: abas };
+  };
+
   /* ------------------------------------------------------------------ vários arquivos: junta sem contar duas vezes o mesmo lançamento */
   I.juntar = function (lidos) {
     var porArquivo = lidos.map(function (r) {

@@ -65,7 +65,7 @@ export async function montarReciboPdf(r) {
   doc.setDrawColor(46, 46, 46); doc.setLineWidth(0.3); doc.line(L + 25, y, L + W - 25, y); y += 5.5;
   doc.setFont('helvetica', 'bold'); doc.setFontSize(11); txt(r.emitenteNome, L + W / 2, y, { align: 'center' }); y += 5; doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(107, 107, 99);
   const ass = [r.emitenteCrp ? `CRP ${r.emitenteCrp}` : null, r.emitenteDoc ? `${r.emitenteDoc.length === 14 ? 'CNPJ' : 'CPF'} ${fmtCPF(r.emitenteDoc)}` : null].filter(Boolean).join('  ·  '); if (ass) txt(ass, L + W / 2, y, { align: 'center' });
-  doc.setFontSize(8); doc.setTextColor(150, 148, 141); txt('Gerado pelo CM Consultório', L, 285);
+  doc.setFontSize(8); doc.setTextColor(150, 148, 141); txt('Gerado pelo Portal CLINCM', L, 285);
   if (r.cancelado) { doc.setTextColor(200, 80, 60); doc.setFont('helvetica', 'bold'); doc.setFontSize(60); doc.text('CANCELADO', 105, 150, { align: 'center', angle: 30 }); }
   return doc;
 }

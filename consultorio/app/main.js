@@ -1,4 +1,4 @@
-/* CM Consultório: ponto de entrada. Decide a primeira tela (acesso restrito, entrar, aplicativo), monta a casca e troca as telas. */
+/* Portal CLINCM: ponto de entrada. Decide a primeira tela (acesso restrito, entrar, aplicativo), monta a casca e troca as telas. */
 import { api, aoOcorrer, definirCsrf } from './api.js';
 import { App, defineEu, carregarBase } from './estado.js';
 import { html, raw, montar, $, $$, abrirModal, aviso, esc } from './ui.js';
@@ -10,13 +10,14 @@ const NAV = [
   { itens: [['inicio', 'Início'], ['agenda', 'Agenda'], ['pacientes', 'Pacientes']] },
   { titulo: 'Financeiro', itens: [['receber', 'A receber'], ['pagar', 'A pagar'], ['caixa', 'Fluxo de caixa'], ['contas', 'Contas e cartões'], ['extrato', 'Extrato bancário']] },
   { titulo: 'Documentos', itens: [['recibos', 'Recibos'], ['relatorios', 'Relatórios']] },
+  { titulo: 'Cadastros', itens: [['fornecedores', 'Fornecedores'], ['importar', 'Importar planilha']] },
   { itens: [['config', 'Configurações']] },
 ];
 const NAV_INF = ['inicio', 'agenda', 'pacientes', 'receber'];
 const ROTULO = Object.fromEntries(NAV.flatMap((g) => g.itens));
 /* Telas já construídas (cada uma é um módulo em telas/). As demais mostram "Em construção" sem fazer pedido ao servidor;
    ao construir uma tela, acrescente-a aqui. Se uma tela listada falhar ao carregar, o erro aparece de verdade (não vira "em construção"). */
-const PRONTAS = new Set(['inicio', 'config', 'pacientes', 'agenda', 'receber', 'pagar', 'contas', 'caixa', 'extrato', 'recibos', 'relatorios']);
+const PRONTAS = new Set(['inicio', 'config', 'pacientes', 'agenda', 'receber', 'pagar', 'contas', 'caixa', 'extrato', 'recibos', 'relatorios', 'fornecedores', 'importar']);
 const PUBLICAS = new Set(['entrar', 'cadastro', 'esqueci', 'redefinir', 'verificar']);
 let limpar = null;
 let casca = false;
@@ -85,9 +86,9 @@ function montarCasca() {
   const lateral = NAV.map((g) => `${g.titulo ? `<h6>${esc(g.titulo)}</h6>` : ''}${g.itens.map(([k, t]) => link(k, t)).join('')}`).join('');
   const inferior = NAV_INF.map((k) => link(k, ROTULO[k])).join('') + `<button type="button" data-mais>${icone('mais')}<span>Mais</span></button>`;
   raiz.innerHTML = `<div class="app">
-    <aside class="lateral" aria-label="Menu"><div class="marca-app"><small>CM</small>Consultório</div>${lateral}
+    <aside class="lateral" aria-label="Menu"><div class="marca-app"><small>Portal</small>CLINCM</div>${lateral}
       <div class="rodape"><strong>${esc(p.nome)}</strong>${esc(App.eu.conta.nome)}<br><button type="button" class="link" data-sair>Sair</button></div></aside>
-    <div class="coluna"><header class="topo"><div class="marca-app"><small>CM</small>Consultório</div></header>
+    <div class="coluna"><header class="topo"><div class="marca-app"><small>Portal</small>CLINCM</div></header>
       <div id="faixas"></div><main class="principal" id="conteudo" tabindex="-1"></main></div>
     <nav class="nav-inf" aria-label="Menu principal">${inferior}</nav></div>`;
   raiz.onclick = aoClicar;
@@ -122,7 +123,7 @@ function atualizarNavegacao(seg) {
     a.classList.toggle('ativo', on);
     if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
   });
-  document.title = (ROTULO[seg] ? ROTULO[seg] + ' · ' : '') + 'CM Consultório';
+  document.title = (ROTULO[seg] ? ROTULO[seg] + ' · ' : '') + 'Portal CLINCM';
 }
 
 /** Avisos no topo: modo restrito, teste grátis, e-mail por confirmar. */

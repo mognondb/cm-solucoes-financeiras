@@ -44,7 +44,7 @@ function resumoCobranca(p) {
 /* ================================================================= lista */
 async function lista(el) {
   const podeEditar = !somenteLeitura();
-  montar(el, html`<div class="cabeca"><div><h1>Pacientes</h1><p id="pac-sub">&nbsp;</p></div>${podeEditar ? html`<button class="btn btn-pri" id="pac-novo">Novo paciente</button>` : ''}</div>
+  montar(el, html`<div class="cabeca"><div><h1>Pacientes</h1><p id="pac-sub">&nbsp;</p></div>${podeEditar ? html`<div class="pac-acoes" style="margin:0"><a class="btn btn-sec" href="#/importar?tipo=pacientes">Importar planilha</a><button class="btn btn-pri" id="pac-novo">Novo paciente</button></div>` : ''}</div>
     <div class="filtros"><div class="campo busca"><label class="sr" for="pac-busca">Buscar paciente</label><input id="pac-busca" type="search" placeholder="Buscar por nome, telefone ou CPF" autocomplete="off" value="${filtro.busca}"></div></div>
     <div class="chips" id="pac-chips" role="group" aria-label="Filtrar por situação" style="margin-bottom:14px"></div>
     <div id="pac-lista"><div class="carregando">Carregando…</div></div>`);

@@ -23,7 +23,7 @@ async function carregar() {
 /* ---------------------------------------------------------------- leitura do arquivo (no navegador) */
 function carregarLeitor() {
   if (window.CMDiag && window.CMDiag.importar) return Promise.resolve(window.CMDiag.importar);
-  return new Promise((res, rej) => { const s = document.createElement('script'); s.src = '/assets/js/diagnostico-importar.js?v=1'; s.onload = () => (window.CMDiag && window.CMDiag.importar ? res(window.CMDiag.importar) : rej(new Error('Leitor indisponível.'))); s.onerror = () => rej(new Error('Não foi possível carregar o leitor de extratos.')); document.head.appendChild(s); });
+  return new Promise((res, rej) => { const s = document.createElement('script'); s.src = '/assets/js/diagnostico-importar.js?v=2'; s.onload = () => (window.CMDiag && window.CMDiag.importar ? res(window.CMDiag.importar) : rej(new Error('Leitor indisponível.'))); s.onerror = () => rej(new Error('Não foi possível carregar o leitor de extratos.')); document.head.appendChild(s); });
 }
 async function lerArquivo(arquivo) {
   try {

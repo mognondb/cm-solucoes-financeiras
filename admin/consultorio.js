@@ -1,4 +1,4 @@
-/* Aba "Consultório" do painel administrativo: abre a plataforma do consultório (CM Consultório), controla se ela está restrita
+/* Aba "Portal CLINCM" do painel administrativo: abre a plataforma (Portal CLINCM), controla se ela está restrita
    à equipe ou aberta ao público e acompanha as contas e os testes grátis. Fala com /consultorio/api/admin/* usando a mesma
    credencial (HTTP Basic) que o painel já guarda no navegador. */
 (function () {
@@ -21,7 +21,7 @@
   function desenhar(resumo, contas) {
     var aberto = resumo.acesso === 'aberto';
     painel.innerHTML =
-      '<p class="admin-field-hint" style="margin-bottom:16px;">CM Consultório: agenda, pacientes e financeiro para consultórios de psicologia. ' +
+      '<p class="admin-field-hint" style="margin-bottom:16px;">Portal CLINCM: gestão integrada (agenda, recebimentos, contas a pagar e fluxo de caixa) para pequenos consultórios de saúde. ' +
       'Enquanto estiver <strong>restrito</strong>, só quem entra por esta aba consegue usar. A plataforma não aparece no site.</p>' +
       '<div class="admin-card" style="padding:18px;border:1px solid #ebe6dc;border-radius:14px;background:#fff;margin-bottom:18px">' +
       '<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;justify-content:space-between">' +

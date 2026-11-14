@@ -117,7 +117,7 @@ async function categorias(alvo) {
   await carregarBase(['categorias']);
   const bloco = (tipo, titulo) => { const l = App.cache.categorias.filter((c) => c.tipo === tipo); return html`<div class="cartao"><div class="cartao-t"><h3>${titulo}</h3><button class="btn btn-sec btn-peq" data-novo="${tipo}">Adicionar</button></div>
     <ul class="lista">${l.map((c) => html`<li class="linha"><div class="corpo"><span class="tit" style="${c.ativo ? '' : 'color:#999'}">${c.nome}</span><span class="sub">${tipo === 'despesa' ? (c.grupo === 'fixa' ? 'Fixa' : 'Variável') + (c.dedutivel ? ' · pode entrar no livro-caixa' : '') : ''}</span></div>${c.ativo ? '' : selo('Inativa')}<button class="btn btn-ghost btn-peq" data-edit="${c.id}">Editar</button></li>`)}</ul></div>`; };
-  montar(alvo, html`<p class="suave">Vieram da Planilha de Controle Financeiro para Psicólogos da CM. Renomear uma categoria já usada muda o nome nos lançamentos antigos; para encerrar uma, desative em vez de apagar.</p>${bloco('receita', 'Categorias de receita')}<div style="height:16px"></div>${bloco('despesa', 'Categorias de despesa')}
+  montar(alvo, html`<div class="pac-acoes" style="margin:0 0 12px;justify-content:flex-end"><a class="btn btn-sec btn-peq" href="#/importar?tipo=categorias">Importar planilha</a></div><p class="suave">Vieram da Planilha de Controle Financeiro para Psicólogos da CM. Renomear uma categoria já usada muda o nome nos lançamentos antigos; para encerrar uma, desative em vez de apagar.</p>${bloco('receita', 'Categorias de receita')}<div style="height:16px"></div>${bloco('despesa', 'Categorias de despesa')}
     <p class="suave peq" style="margin-top:12px">"Pode entrar no livro-caixa" é só uma sugestão para o carnê-leão: confirme com seu contador.</p>`);
   const abrirForm = (c, tipo) => {
     const m = abrirModal({ titulo: c ? 'Editar categoria' : 'Nova categoria', corpo: html`<form novalidate><p class="erro-form" role="alert" hidden></p>
@@ -154,7 +154,7 @@ function conta(alvo) {
   form.addEventListener('submit', (e) => { e.preventDefault(); enviar(form, async (d) => { await api.post('auth/senha', d); form.reset(); }, 'Senha alterada.'); });
   $('#baixar-dados', alvo).addEventListener('click', async (e) => {
     const b = e.currentTarget; b.disabled = true;
-    try { const dados = await api.get('conta/exportar'); const url = URL.createObjectURL(new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' })); const a = document.createElement('a'); a.href = url; a.download = `cm-consultorio-dados-${App.hoje}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000); aviso('Arquivo gerado.'); }
+    try { const dados = await api.get('conta/exportar'); const url = URL.createObjectURL(new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' })); const a = document.createElement('a'); a.href = url; a.download = `portal-clincm-dados-${App.hoje}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000); aviso('Arquivo gerado.'); }
     catch (er) { aviso(er.message, 'erro'); } finally { b.disabled = false; }
   });
   $('#excluir-conta', alvo).addEventListener('click', () => {

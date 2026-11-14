@@ -20,6 +20,8 @@ require __DIR__ . '/lib/rotas_lancamentos.php';
 require __DIR__ . '/lib/rotas_contas.php';
 require __DIR__ . '/lib/rotas_extrato.php';
 require __DIR__ . '/lib/rotas_documentos.php';
+require __DIR__ . '/lib/rotas_fornecedores.php';
+require __DIR__ . '/lib/rotas_importar.php';
 require __DIR__ . '/lib/rotas_admin.php';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -52,5 +54,7 @@ psi_registrar_rotas_lancamentos($roteador);
 psi_registrar_rotas_contas($roteador);
 psi_registrar_rotas_extrato($roteador);
 psi_registrar_rotas_documentos($roteador);
+psi_registrar_rotas_fornecedores($roteador);
+psi_registrar_rotas_importar($roteador);
 psi_registrar_rotas_admin($roteador);
 $roteador->despachar($metodo, $caminho);

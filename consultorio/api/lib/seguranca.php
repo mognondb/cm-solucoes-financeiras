@@ -4,7 +4,7 @@
  *  - sessão por cookie HttpOnly (só o hash do token fica no banco) + token CSRF em todo pedido que altera dados;
  *  - limite de tentativas (login, cadastro, redefinição de senha);
  *  - "acesso restrito": enquanto a plataforma está em desenvolvimento, só entra quem tem o cookie assinado que o painel
- *    administrativo emite (psi_adm). Para abrir ao público basta mudar o ajuste "acesso" para "aberto" (aba Consultório do painel);
+ *    administrativo emite (psi_adm). Para abrir ao público basta mudar o ajuste "acesso" para "aberto" (aba Portal CLINCM do painel);
  *  - teste grátis: depois do prazo a conta fica somente leitura (dá para ver e exportar os dados) até virar assinatura.
  */
 declare(strict_types=1);

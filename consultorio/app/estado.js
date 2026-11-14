@@ -5,7 +5,7 @@ export const App = { eu: null, estado: null, cache: {}, hoje: '' };
 
 /** Dados de apoio que quase toda tela usa. Recarrega só o que for pedido (ou tudo, na primeira vez). */
 export async function carregarBase(quais) {
-  const mapa = { categorias: 'categorias', servicos: 'servicos', profissionais: 'profissionais', contas: 'contas-fin' };
+  const mapa = { categorias: 'categorias', servicos: 'servicos', profissionais: 'profissionais', contas: 'contas-fin', fornecedores: 'fornecedores' };
   const lista = quais || Object.keys(mapa);
   await Promise.all(lista.map(async (k) => { App.cache[k] = (await api.get(mapa[k])).itens; }));
 }

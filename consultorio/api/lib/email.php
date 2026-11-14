@@ -18,7 +18,7 @@ function psi_enviar_email(string $para, string $assunto, string $texto, string $
     $html = '<!doctype html><html lang="pt-BR"><body style="margin:0;background:#f8f6f1;font-family:Arial,Helvetica,sans-serif;color:#2e2e2e">'
       . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:24px 12px">'
       . '<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#fff;border:1px solid #ebe6dc;border-radius:14px">'
-      . '<tr><td style="padding:20px 28px;border-bottom:1px solid #ebe6dc;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;color:#8f6d38">CM Consultório</td></tr>'
+      . '<tr><td style="padding:20px 28px;border-bottom:1px solid #ebe6dc;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;color:#8f6d38">Portal CLINCM</td></tr>'
       . '<tr><td style="padding:24px 28px 8px">' . implode('', $paragrafos) . '</td></tr>'
       . ($botaoLink !== '' ? '<tr><td style="padding:4px 28px 24px"><a href="' . $h($botaoLink) . '" style="display:inline-block;background:#b18a52;color:#fff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 24px;border-radius:999px">' . $h($botaoRotulo) . '</a></td></tr>' : '')
       . '<tr><td style="padding:16px 28px;border-top:1px solid #ebe6dc;font-size:12px;line-height:1.5;color:#6b6b63">CM Soluções Financeiras · É um e-mail automático, não precisa responder.</td></tr>'
@@ -26,7 +26,7 @@ function psi_enviar_email(string $para, string $assunto, string $texto, string $
     $textoFinal = $texto . ($botaoLink !== '' ? "\n\n$botaoRotulo: $botaoLink" : '') . "\n\n--\nCM Soluções Financeiras · e-mail automático, não precisa responder.";
     $b = 'cm_alt_' . bin2hex(random_bytes(8));
     $enc = fn($v) => '=?UTF-8?B?' . base64_encode($v) . '?=';
-    $cab = "From: {$enc('CM Consultório')} <nao-responda@cmfinanceiro.com>\r\nMIME-Version: 1.0\r\nContent-Type: multipart/alternative; boundary=\"$b\"";
+    $cab = "From: {$enc('Portal CLINCM')} <nao-responda@cmfinanceiro.com>\r\nMIME-Version: 1.0\r\nContent-Type: multipart/alternative; boundary=\"$b\"";
     $corpo = "--$b\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n" . chunk_split(base64_encode($textoFinal)) . "\r\n"
       . "--$b\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n" . chunk_split(base64_encode($html)) . "\r\n--$b--\r\n";
     return (bool)@mail($para, $enc($assunto), $corpo, $cab);

@@ -67,7 +67,7 @@ function psi_registrar_rotas_auth(PsiRoteador $r): void {
     psi_sessao_criar($usuarioId, $contaId);
     psi_auditar('conta_criada', 'conta', $contaId);
     $tok = psi_token_criar($usuarioId, 'verificar', 3 * 86400);
-    psi_enviar_email($email, 'Confirme seu e-mail — CM Consultório', "Olá, " . explode(' ', $nome)[0] . "!\n\nBem-vindo(a) ao CM Consultório. Para confirmar que este e-mail é seu, use o botão abaixo. O link vale por 3 dias.", 'Confirmar meu e-mail', psi_url_base() . '#/verificar/' . $tok);
+    psi_enviar_email($email, 'Confirme seu e-mail — Portal CLINCM', "Olá, " . explode(' ', $nome)[0] . "!\n\nBem-vindo(a) ao Portal CLINCM. Para confirmar que este e-mail é seu, use o botão abaixo. O link vale por 3 dias.", 'Confirmar meu e-mail', psi_url_base() . '#/verificar/' . $tok);
     return psi_eu();
   }, 'publica');
 
@@ -111,7 +111,7 @@ function psi_registrar_rotas_auth(PsiRoteador $r): void {
     $s = $db->prepare('SELECT id, nome FROM psi_usuarios WHERE email = ? AND ativo = 1'); $s->execute([$email]);
     if ($u = $s->fetch()) {
       $tok = psi_token_criar((int)$u['id'], 'redefinir', 3600);
-      psi_enviar_email($email, 'Redefinir senha — CM Consultório', "Olá, " . explode(' ', (string)$u['nome'])[0] . "!\n\nRecebemos um pedido para redefinir a senha da sua conta. Use o botão abaixo para escolher uma nova senha. O link vale por 1 hora e só funciona uma vez.\n\nSe não foi você, ignore este e-mail: nada foi alterado.", 'Escolher nova senha', psi_url_base() . '#/redefinir/' . $tok);
+      psi_enviar_email($email, 'Redefinir senha — Portal CLINCM', "Olá, " . explode(' ', (string)$u['nome'])[0] . "!\n\nRecebemos um pedido para redefinir a senha da sua conta. Use o botão abaixo para escolher uma nova senha. O link vale por 1 hora e só funciona uma vez.\n\nSe não foi você, ignore este e-mail: nada foi alterado.", 'Escolher nova senha', psi_url_base() . '#/redefinir/' . $tok);
     }
     return ['ok' => true, 'message' => 'Se o e-mail estiver cadastrado, você receberá um link para redefinir a senha.']; // mesma resposta exista ou não
   }, 'publica');
@@ -140,7 +140,7 @@ function psi_registrar_rotas_auth(PsiRoteador $r): void {
     if (psi_limite_excedido('verificar', 'ver|' . $u['id'], 3, 3600)) psi_erro('Aguarde um pouco antes de pedir de novo.', 429);
     psi_registrar_tentativa('verificar', 'ver|' . $u['id']);
     $tok = psi_token_criar((int)$u['id'], 'verificar', 3 * 86400);
-    psi_enviar_email($u['email'], 'Confirme seu e-mail — CM Consultório', "Para confirmar que este e-mail é seu, use o botão abaixo. O link vale por 3 dias.", 'Confirmar meu e-mail', psi_url_base() . '#/verificar/' . $tok);
+    psi_enviar_email($u['email'], 'Confirme seu e-mail — Portal CLINCM', "Para confirmar que este e-mail é seu, use o botão abaixo. O link vale por 3 dias.", 'Confirmar meu e-mail', psi_url_base() . '#/verificar/' . $tok);
     return ['ok' => true];
   }, 'login_sempre');
 

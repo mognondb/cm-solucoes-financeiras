@@ -1,12 +1,13 @@
-# CM Consultório
+# Portal CLINCM
 
-Plataforma de gestão para consultórios de psicologia muito pequenos (uma ou duas pessoas, poucas contas bancárias e um cartão):
+Plataforma integrada de gestão para pequenos consultórios de saúde (uma ou poucas pessoas, poucas contas bancárias e um cartão; começou pela psicologia):
 **pacientes, agenda, contas a receber (com inadimplência), contas a pagar, fluxo de caixa, extrato bancário, recibos e relatórios.**
 Pense em um "Conta Azul" feito para essa rotina, com a agenda no centro: o que acontece na agenda gera o que há para receber.
 
-- Endereço: `/consultorio/` (aplicativo) e `/consultorio/api/` (API).
+- Endereço: `/consultorio/` (aplicativo) e `/consultorio/api/` (API). O nome do produto é **Portal CLINCM**, mas o endereço continua `/consultorio/` por enquanto
+  (o cookie de sessão, a API e o deploy dependem dele); trocar o endereço só faz sentido quando a plataforma for aberta ao público, com redirecionamento.
 - **Não é linkada em lugar nenhum do site público** (nem menu, rodapé, sitemap ou robots). Enquanto estiver em desenvolvimento só se entra
-  pela aba **Consultório** do painel administrativo (`/admin/`), que libera o acesso. Quando estiver pronta, a mesma aba abre ao público.
+  pela aba **Portal CLINCM** do painel administrativo (`/admin/`), que libera o acesso. Quando estiver pronta, a mesma aba abre ao público.
 - Só administrativo e financeiro. **Sem prontuário nem anotações clínicas** (os termos pedem que o profissional não registre nada clínico).
 - Este arquivo é bloqueado na web pelo `.htaccess` da pasta.
 
@@ -21,6 +22,7 @@ Pense em um "Conta Azul" feito para essa rotina, com a agenda no centro: o que a
 | F2 | Contas a pagar, contas bancárias, cartão e fatura, despesas fixas, fluxo de caixa | feito |
 | F3 | Importar extrato (OFX/CSV/Excel) e conciliar | feito |
 | F4 | Recibos em PDF, relatórios, apoio ao carnê-leão, exportar dados, excluir conta (LGPD) | feito |
+| G1 | Portal CLINCM: novo nome, fornecedores, importação de pacientes, fornecedores e categorias por planilha | feito |
 
 Rotas do aplicativo que ainda não têm tela aparecem como "Em construção" (lista `PRONTAS` em `app/main.js`: ao criar uma tela, acrescente-a ali).
 O hash aceita parâmetros (`#/agenda?paciente=12`): a tela recebe `abrir(el, resto, consulta)`.
@@ -65,7 +67,7 @@ Configuração `acesso` em `psi_ajustes`: `restrito` (padrão) ou `aberto`.
 
 1. Em `restrito`, toda rota que não seja `livre` ou `admin` exige o cookie `psi_adm` (assinado com HMAC, validade de 8 h).
 2. O cookie é emitido por `POST restrito/entrar`, que exige autenticação HTTP Basic de um **administrador** da tabela `usuarios` do site.
-3. A aba **Consultório** do painel: "Abrir a plataforma" faz essa chamada com a credencial que o painel já guarda e abre `/consultorio/`.
+3. A aba **Portal CLINCM** do painel: "Abrir a plataforma" faz essa chamada com a credencial que o painel já guarda e abre `/consultorio/`.
    Também alterna `restrito`/`aberto` (com confirmação), define os dias de teste grátis e lista as contas, podendo mudar o plano de cada uma.
 4. Visitante sem o cookie vê apenas "Plataforma em desenvolvimento".
 
@@ -106,10 +108,11 @@ validar a entrega de e-mail (SPF/DKIM do domínio) e então usar "Abrir ao públ
 | `psi_contas_fin` | Bancos, carteira, cartão de crédito e plataformas (quantidade livre) |
 | `psi_categorias` | 13 de receita e 22 de despesa já sugeridas (fixa/variável; "pode entrar no livro-caixa"), editáveis |
 | `psi_extratos`, `psi_extrato_itens` | Extratos importados e suas linhas (pendente, conciliada, lançada, transferência, ignorada) |
+| `psi_fornecedores` | Quem o consultório paga (nome, CPF/CNPJ, contato, categoria padrão da despesa). A ligação com as despesas é pelo nome (`contraparte`) |
 | `psi_recibos`, `psi_recibo_baixas` | Recibos numerados (com cópia dos dados do emitente e do pagador no momento da emissão) e os pagamentos que cada um cobre |
 | `psi_auditoria` | Quem fez o quê |
 
-Migrações: v1 base · v2 agenda (índice único das séries) · v3 `psi_transferencias` e `psi_recorrentes`. · v4 `psi_extratos` e `psi_extrato_itens` · v5 `psi_recibos` e `psi_recibo_baixas`.
+Migrações: v1 base · v2 agenda (índice único das séries) · v3 `psi_transferencias` e `psi_recorrentes`. · v4 `psi_extratos` e `psi_extrato_itens` · v5 `psi_recibos` e `psi_recibo_baixas` · v6 `psi_fornecedores`.
 
 ### Agenda (F1)
 
@@ -171,6 +174,19 @@ Um lançamento (`psi_lancamentos`) é uma conta a receber ou a pagar; `psi_baixa
 - **Apoio ao carnê-leão:** rendimentos de pessoas físicas por pagador (com CPF), recebidos sem paciente, pagadores sem CPF, despesas de categorias marcadas como "livro-caixa" e uma base estimada (rendimentos − despesas).
   Convênios e empresas (retenção na fonte) ficam de fora. **Não calcula imposto**: é um apoio à organização, e a tela avisa que o contador confirma.
 
+### Fornecedores e importação de cadastros (G1)
+
+- **Fornecedores** (`#/fornecedores`): cadastro de quem se paga, com a categoria padrão da despesa. A ligação com "A pagar" é pelo **nome** do fornecedor (campo `contraparte` do lançamento), então o que já tinha sido
+  lançado antes aparece na ficha (total, pago e em aberto), e **renomear** o fornecedor renomeia a contraparte das despesas e das despesas fixas dele. Só se apaga quem nunca teve despesa; os demais são arquivados.
+  No formulário de despesa o campo Fornecedor sugere os cadastrados e, ao escolher um, preenche a categoria padrão.
+- **Importar planilha** (`#/importar?tipo=pacientes|fornecedores|categorias`): o arquivo (Excel .xlsx ou CSV, com autodetecção de separador e de codificação) é **lido no navegador** (`app/planilha.js` +
+  `CMDiag.importar.lerMatriz` em `assets/js/diagnostico-importar.js`); o servidor só recebe as linhas já ligadas aos campos. Fluxo: escolher o arquivo → ligar as colunas (reconhecidas pelo nome do cabeçalho, com
+  detecção da linha do cabeçalho e escolha da aba) → **conferir** (nada é gravado) → importar. Há modelo de planilha para baixar em cada tipo; o catálogo de campos vem do servidor (`GET importar/campos/{tipo}`).
+- O servidor (`rotas_importar.php`) entende formatos de planilha (datas dd/mm/aaaa ou serial do Excel, "R$ 1.234,56", CPF/CNPJ que perdeu o zero à esquerda, sim/não, sinônimos de opções) e **reusa as validações do
+  cadastro manual** (`psi_tentar` captura o erro de cada linha em vez de encerrar a requisição). Cada linha termina como novo, atualizar, ignorado (já cadastrado, repetido no arquivo ou vazio) ou problema (com a mensagem).
+  Duplicados: por CPF/CNPJ ou, se faltar, pelo nome (duas pessoas com o mesmo nome e CPFs diferentes são pessoas diferentes). Modo "atualizar" só altera os campos preenchidos na planilha. Limite de 2.000 linhas por vez.
+  Categoria padrão desconhecida num fornecedor vira aviso (entra sem categoria). A importação grava na trilha de auditoria.
+
 ## Testar localmente
 
 Requer PHP 8 com `pdo_mysql` e MySQL/MariaDB.
@@ -179,7 +195,7 @@ Requer PHP 8 com `pdo_mysql` e MySQL/MariaDB.
 2. Importe `db/schema.sql` (tabela `usuarios` do site, necessária ao login do admin) e crie um usuário `admin`.
 3. Suba o servidor com um roteador que encaminhe `/consultorio/api/*` para `consultorio/api/index.php` e o resto para arquivos estáticos
    (`php -S 127.0.0.1:8099 router.php`). O envio de e-mail pode ser capturado com um `sendmail` falso.
-4. Abra `/admin/`, entre, aba **Consultório**, "Abrir a plataforma".
+4. Abra `/admin/`, entre, aba **Portal CLINCM**, "Abrir a plataforma".
 
 Os testes de API e de interface usados no desenvolvimento ficam fora do repositório (cliente HTTP com cookies para a API e Playwright para a tela).
 Cada fase nova deve ter os dois: API (isolamento entre contas, CSRF, limites, regras de cobrança) e navegador (desktop e celular de 390 px).

@@ -4,14 +4,14 @@ import { App, defineEu, carregarBase } from '../estado.js';
 import { html, raw, montar, $, dadosForm } from '../ui.js';
 
 const moldura = (conteudo) => html`<div class="acesso"><div class="acesso-caixa">
-  <div class="acesso-marca"><small>CM Soluções Financeiras</small><div class="nome">CM Consultório</div></div>
+  <div class="acesso-marca"><small>CM Soluções Financeiras</small><div class="nome">Portal CLINCM</div></div>
   <div class="cartao">${conteudo}</div>${''}</div></div>`;
 
 /** Plataforma em desenvolvimento: só a equipe da CM entra (pelo painel administrativo). */
 export function restrito(raiz) {
   montar(raiz, moldura(html`<h1>Plataforma em desenvolvimento</h1>
-    <p>O CM Consultório ainda está sendo construído e, por enquanto, só a equipe da CM Soluções Financeiras tem acesso.</p>
-    <p class="suave peq">Se você faz parte da equipe, abra a plataforma pela aba <strong>Consultório</strong> do painel administrativo.</p>
+    <p>O Portal CLINCM ainda está sendo construído e, por enquanto, só a equipe da CM Soluções Financeiras tem acesso.</p>
+    <p class="suave peq">Se você faz parte da equipe, abra a plataforma pela aba <strong>Portal CLINCM</strong> do painel administrativo.</p>
     <a class="btn btn-pri btn-bloco" href="../admin/index.html">Ir para o painel administrativo</a>`));
 }
 

@@ -159,24 +159,37 @@ function perguntarMotivo() {
   });
 }
 
+/* ================================================================= fornecedores no formulário de despesa */
+export const datalistFornecedores = () => html`<datalist id="dl-fornecedores">${(App.cache.fornecedores || []).filter((f) => f.ativo).map((f) => html`<option value="${f.nome}"></option>`)}</datalist>`;
+const semAcentoMin = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+/** Ao escolher um fornecedor cadastrado, preenche a categoria padrão dele (se a categoria ainda estiver vazia). */
+export function ligarFornecedorACategoria(form) {
+  const campoForn = form.elements.contraparte; const campoCat = form.elements.categoriaId; if (!campoForn || !campoCat) return;
+  const aoMudar = () => {
+    const f = (App.cache.fornecedores || []).find((x) => semAcentoMin(x.nome) === semAcentoMin(campoForn.value));
+    if (f && f.categoriaId && !campoCat.value && [...campoCat.options].some((o) => o.value === String(f.categoriaId))) { campoCat.value = String(f.categoriaId); campoCat.dataset.sugerida = '1'; }
+  };
+  campoForn.addEventListener('change', aoMudar); campoForn.addEventListener('blur', aoMudar);
+}
+
 /* ================================================================= novo / editar lançamento */
-export async function abrirLancamento({ editar, tipo = 'receber', pacienteId } = {}, depois) {
+export async function abrirLancamento({ editar, tipo = 'receber', pacienteId, contraparte: contraparteInicial, categoriaId: categoriaInicial } = {}, depois) {
   const l = editar || null; const t = l ? l.tipo : tipo; const receber = t === 'receber';
-  await carregarBase(['categorias', 'contas']); let pacientes = [];
+  await carregarBase(['categorias', 'contas', 'fornecedores']); let pacientes = [];
   if (receber) { try { pacientes = (await api.get('pacientes?status=todos')).itens.filter((p) => p.status !== 'arquivado'); } catch (e) { aviso(e.message, 'erro'); return; } }
   const cats = categoriasDe(receber ? 'receita' : 'despesa'); const contas = App.cache.contas.filter((c) => c.ativo && (!receber || c.tipo !== 'cartao'));
   const m = abrirModal({ titulo: l ? 'Editar lançamento' : receber ? 'Nova cobrança' : 'Nova conta a pagar', largo: true, corpo: html`<div><p class="erro-form" role="alert" hidden></p>
     ${campo({ id: 'descricao', rotulo: 'Descrição', valor: l ? l.descricao : '', obrig: true, placeholder: receber ? 'Ex.: Avaliação psicológica, palestra, aluguel de sala' : 'Ex.: aluguel, internet, supervisão', extra: 'maxlength="150"' })}
     <div class="grade-3">${campoDinheiro({ id: 'valor', rotulo: l ? 'Valor' : 'Valor total', valor: l ? l.valor : 0, obrig: true })}${campo({ id: 'vencimento', rotulo: 'Vencimento', tipo: 'date', valor: l ? l.vencimento : App.hoje, obrig: true })}
       ${l ? '' : campo({ id: 'parcelas', rotulo: 'Parcelas', tipo: 'number', valor: 1, extra: 'min="1" max="60"', ajuda: 'Mensais, com o valor dividido.' })}</div>
-    <div class="grade-2">${receber ? campo({ id: 'pacienteId', rotulo: 'Paciente (opcional)', valor: l ? l.pacienteId || '' : pacienteId || '', opcoes: [['', 'Sem paciente'], ...pacientes.map((p) => [p.id, p.nome])] }) : campo({ id: 'contraparte', rotulo: 'Fornecedor (opcional)', valor: l ? l.contraparte || '' : '' })}
-      ${campo({ id: 'categoriaId', rotulo: 'Categoria', valor: l ? l.categoriaId || '' : '', opcoes: [['', 'Sem categoria'], ...cats.map((c) => [c.id, c.nome])] })}</div>
+    <div class="grade-2">${receber ? campo({ id: 'pacienteId', rotulo: 'Paciente (opcional)', valor: l ? l.pacienteId || '' : pacienteId || '', opcoes: [['', 'Sem paciente'], ...pacientes.map((p) => [p.id, p.nome])] }) : campo({ id: 'contraparte', rotulo: 'Fornecedor (opcional)', valor: l ? l.contraparte || '' : contraparteInicial || '', extra: 'list="dl-fornecedores" autocomplete="off" maxlength="120"' })}${datalistFornecedores()}
+      ${campo({ id: 'categoriaId', rotulo: 'Categoria', valor: l ? l.categoriaId || '' : categoriaInicial || '', opcoes: [['', 'Sem categoria'], ...cats.map((c) => [c.id, c.nome])] })}</div>
     ${receber && l ? campo({ id: 'contraparte', rotulo: 'Contraparte (ex.: convênio)', valor: l.contraparte || '' }) : ''}
     ${l ? '' : html`<label class="marca" style="margin-bottom:10px"><input type="checkbox" name="jaPago" id="jaPago"><span>${receber ? 'Já recebi' : 'Já paguei'} (registrar o pagamento agora)</span></label>
       <div id="bloco-pago" hidden><div class="grade-3">${campo({ id: 'dataPago', rotulo: 'Data', tipo: 'date', valor: App.hoje, extra: `max="${App.hoje}"` })}${campo({ id: 'formaPago', rotulo: 'Forma', valor: '', opcoes: FORMAS })}${campo({ id: 'contaPago', rotulo: receber ? 'Entrou em' : 'Saiu de', valor: contas[0] ? contas[0].id : '', opcoes: contas.map((c) => [c.id, c.nome]) })}</div></div>`}
     ${campo({ id: 'obs', rotulo: 'Observação', tipo: 'textarea', valor: l ? l.obs || '' : '', extra: 'maxlength="300"' })}</div>`,
     acoes: [{ id: 'cancelar', rotulo: 'Cancelar' }, { id: 'salvar', rotulo: l ? 'Salvar' : 'Lançar', classe: 'btn-pri' }] });
-  const form = $('form', m.el);
+  const form = $('form', m.el); if (!receber) ligarFornecedorACategoria(form);
   const pago = form.elements.jaPago; if (pago) pago.addEventListener('change', () => { $('#bloco-pago', form).hidden = !pago.checked; if (pago.checked && form.elements.parcelas) form.elements.parcelas.value = 1; });
   m.el.addEventListener('click', async (e) => {
     const b = e.target.closest('[data-acao]'); if (!b) return; if (b.dataset.acao === 'cancelar') return m.fechar();
