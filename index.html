@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css?v=14">
+<link rel="stylesheet" href="assets/css/style.css?v=16">
 <link rel="stylesheet" href="assets/css/dashboard.css?v=5">
 <link rel="stylesheet" href="assets/css/conteudos.css?v=5">
 </head>
@@ -38,8 +38,8 @@
     </a>
 
     <nav class="nav" id="nav">
+      <a href="diagnostico/" class="nav-destaque">Diagnóstico grátis</a>
       <a href="#sobre">Sobre</a>
-      <a href="#plataformas">Plataformas</a>
       <a href="conteudos/" data-conteudos-link hidden>Conteúdos</a>
       <a href="#painel">Painel</a>
       <a href="#servicos">Serviços</a>
@@ -61,6 +61,7 @@
   <!-- HERO -->
   <section class="hero">
     <div class="container hero-inner">
+      <p class="hero-aviso"><a href="diagnostico/" class="hero-novo"><span class="hero-novo-tag">Novo</span>Diagnóstico financeiro gratuito<span class="hero-novo-seta" aria-hidden="true">→</span></a></p>
       <p class="eyebrow">Organização financeira · Análise · Estratégia · Gestão</p>
       <h1>Transformamos números em decisões</h1>
       <p class="hero-sub">
@@ -71,6 +72,55 @@
       <div class="hero-actions">
         <a href="diagnostico/" class="btn btn-primary">Fazer o diagnóstico gratuito</a>
         <a href="#painel" class="btn btn-outline">Ver o painel na prática</a>
+      </div>
+      <p class="hero-micro">Gratuito · cerca de 6 minutos · o relatório sai na hora</p>
+    </div>
+  </section>
+
+  <!-- CM DIAGNÓSTICO / PLATAFORMAS DIGITAIS: faixa de destaque logo depois do topo.
+       Para anunciar uma nova plataforma, copie um bloco .plat-card dentro de .plat-grid. -->
+  <section id="plataformas" class="section section-plataformas">
+    <div class="container">
+      <div class="plat-destaque">
+        <div class="plat-texto">
+          <p class="plat-selos"><span class="plat-selo">Plataforma digital · disponível agora</span><span class="plat-selo plat-selo-ouro">Gratuito</span></p>
+          <h2>Descubra a saúde financeira do seu negócio</h2>
+          <p class="plat-lead">
+            O <strong>CM Diagnóstico</strong> é uma análise que se adapta ao seu segmento e entrega três
+            leituras separadas: saúde financeira, maturidade de gestão e eficiência operacional.
+          </p>
+          <ul class="plat-lista">
+            <li>Perguntas que mudam conforme o segmento e as suas respostas, sem formulário genérico</li>
+            <li>Modo preciso: importe o extrato do banco (OFX, CSV ou Excel) e receba um painel em gráficos</li>
+            <li>Relatório com indicadores, pontos de atenção e por onde começar, pronto para salvar em PDF</li>
+            <li>O extrato é lido no seu navegador: o arquivo não é enviado, só os totais da análise</li>
+          </ul>
+          <div class="plat-acoes">
+            <a href="diagnostico/" class="btn btn-primary">Fazer o meu diagnóstico</a>
+            <a href="diagnostico/?exemplo=preciso" class="btn btn-outline">Ver um exemplo</a>
+          </div>
+          <p class="plat-nota">Modo rápido (cerca de 6 min) ou preciso (cerca de 12 min).</p>
+        </div>
+        <figure class="plat-fig">
+          <img src="assets/img/diagnostico-painel.png?v=3" width="912" height="887" loading="lazy"
+               alt="Painel do CM Diagnóstico: vendas, resultado, ponto de equilíbrio e gráfico da venda até o que sobra no mês">
+          <figcaption>Painel gerado pelo diagnóstico. Exemplo ilustrativo, com dados fictícios.</figcaption>
+        </figure>
+      </div>
+
+      <div class="plat-prox">
+        <h3>Mais plataformas a caminho</h3>
+        <div class="plat-grid">
+          <article class="plat-card">
+            <p class="plat-selos"><span class="plat-selo">Em breve</span><span class="plat-selo">Por assinatura</span></p>
+            <h4>Plataformas de gestão por assinatura</h4>
+            <p>
+              Estamos desenvolvendo plataformas para você acompanhar o financeiro do negócio todo mês,
+              com mensalidade. Quer saber assim que a primeira abrir?
+            </p>
+            <a href="https://wa.me/554888766576?text=Ol%C3%A1!%20Quero%20ser%20avisado%20quando%20as%20plataformas%20de%20gest%C3%A3o%20por%20assinatura%20da%20CM%20estiverem%20dispon%C3%ADveis." class="btn btn-outline" target="_blank" rel="noopener">Quero ser avisado</a>
+          </article>
+        </div>
       </div>
     </div>
   </section>
@@ -122,60 +172,6 @@
         </div>
       </div>
       <p class="callout">O financeiro deixa de ser apenas uma obrigação e passa a ser uma ferramenta de gestão.</p>
-    </div>
-  </section>
-
-  <!-- PLATAFORMAS DIGITAIS: o CM Diagnóstico em destaque + as próximas plataformas.
-       Para anunciar uma nova, copie um bloco .plat-card dentro de .plat-grid. -->
-  <section id="plataformas" class="section section-plataformas">
-    <div class="container">
-      <p class="section-eyebrow">Plataformas digitais</p>
-      <h2 class="section-title">Gestão financeira para usar quando você quiser</h2>
-      <p class="section-sub">
-        Além do trabalho feito junto com você, a CM desenvolve plataformas digitais para
-        entender e acompanhar o financeiro do seu negócio. A primeira já está no ar.
-      </p>
-
-      <article class="plat-destaque">
-        <div class="plat-texto">
-          <p class="plat-selos"><span class="plat-selo plat-selo-on">Disponível agora</span><span class="plat-selo">Gratuito</span></p>
-          <h3>CM Diagnóstico</h3>
-          <p class="plat-lead">
-            Uma análise financeira que se adapta ao seu negócio. Ela entende o seu segmento, pergunta
-            o que importa para ele e entrega três leituras separadas: saúde financeira, maturidade
-            de gestão e eficiência operacional.
-          </p>
-          <ul class="card-lista">
-            <li>Perguntas que mudam conforme o segmento e as suas respostas, sem formulário genérico</li>
-            <li>Modo preciso: importe o extrato do banco (OFX, CSV ou Excel) e receba um painel em gráficos</li>
-            <li>Relatório com indicadores, pontos de atenção e por onde começar, pronto para salvar em PDF</li>
-            <li>O extrato é lido no seu navegador: o arquivo não é enviado, só os totais da análise</li>
-          </ul>
-          <div class="plat-acoes">
-            <a href="diagnostico/" class="btn btn-primary">Fazer o meu diagnóstico</a>
-            <a href="diagnostico/?exemplo=preciso" class="btn btn-outline">Ver um exemplo</a>
-          </div>
-          <p class="plat-nota">Modo rápido (cerca de 6 min) ou preciso (cerca de 12 min).</p>
-        </div>
-        <figure class="plat-fig">
-          <img src="assets/img/diagnostico-painel.png?v=3" width="912" height="887" loading="lazy"
-               alt="Painel do CM Diagnóstico: vendas, resultado, ponto de equilíbrio e gráfico da venda até o que sobra no mês">
-          <figcaption>Painel gerado pelo diagnóstico. Exemplo ilustrativo, com dados fictícios.</figcaption>
-        </figure>
-      </article>
-
-      <h3 class="subtitulo-sm plat-prox-t">A caminho</h3>
-      <div class="plat-grid">
-        <article class="plat-card">
-          <p class="plat-selos"><span class="plat-selo">Em breve</span><span class="plat-selo">Por assinatura</span></p>
-          <h4>Plataformas de gestão por assinatura</h4>
-          <p>
-            Estamos desenvolvendo plataformas para você acompanhar o financeiro do negócio todo mês,
-            com mensalidade. Quer saber assim que a primeira abrir?
-          </p>
-          <a href="https://wa.me/554888766576?text=Ol%C3%A1!%20Quero%20ser%20avisado%20quando%20as%20plataformas%20de%20gest%C3%A3o%20por%20assinatura%20da%20CM%20estiverem%20dispon%C3%ADveis." class="btn btn-outline" target="_blank" rel="noopener">Quero ser avisado</a>
-        </article>
-      </div>
     </div>
   </section>
 
@@ -356,8 +352,9 @@
     </div>
     <div class="footer-col">
       <h5>Navegação</h5>
-      <a href="#sobre">Sobre</a>
+      <a href="diagnostico/">Diagnóstico gratuito</a>
       <a href="#plataformas">Plataformas</a>
+      <a href="#sobre">Sobre</a>
       <a href="conteudos/" data-conteudos-link hidden>Conteúdos</a>
       <a href="#painel">Painel</a>
       <a href="#servicos">Serviços</a>

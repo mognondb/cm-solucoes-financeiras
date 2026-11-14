@@ -80,7 +80,7 @@ function cmAbrir(array $o): void {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/css/style.css?v=14">
+<link rel="stylesheet" href="/assets/css/style.css?v=16">
 <link rel="stylesheet" href="/assets/css/conteudos.css?v=<?= CM_V_CSS ?>">
 <?php foreach ((array)($o['css'] ?? []) as $href): ?><link rel="stylesheet" href="<?= blogEsc($href) ?>">
 <?php endforeach; ?>
@@ -100,8 +100,8 @@ function cmAbrir(array $o): void {
     </a>
 
     <nav class="nav" id="nav">
+      <a href="/diagnostico/" class="nav-destaque"<?= $ativo === 'diagnostico' ? ' aria-current="page"' : '' ?>>Diagnóstico grátis</a>
       <?= $link('/#sobre', 'Sobre') ?>
-      <?= $link('/#plataformas', 'Plataformas') ?>
       <?= $link('/conteudos/', BLOG_NOME_PUBLICO, 'conteudos') ?>
       <?= $link('/#painel', 'Painel') ?>
       <?= $link('/#servicos', 'Serviços') ?>
@@ -134,8 +134,9 @@ function cmFechar(array $o = []): void {
     </div>
     <div class="footer-col">
       <h5>Navegação</h5>
-      <a href="/#sobre">Sobre</a>
+      <a href="/diagnostico/">Diagnóstico gratuito</a>
       <a href="/#plataformas">Plataformas</a>
+      <a href="/#sobre">Sobre</a>
       <a href="/conteudos/"><?= blogEsc(BLOG_NOME_PUBLICO) ?></a>
       <a href="/#painel">Painel</a>
       <a href="/#servicos">Serviços</a>

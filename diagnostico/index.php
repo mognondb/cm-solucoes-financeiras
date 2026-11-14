@@ -9,7 +9,7 @@ cmAbrir([
   'caminho' => '/diagnostico/',
   'css' => ['/assets/css/diagnostico.css?v=4'],
   'corpo' => 'pg-dg dg-root',
-  'ativo' => '', // nenhuma opção do menu fica destacada
+  'ativo' => 'diagnostico', // marca o item "Diagnóstico grátis" do menu
 ]);
 ?>
 <div id="dg-app" aria-live="polite">
