@@ -184,10 +184,30 @@ análises separadas** (saúde financeira, maturidade de gestão e eficiência op
 leitura integrada e recomendações por prioridade — nunca uma nota única. Há também uma **simulação** com um
 negócio de alimentação (`/diagnostico/?exemplo=1`, ou o link "Ver um exemplo"); ela não envia nada.
 
+**Modo preciso e importação de extrato.** No resumo do perfil a pessoa escolhe entre *rápido* (faixas, ~6 min) e
+*preciso* (~12 min). No preciso as perguntas de faixa viram campos de valor (R$, %, dias, horas; quem não sabe o valor
+exato volta à faixa), entram perguntas mais detalhadas (ticket médio, dias de funcionamento, impostos, retirada, saldo,
+prazos de recebimento e pagamento e, por segmento, o item mais vendido, a ocupação da agenda, o estoque, o valor da hora)
+e o relatório ganha um **painel gráfico** (cascata da venda até a sobra do mês e indicadores-chave). Quem respondeu o
+rápido pode "Deixar mais preciso" sem repetir o que já respondeu.
+Opcionalmente a pessoa **importa o extrato** (OFX, CSV ou Excel .xlsx; PDF não é aceito): o sistema identifica faturamento,
+custos, despesas, impostos, retirada, dívidas, canais de venda e saldo, pede que ela confirme as maiores origens, mostra
+"o que encontramos e o que vamos perguntar" (só pergunta o que o extrato não deu) e o painel passa a incluir entradas e
+saídas mês a mês, os canais de venda e o saldo semana a semana.
+- **Privacidade**: o arquivo é lido **no navegador** (`assets/js/diagnostico-importar.js` não faz requisição de rede) e nunca
+  é enviado. Se a pessoa enviar o diagnóstico, só vão totais: por categoria, por mês e por semana, sem nomes, descrições nem
+  o arquivo. Isso também é o que fica no banco e aparece no painel.
+- **Regras de classificação** (palavras-chave de adquirentes, aplicativos, aluguel, energia, impostos, parcelas...): ficam
+  em `RE_ENTRADA` e `RE_SAIDA` no importador. O que as regras não reconhecem (em geral transferências para pessoas) é
+  perguntado à pessoa. Cada valor importado continua editável.
+- **Modo preciso (código)**: perguntas com `tipo: 'valor'` e a função `par()` (cria o campo de valor a partir da faixa) em
+  `diagnostico-dados.js`; indicadores e pontuações novos em `diagnostico-motor.js`; recomendações exclusivas em `diagnostico-recs.js`;
+  gráficos (SVG, sem biblioteca) em `diagnostico-relatorio.js`.
+
 - **Onde editar**: `assets/js/diagnostico-dados.js` (perguntas, opções, pontos de cada resposta e as
   referências de margem por segmento em `LIM_MARGEM`), `diagnostico-recs.js` (recomendações e quando
-  aparecem), `diagnostico-motor.js` (cálculo dos indicadores, notas e leitura integrada) e
-  `diagnostico-relatorio.js` (o relatório em si). Para um novo segmento: incluir em `SEGMENTOS`, criar as
+  aparecem), `diagnostico-motor.js` (cálculo dos indicadores, notas e leitura integrada),
+  `diagnostico-relatorio.js` (o relatório e o painel gráfico) e `diagnostico-importar.js` (leitura de extratos). Para um novo segmento: incluir em `SEGMENTOS`, criar as
   perguntas da etapa 3 com `se`, e preencher `LIM_MARGEM`, `EFICIENCIA_DESC`, as opções de recebimento e as
   recomendações. Ao alterar qualquer arquivo, aumente o `?v=` dele em `diagnostico/index.php` e `admin/index.html`.
 - **Calibragem**: os pesos, as notas e as referências de margem são regras práticas para pequenos negócios,

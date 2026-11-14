@@ -355,6 +355,86 @@
       opcoes: [O('a', 'Até R$ 5 mil', null, 2500), O('b', 'De R$ 5 mil a R$ 20 mil', null, 12500), O('c', 'De R$ 20 mil a R$ 50 mil', null, 35000), O('d', 'Mais de R$ 50 mil', null, 70000), NS()] },
   ];
 
+
+  /* ===================== MODO PRECISO =====================
+     r.modo === 'preciso': as perguntas de faixa viram campos de valor (R$, %, dias, horas) e entram perguntas mais
+     detalhadas. Quem não sabe o valor exato usa "escolher uma faixa" (r._faixa[idDoValor] = true), que volta à pergunta de
+     faixa correspondente. Os valores podem vir de um extrato importado (r._pre, r._origem) e continuam editáveis. */
+  function preciso(r) { return r.modo === 'preciso'; }
+  function emFaixa(r, id) { return !!(r._faixa && r._faixa[id]); }
+  D._u.preciso = preciso;
+  var iA = function (id) { for (var i = 0; i < D.PERGUNTAS.length; i++) if (D.PERGUNTAS[i].id === id) return i; return -1; };
+
+  /* cria idValor logo depois de idFaixa e esconde a pergunta de faixa enquanto o modo for preciso */
+  function par(idFaixa, idValor, cfg) {
+    var i = iA(idFaixa), qf = D.PERGUNTAS[i], seF = qf.se || function () { return true; };
+    qf.se = function (r) { return seF(r) && (!preciso(r) || emFaixa(r, idValor)); };
+    var qv = {
+      id: idValor, etapa: qf.etapa, tipo: 'valor', unidade: cfg.unidade || 'R$', curto: qf.curto, faixaDe: idFaixa, textoFaixa: cfg.textoFaixa || 'Não sei o valor exato: escolher uma faixa',
+      titulo: cfg.titulo || qf.titulo, ajuda: cfg.ajuda !== undefined ? cfg.ajuda : qf.ajuda, max: cfg.max || 1e8,
+      se: function (r) { return seF(r) && preciso(r) && !emFaixa(r, idValor); },
+    };
+    D.PERGUNTAS.splice(i + 1, 0, qv);
+  }
+  /* pergunta nova, só no modo preciso, inserida depois de idAntes; se(r) refina quando aparece; opcional = pode pular */
+  function nova(idAntes, q) {
+    var se = q.se || function () { return true; };
+    q.tipo = 'valor'; q.unidade = q.unidade || 'R$'; q.max = q.max || 1e8;
+    q.se = function (r) { return preciso(r) && se(r); };
+    D.PERGUNTAS.splice(iA(idAntes) + 1, 0, q);
+  }
+  var NOUN = { alimentacao: 'pedido ou venda', saude: 'atendimento', estetica: 'atendimento', comercio: 'venda', servicos: 'cliente ou projeto atendido', outro: 'venda' };
+  var h = function (a, b) { return function (r) { return a.indexOf(r.segmento) !== -1 && (!b || b(r)); }; };
+
+  /* --- etapa 2: valores exatos no lugar das faixas --- */
+  par('fat', 'fat_v', { ajuda: 'Total vendido por mês, em média, nos últimos meses. Se você importou um extrato, já preenchemos: pode corrigir.' });
+  par('custo', 'custo_v', {});
+  par('fixas', 'fixas_v', {});
+  par('folha', 'folha_v', {});
+  par('reserva', 'saldo_v', {
+    titulo: 'Quanto há disponível hoje, em caixa e nas contas do negócio?', ajuda: 'Some o saldo das contas e o dinheiro em caixa. Não inclua aplicações de longo prazo nem dinheiro pessoal.',
+    textoFaixa: 'Prefiro dizer por quanto tempo o dinheiro dura',
+  });
+  nova('fat_v', { id: 'px_vendas', etapa: 2, curto: 'Vendas por mês', unidade: 'un', opcional: true, max: 1e6,
+    titulo: function (c) { return 'Em média, quantos ' + ({ alimentacao: 'pedidos ou vendas', saude: 'atendimentos', estetica: 'atendimentos', comercio: 'vendas', servicos: 'clientes ou projetos' }[c.seg] || 'vendas') + ' o negócio faz por mês?'; },
+    ajuda: 'Um número aproximado já serve: com ele calculamos o ticket médio e quanto é preciso vender para empatar.' });
+  nova('px_vendas', { id: 'px_dias', etapa: 2, curto: 'Dias de funcionamento', unidade: 'dias', opcional: true, max: 31,
+    titulo: 'Quantos dias por mês o negócio funciona, em média?', ajuda: 'Para transformar a meta do mês em uma meta por dia.' });
+  nova('folha_v', { id: 'impostos_v', etapa: 2, curto: 'Impostos por mês', opcional: true,
+    titulo: 'Quanto o negócio paga de impostos por mês, em média?', ajuda: 'DAS do Simples, DAS-MEI, ISS e outros tributos. Pode deixar em branco se não souber.' });
+  nova('impostos_v', { id: 'retirada_v', etapa: 2, curto: 'Retirada do proprietário', opcional: true,
+    titulo: 'Quanto você retira por mês, em média, para você?', ajuda: 'Pró-labore e retiradas. Mesmo que seja pouco ou nada, informe: o resultado do negócio precisa sustentar essa retirada.' });
+
+  /* --- etapa 3: detalhes por segmento --- */
+  nova('ou_preco', { id: 'px_item_preco', etapa: 3, curto: 'Preço do item mais vendido', se: h(['alimentacao']),
+    titulo: 'Pense no item que mais vende: por quanto você o vende?', ajuda: 'Preço de venda, em reais.', opcional: true });
+  nova('px_item_preco', { id: 'px_item_custo', etapa: 3, curto: 'Custo do item mais vendido', se: h(['alimentacao']),
+    titulo: 'E quanto custa produzir esse item?', ajuda: 'Ingredientes e embalagem de uma unidade, em reais. Se tiver ficha técnica, use o custo dela.', opcional: true });
+  nova('px_item_custo', { id: 'px_horas_agenda', etapa: 3, curto: 'Horas disponíveis na agenda', unidade: 'h', max: 744, se: h(['saude', 'estetica']),
+    titulo: 'Quantas horas de atendimento a sua agenda comporta por mês?', ajuda: 'Considere os dias e horários em que você atende. Ex.: 6 horas por dia × 20 dias = 120 horas.', opcional: true });
+  nova('px_horas_agenda', { id: 'px_horas_atend', etapa: 3, curto: 'Horas atendidas', unidade: 'h', max: 744, se: h(['saude', 'estetica']),
+    titulo: 'E quantas horas foram efetivamente atendidas, em média?', ajuda: 'Só os horários realmente ocupados por atendimento.', opcional: true });
+  nova('px_horas_atend', { id: 'px_faltas', etapa: 3, curto: 'Faltas e cancelamentos', unidade: '%', max: 100, se: h(['saude', 'estetica']),
+    titulo: 'Que percentual dos horários marcados costuma faltar ou cancelar sem reposição?', ajuda: 'Uma estimativa: de cada 100 horários marcados, quantos viram falta?', opcional: true });
+  nova('px_faltas', { id: 'px_estoque_v', etapa: 3, curto: 'Valor do estoque', se: h(['comercio']),
+    titulo: 'Qual é, hoje, o valor do estoque a preço de custo?', ajuda: 'Quanto o que está parado na prateleira custou para você comprar.', opcional: true });
+  nova('px_estoque_v', { id: 'px_horas_vend', etapa: 3, curto: 'Horas vendidas por mês', unidade: 'h', max: 744, se: h(['servicos']),
+    titulo: 'Quantas horas por mês são efetivamente vendidas (cobradas dos clientes)?', ajuda: 'Desconte reuniões internas, administrativo e prospecção.', opcional: true });
+  nova('px_horas_vend', { id: 'px_valor_hora', etapa: 3, curto: 'Valor cobrado por hora', se: h(['servicos']),
+    titulo: 'Qual é o valor médio que você cobra por hora de trabalho?', ajuda: 'Se cobra por projeto, divida o valor do projeto pelas horas gastas.', opcional: true });
+  nova('px_valor_hora', { id: 'px_receber_v', etapa: 3, curto: 'Valores a receber em aberto', se: h(['servicos']),
+    titulo: 'Quanto os clientes devem a você hoje (valores a receber em aberto)?', ajuda: 'Somando tudo que já foi entregue ou faturado e ainda não foi pago.', opcional: true });
+
+  /* --- etapa 5: aprofundamento com valores --- */
+  par('dv_app_pct', 'dv_app_pct_v', { unidade: '%', max: 100, ajuda: 'De cada 100 reais vendidos, quantos vêm desse canal?', textoFaixa: 'Não sei o percentual exato: escolher uma faixa' });
+  par('dv_app_taxa', 'dv_app_taxa_v', { unidade: '%', max: 100, ajuda: 'Some comissão, taxa de entrega e de pagamento, se houver.', textoFaixa: 'Não sei a taxa exata: escolher uma faixa' });
+  par('dv_parcela', 'dv_parcela_v', { titulo: 'Quanto você paga por mês em parcelas de dívidas?', ajuda: 'Some todas as parcelas de empréstimos, financiamentos e renegociações.' });
+  par('dv_saldo', 'dv_saldo_v', { titulo: 'E o saldo devedor total, aproximadamente?', ajuda: 'Quanto ainda falta pagar, somando todas as dívidas.' });
+  nova('dv_saldo_v', { id: 'px_prazo_receb', etapa: 5, curto: 'Prazo médio de recebimento', unidade: 'dias', max: 365, opcional: true,
+    titulo: 'Em média, em quantos dias o dinheiro das vendas entra na conta?', ajuda: '0 se recebe na hora (Pix, dinheiro, débito). Crédito no cartão costuma levar cerca de 30 dias; vendas a prazo, o que foi combinado.' });
+  nova('px_prazo_receb', { id: 'px_prazo_pagto', etapa: 5, curto: 'Prazo médio de pagamento', unidade: 'dias', max: 365, opcional: true,
+    titulo: 'Em média, em quantos dias você paga os fornecedores?', ajuda: '0 se paga à vista. Prazo maior que o de recebimento alivia o caixa.' });
+
   D._mapa = {};
   D.PERGUNTAS.forEach(function (q) { D._mapa[q.id] = q; });
   D.pergunta = function (id) { return D._mapa[id] || null; };

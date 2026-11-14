@@ -7,7 +7,7 @@ cmAbrir([
   'titulo' => 'CM Diagnóstico',
   'descricao' => 'Diagnóstico financeiro gratuito para pequenos negócios: análise de saúde financeira, maturidade de gestão e eficiência operacional, adaptada ao seu segmento, em cerca de 6 minutos.',
   'caminho' => '/diagnostico/',
-  'css' => ['/assets/css/diagnostico.css?v=2'],
+  'css' => ['/assets/css/diagnostico.css?v=4'],
   'corpo' => 'pg-dg dg-root',
   'ativo' => '', // nenhuma opção do menu fica destacada
 ]);
@@ -18,10 +18,11 @@ cmAbrir([
 <?php
 cmFechar([
   'js' => [
-    '/assets/js/diagnostico-dados.js?v=1',
-    '/assets/js/diagnostico-recs.js?v=1',
-    '/assets/js/diagnostico-motor.js?v=1',
-    '/assets/js/diagnostico-relatorio.js?v=1',
-    '/assets/js/diagnostico.js?v=1',
+    '/assets/js/diagnostico-dados.js?v=2',
+    '/assets/js/diagnostico-recs.js?v=2',
+    '/assets/js/diagnostico-motor.js?v=2',
+    '/assets/js/diagnostico-relatorio.js?v=3',
+    '/assets/js/diagnostico-importar.js?v=2',
+    '/assets/js/diagnostico.js?v=3',
   ],
 ]);

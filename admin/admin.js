@@ -949,7 +949,8 @@
     if (d.versao >= 2 && d.resultado && D) {
       const seg = (D.SEGMENTOS.find((s) => s.id === d.segmento) || {}).rotulo || d.segmento || '—';
       const r = D.resumo(d.resultado);
-      return `${escapeHtml(seg)} · Saúde: ${escapeHtml(r.saude)} · Gestão: ${escapeHtml(r.maturidade)} · Eficiência: ${escapeHtml(r.eficiencia)}`;
+      const modo = d.resultado.modo === 'preciso' ? ` · Preciso${d.resultado.importacao ? ' (com extrato)' : ''}` : '';
+      return `${escapeHtml(seg)} · Saúde: ${escapeHtml(r.saude)} · Gestão: ${escapeHtml(r.maturidade)} · Eficiência: ${escapeHtml(r.eficiencia)}${modo}`;
     }
     return `${escapeHtml(d.ramo || '—')} · ${escapeHtml(d.dificuldade || '—')}`;
   }

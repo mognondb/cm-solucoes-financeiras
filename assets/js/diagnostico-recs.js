@@ -60,9 +60,9 @@
       } },
 
     { id: 'fluxo_caixa', dim: 'D3', peso: 1.25,
-      quando: function (c) { return maior(sev(c, 'org_contas', 1.5), c.p('reserva') !== null && c.p('reserva') <= 0.5 ? 0.8 : 0); },
+      quando: function (c) { var pr = c.ind.ptsReserva; return maior(sev(c, 'org_contas', 1.5), pr !== null && pr <= 0.5 ? 0.8 : 0); },
       texto: function (c) {
-        var pouca = c.p('reserva') !== null && c.p('reserva') <= 0.5;
+        var pouca = c.ind.ptsReserva !== null && c.ind.ptsReserva <= 0.5;
         return {
           titulo: 'Estruturar uma rotina de fluxo de caixa',
           porque: 'Sem enxergar os vencimentos dos próximos dias' + (pouca ? ' e com pouca reserva' : '') + ', é fácil ser surpreendido por contas e atrasar pagamentos.',
@@ -124,7 +124,7 @@
       } },
 
     { id: 'reserva', dim: 'D3', peso: 1.2,
-      quando: function (c) { return c.p('reserva') !== null && c.p('reserva') <= 0.5 ? (3 - c.p('reserva')) / 3 : 0; },
+      quando: function (c) { var pr = c.ind.ptsReserva; return pr !== null && pr <= 0.5 ? (3 - pr) / 3 : 0; },
       texto: function (c) {
         var i = c.ind;
         return {
@@ -496,6 +496,119 @@
           acoes: ['Separe, todo mês, o que varia com a venda do que é fixo.',
             'Calcule quanto sobra de cada venda depois dos custos diretos.',
             'Acompanhe essa margem mês a mês.'],
+        };
+      } },
+
+    /* ---------------------------------------------------------------- modo preciso (precisam de números exatos) */
+    { id: 'meta_diaria', dim: 'D3', peso: 1.15,
+      quando: function (c) {
+        var i = c.ind;
+        if (i.peVendas === null || !i.vendasMes) return 0;
+        var uso = i.peVendas / i.vendasMes; // quanto do volume atual é só para empatar
+        return uso >= 1 ? 1 : uso >= 0.8 ? 0.7 : 0;
+      },
+      texto: function (c) {
+        var i = c.ind, f = c.fmt;
+        var dia = i.diasFunc ? ' (cerca de ' + (Math.round(i.peVendas / i.diasFunc * 10) / 10 + '').replace('.', ',') + ' por dia de funcionamento)' : '';
+        return {
+          titulo: 'Transformar o ponto de equilíbrio em uma meta diária',
+          porque: 'Com ticket médio de ' + f.inteiro(i.ticket) + ', o negócio precisa de cerca de ' + Math.round(i.peVendas).toLocaleString('pt-BR') + ' vendas por mês só para empatar' + dia
+            + '. Hoje faz cerca de ' + Math.round(i.vendasMes).toLocaleString('pt-BR') + ': sobra pouca ou nenhuma folga.',
+          acoes: ['Coloque a meta diária (' + (i.peDia !== null ? f.inteiro(i.peDia) : 'o ponto de equilíbrio dividido pelos dias de funcionamento') + ') onde a equipe e você enxerguem todo dia.',
+            'Compare o vendido com a meta ao fechar o dia, não só no fim do mês.',
+            'Para ganhar folga, aja no ticket médio (combos, adicionais, venda casada) e na margem, antes de buscar mais volume.'],
+        };
+      } },
+
+    { id: 'retirada_excede', dim: 'D4', peso: 1.35,
+      quando: function (c) { var i = c.ind; return (i.resultadoApos !== null && i.fat) ? (i.resultadoApos < 0 ? 1 : (i.resultadoApos / i.fat < 0.03 ? 0.6 : 0)) : 0; },
+      texto: function (c) {
+        var i = c.ind, f = c.fmt;
+        return {
+          titulo: i.resultadoApos < 0 ? 'Sua retirada é maior do que o resultado do negócio' : 'Depois da sua retirada, quase nada sobra',
+          porque: 'O resultado estimado é de ' + f.inteiro(i.resultado) + ' por mês e a sua retirada é de ' + f.inteiro(i.retirada) + '.'
+            + (i.resultadoApos < 0 ? ' A diferença (' + f.inteiro(-i.resultadoApos) + ' por mês) sai do caixa ou vira dívida.' : ' Sobram ' + f.inteiro(i.resultadoApos) + ': sem folga para imprevistos ou investimento.'),
+          acoes: ['Decida conscientemente: reduzir a retirada por um tempo, aumentar a margem ou cortar despesas fixas. Deixar como está consome o caixa.',
+            'Defina a retirada como uma porcentagem do resultado do mês anterior, para ela se ajustar sozinha.',
+            'Revise a rentabilidade dos itens e o preço antes de mexer na retirada: costuma ser onde mais rende.'],
+        };
+      } },
+
+    { id: 'item_lider', dim: 'D2', peso: 1.1, seg: ['alimentacao'],
+      quando: function (c) { var i = c.ind; return (i.ptsItem !== null && i.ptsItem <= 1.5) ? (3 - i.ptsItem) / 3 : 0; },
+      texto: function (c) {
+        var i = c.ind, f = c.fmt;
+        return {
+          titulo: 'Rever o preço ou a receita do item que mais vende',
+          porque: 'O item mais vendido deixa ' + f.pct(i.itemMargem) + ' de margem (vende por ' + f.inteiro(i.itemP) + ' e custa ' + f.inteiro(i.itemC) + '), abaixo da referência de ' + f.pct(i.limMargem[1]) + '. Como ele é o que mais sai, o efeito no resultado é grande.',
+          acoes: ['Teste um reajuste pequeno de preço neste item e acompanhe por duas semanas se a venda se mantém.',
+            'Reveja a receita: porção, ingrediente mais caro, embalagem.',
+            'Cotize os 3 ingredientes mais caros dele com outro fornecedor.'],
+        };
+      } },
+
+    { id: 'ocupacao', dim: 'D2', peso: 1.2, seg: ['saude', 'estetica'],
+      quando: function (c) { var i = c.ind; return (i.ptsOcup !== null && i.ptsOcup <= 1.5) ? (3 - i.ptsOcup) / 3 : 0; },
+      texto: function (c) {
+        var i = c.ind, f = c.fmt;
+        return {
+          titulo: 'Aumentar a ocupação da agenda',
+          porque: 'A agenda está ' + f.pct(i.ocupacao) + ' ocupada.' + (i.perdaFaltas !== null ? ' Só as faltas e cancelamentos custam cerca de ' + f.inteiro(i.perdaFaltas) + ' por mês.' : '') + ' Horário vazio tem custo fixo e não gera receita.',
+          acoes: ['Mapeie os dias e horários que mais ficam vazios e concentre ações neles (retorno de clientes antigos, horários promocionais, lista de espera).',
+            'Confirme os atendimentos com antecedência e tenha regra clara para falta e cancelamento.',
+            'Acompanhe a ocupação toda semana: é o seu principal número de capacidade.'],
+        };
+      } },
+
+    { id: 'estoque_dias', dim: 'D1', peso: 1.1, seg: ['comercio'],
+      quando: function (c) { var i = c.ind; return (i.ptsEstoque !== null && i.ptsEstoque <= 1.5) ? (3 - i.ptsEstoque) / 3 : 0; },
+      texto: function (c) {
+        var i = c.ind;
+        return {
+          titulo: 'Reduzir o dinheiro parado em estoque',
+          porque: 'O estoque equivale a cerca de ' + Math.round(i.diasEstoque) + ' dias de compras. Esse dinheiro poderia estar no caixa, pagando contas ou virando mercadoria que gira mais rápido.',
+          acoes: ['Liste o que está parado há mais de 90 dias e faça promoções ou combos para girar.',
+            'Reduza a compra dos itens de baixo giro e reponha em lotes menores.',
+            'Defina uma meta de dias de estoque e acompanhe todo mês.'],
+        };
+      } },
+
+    { id: 'ciclo_caixa', dim: 'D3', peso: 1,
+      quando: function (c) { var i = c.ind; return (i.ptsCiclo !== null && i.ptsCiclo <= 1.5) ? (3 - i.ptsCiclo) / 3 : 0; },
+      texto: function (c) {
+        var i = c.ind, f = c.fmt;
+        return {
+          titulo: 'Encurtar o intervalo entre pagar e receber',
+          porque: 'O dinheiro das vendas entra em cerca de ' + (i.ciclo + ' dias a mais do que o prazo que você tem para pagar fornecedores') + (i.capitalGiro !== null ? ': o caixa precisa financiar cerca de ' + f.inteiro(i.capitalGiro) + ' nesse intervalo' : '') + '.',
+          acoes: ['Negocie prazo maior com os principais fornecedores (ou pague quando vencer, não antes).',
+            'Ofereça um pequeno desconto para pagamento à vista ou via Pix.',
+            'Avalie antecipar recebíveis só quando o custo for menor que o de ficar sem caixa.'],
+        };
+      } },
+
+    { id: 'valor_hora', dim: 'D2', peso: 1.4, seg: ['servicos'],
+      quando: function (c) { var i = c.ind; return (i.ptsHora !== null && i.ptsHora <= 1.5) ? (3 - i.ptsHora) / 3 : 0; },
+      texto: function (c) {
+        var i = c.ind, f = c.fmt;
+        return {
+          titulo: 'Reajustar o valor da hora (ou vender mais horas)',
+          porque: 'Cada hora custa cerca de ' + f.inteiro(i.custoHora) + ' (despesas, custos, impostos e a sua retirada) e você cobra ' + f.inteiro(i.valorHora) + ': margem de ' + f.pct(i.margemHora) + '.',
+          acoes: ['Reajuste o valor das novas propostas até a hora cobrir o custo com margem.',
+            'Para clientes antigos, combine reajuste anual por índice.',
+            'Aumente as horas vendidas: reduza o tempo gasto com administrativo e propostas que não fecham.'],
+        };
+      } },
+
+    { id: 'receber_aberto', dim: 'D3', peso: 0.9, seg: ['servicos'],
+      quando: function (c) { var i = c.ind; return (i.diasReceber !== null && i.diasReceber >= 45) ? (i.diasReceber >= 60 ? 0.8 : 0.6) : 0; },
+      texto: function (c) {
+        var i = c.ind, f = c.fmt;
+        return {
+          titulo: 'Cobrar o que já foi entregue',
+          porque: 'Há ' + f.inteiro(i.receberAberto) + ' a receber, o equivalente a cerca de ' + Math.round(i.diasReceber) + ' dias de faturamento parados na mão dos clientes.',
+          acoes: ['Liste quem deve, quanto e desde quando, e comece pelos maiores e mais antigos.',
+            'Defina rotina de cobrança (lembrete antes do vencimento, contato no dia, nova cobrança em poucos dias).',
+            'Nas próximas vendas, peça entrada ou parcele em etapas de entrega.'],
         };
       } },
 
