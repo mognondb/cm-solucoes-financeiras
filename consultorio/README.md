@@ -189,6 +189,8 @@ Um lançamento (`psi_lancamentos`) é uma conta a receber ou a pagar; `psi_baixa
 - O servidor (`rotas_importar.php`) entende formatos de planilha (datas dd/mm/aaaa ou serial do Excel, "R$ 1.234,56", CPF/CNPJ que perdeu o zero à esquerda, sim/não, sinônimos de opções) e **reusa as validações do
   cadastro manual** (`psi_tentar` captura o erro de cada linha em vez de encerrar a requisição). Cada linha termina como novo, atualizar, ignorado (já cadastrado, repetido no arquivo ou vazio) ou problema (com a mensagem).
   Duplicados: por CPF/CNPJ ou, se faltar, pelo nome (duas pessoas com o mesmo nome e CPFs diferentes são pessoas diferentes). Modo "atualizar" só altera os campos preenchidos na planilha. Limite de 2.000 linhas por vez.
+  Regras que evitam "repetido" falso: documento sem nenhum dígito ("-", "n/a", "não tem") vale como em branco; CPF/CNPJ mal formado é erro **daquela linha** (com o valor da planilha) e a linha com erro nunca "ocupa" o nome ou o CPF das seguintes;
+  o mesmo CPF/CNPJ com **nome diferente** (na planilha ou já cadastrado) é erro explicado, não "ignorado" em silêncio (e nem o modo "atualizar" mexe no cadastro de outra pessoa); só o mesmo nome (+ mesmo CPF) é "repetido", e a mensagem diz o motivo e a linha.
   Categoria padrão desconhecida num fornecedor vira aviso (entra sem categoria). A importação grava na trilha de auditoria.
 
 ### Sugestão de categoria no extrato (G2)

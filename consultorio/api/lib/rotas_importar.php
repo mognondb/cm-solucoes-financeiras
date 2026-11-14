@@ -130,7 +130,7 @@ function psi_imp_documento($v): ?string {
   $d = preg_replace('/\D+/', '', $s); $n = strlen($d);
   if ($n >= 9 && $n < 11) $d = str_pad($d, 11, '0', STR_PAD_LEFT);
   elseif ($n >= 12 && $n < 14) $d = str_pad($d, 14, '0', STR_PAD_LEFT);
-  return $d === '' ? $s : $d;
+  return $d === '' ? null : $d;   // "-", "n/a", "não tem": é o mesmo que deixar em branco (senão todas essas linhas pareceriam ter o mesmo CPF)
 }
 
 const PSI_IMP_TIPO_PAC = ['individual' => ['adulto', 'adulta'], 'casal' => ['casais'], 'familia' => ['familiar', 'familias'], 'infantil' => ['crianca', 'infanto juvenil', 'infantojuvenil', 'adolescente'], 'grupo' => ['em grupo']];
@@ -205,6 +205,12 @@ function psi_registrar_rotas_importar(PsiRoteador $r): void {
 function psi_imp_item(int $linha, ?string $rotulo, string $situacao, ?string $mensagem = null, array $extra = []): array {
   return array_merge(['linha' => $linha, 'rotulo' => $rotulo, 'situacao' => $situacao, 'mensagem' => $mensagem, 'avisos' => []], $extra);
 }
+/** Parece a mesma pessoa/empresa? Mesmo primeiro nome e, havendo sobrenome, o mesmo último ("Maria da Silva" = "Maria Silva"). */
+function psi_imp_mesmo_nome(string $a, string $b): bool {
+  $tira = fn(string $x) => array_values(array_filter(explode(' ', psi_imp_chave($x)), fn($t) => $t !== '' && !in_array($t, ['da', 'de', 'do', 'dos', 'das', 'e'], true)));
+  $ta = $tira($a); $tb = $tira($b); if (!$ta || !$tb) return psi_imp_chave($a) === psi_imp_chave($b);
+  return $ta[0] === $tb[0] && (count($ta) === 1 || count($tb) === 1 || end($ta) === end($tb));
+}
 function psi_imp_numero_linha($r, int $i): int { return is_array($r) && isset($r['_linha']) && is_numeric($r['_linha']) ? (int)$r['_linha'] : $i + 1; }
 
 function psi_imp_planejar_pacientes(array $linhas, bool $atualizar): array {
@@ -220,19 +226,36 @@ function psi_imp_planejar_pacientes(array $linhas, bool $atualizar): array {
     if ($erros) { $plano[] = psi_imp_item($n, $rotulo, 'erro', implode(' ', $erros)); continue; }
     if (!$dados) { $plano[] = psi_imp_item($n, null, 'ignorado', 'Linha vazia.'); continue; }
     if (!isset($dados['nome'])) { $plano[] = psi_imp_item($n, null, 'erro', 'Informe o nome do paciente.'); continue; }
-    $cpf = $dados['cpf'] ?? null; $chave = psi_imp_chave($dados['nome']);
-    // já existe? mesmo CPF; ou mesmo nome quando um dos dois não tem CPF (duas pessoas com o mesmo nome e CPFs diferentes são pessoas diferentes)
-    $achou = $cpf !== null && isset($porCpf[$cpf]) ? $porCpf[$cpf] : null;
+    $cpf = $dados['cpf'] ?? null; $nome = $dados['nome']; $chave = psi_imp_chave($nome);
+    // CPF mal formado é problema desta linha (e ela não entra na comparação com as outras: não pode "repetir" ninguém)
+    foreach (['cpf' => 'CPF', 'respCpf' => 'CPF do responsável'] as $k => $rot) {
+      if (!isset($dados[$k])) continue; [, $er] = psi_tentar(fn() => psi_cpf($dados[$k]));
+      if ($er !== null) { $plano[] = psi_imp_item($n, $rotulo, 'erro', $rot . ' inválido (na planilha: "' . (psi_imp_str($r[$k] ?? null) ?? '') . '"). Corrija ou deixe em branco.'); continue 2; }
+    }
+    $aceitar = function () use (&$vistoNome, &$vistoCpf, $chave, $cpf, $n, $nome) { $vistoNome[$chave][] = [$n, $cpf, $nome]; if ($cpf !== null) $vistoCpf[$cpf] = [$n, $nome]; };
+    // repetido na própria planilha: o mesmo CPF com o mesmo nome, ou o mesmo nome (sem CPFs diferentes). Mesmo CPF com NOME DIFERENTE é erro de digitação em uma das duas.
+    $repetido = null;
+    if ($cpf !== null && isset($vistoCpf[$cpf])) {
+      [$ln, $nomeVisto] = $vistoCpf[$cpf];
+      if (!psi_imp_mesmo_nome($nome, $nomeVisto)) { $plano[] = psi_imp_item($n, $rotulo, 'erro', 'O mesmo CPF já aparece na linha ' . $ln . ' para «' . $nomeVisto . '». Duas pessoas não têm o mesmo CPF: confira as duas linhas.'); continue; }
+      $repetido = "mesmo CPF e nome da linha $ln";
+    }
+    if ($repetido === null && isset($vistoNome[$chave])) { foreach ($vistoNome[$chave] as [$ln, $cpfVisto]) { if ($cpf === null || $cpfVisto === null || $cpf === $cpfVisto) { $repetido = "mesmo nome da linha $ln"; break; } } }
+    if ($repetido !== null) { $plano[] = psi_imp_item($n, $rotulo, 'ignorado', "Repetido no arquivo ($repetido)."); continue; }
+    // já cadastrado: mesmo CPF (com o mesmo nome) ou mesmo nome quando um dos dois não tem CPF (CPFs diferentes são pessoas diferentes)
+    $achou = null; $porQue = 'nome';
+    if ($cpf !== null && isset($porCpf[$cpf])) {
+      $ex = $existentes[$porCpf[$cpf]] ?? null;
+      if ($ex !== null && !psi_imp_mesmo_nome($nome, (string)$ex['nome'])) { $plano[] = psi_imp_item($n, $rotulo, 'erro', 'Este CPF já está cadastrado para «' . $ex['nome'] . '». Confira o CPF.'); continue; }
+      $achou = $porCpf[$cpf]; $porQue = 'CPF';
+    }
     if ($achou === null) foreach ($porNome[$chave] ?? [] as $id) { $ex = $existentes[$id] ?? null; if ($ex === null || $cpf === null || $ex['cpf'] === null) { $achou = $id; break; } }
-    $repetido = ($cpf !== null && isset($vistoCpf[$cpf])) ? $vistoCpf[$cpf] : null;
-    if ($repetido === null && isset($vistoNome[$chave])) { foreach ($vistoNome[$chave] as [$ln, $cpfVisto]) { if ($cpf === null || $cpfVisto === null || $cpf === $cpfVisto) { $repetido = $ln; break; } } }
-    if ($repetido !== null) { $plano[] = psi_imp_item($n, $rotulo, 'ignorado', "Repetido no arquivo (já aparece na linha $repetido)."); continue; }
-    $vistoNome[$chave][] = [$n, $cpf]; if ($cpf !== null) $vistoCpf[$cpf] = $n;
     if ($achou !== null) {
-      if (!$atualizar) { $plano[] = psi_imp_item($n, $rotulo, 'ignorado', 'Já cadastrado (mesmo ' . ($cpf !== null && isset($porCpf[$cpf]) ? 'CPF' : 'nome') . ').'); continue; }
+      if (!$atualizar) { $aceitar(); $plano[] = psi_imp_item($n, $rotulo, 'ignorado', 'Já cadastrado (mesmo ' . $porQue . ').'); continue; }
       $ex = $existentes[$achou]; $mesclado = array_merge(psi_paciente_json($ex), $dados); unset($mesclado['id']);
       [$val, $er] = psi_tentar(fn() => psi_ler_paciente($mesclado));
       if ($er !== null) { $plano[] = psi_imp_item($n, $rotulo, 'erro', $er); continue; }
+      $aceitar();
       $cols = []; foreach (array_keys($dados) as $k) { if ($k === 'nome') continue; $col = PSI_IMP_COLUNAS_PAC[$k] ?? null; if ($col) $cols[$col] = $val[$col]; }
       if (isset($dados['modalidade'])) foreach (['valor_mensal', 'dia_vencimento', 'convenio_nome', 'convenio_prazo_dias'] as $col) $cols[$col] = $val[$col];
       if (!$cols) { $plano[] = psi_imp_item($n, $rotulo, 'ignorado', 'Já cadastrado e sem dados novos para atualizar.'); continue; }
@@ -241,10 +264,9 @@ function psi_imp_planejar_pacientes(array $linhas, bool $atualizar): array {
     }
     [$val, $er] = psi_tentar(fn() => psi_ler_paciente($dados));
     if ($er !== null) { $plano[] = psi_imp_item($n, $rotulo, 'erro', $er); continue; }
+    $aceitar();
     if ($val['desde'] === null) $val['desde'] = psi_hoje();
     $plano[] = psi_imp_item($n, $rotulo, 'novo', null, ['valores' => $val]);
-    // os próximos da planilha comparam também com este
-    if ($cpf !== null) $porCpf[$cpf] = -1; $porNome[$chave][] = -1;
   }
   return $plano;
 }
@@ -264,18 +286,24 @@ function psi_imp_planejar_fornecedores(array $linhas, bool $atualizar): array {
     if ($erros) { $plano[] = psi_imp_item($n, $rotulo, 'erro', implode(' ', $erros)); continue; }
     if (!$dados) { $plano[] = psi_imp_item($n, null, 'ignorado', 'Linha vazia.'); continue; }
     if (!isset($dados['nome'])) { $plano[] = psi_imp_item($n, null, 'erro', 'Informe o nome do fornecedor.'); continue; }
-    $doc = $dados['documento'] ?? null; $chave = psi_imp_chave($dados['nome']);
-    $rep = ($doc !== null && isset($vistoDoc[$doc])) ? $vistoDoc[$doc] : ($vistoNome[$chave] ?? null);
-    if ($rep !== null) { $plano[] = psi_imp_item($n, $rotulo, 'ignorado', "Repetido no arquivo (já aparece na linha $rep).", ['avisos' => $avisos]); continue; }
-    $vistoNome[$chave] = $n; if ($doc !== null) $vistoDoc[$doc] = $n;
+    $doc = $dados['documento'] ?? null; $nome = $dados['nome']; $chave = psi_imp_chave($nome);
+    if ($doc !== null) { [, $er] = psi_tentar(fn() => psi_cpf($doc)); if ($er !== null) { $plano[] = psi_imp_item($n, $rotulo, 'erro', 'CPF/CNPJ inválido (na planilha: "' . (psi_imp_str($r['documento'] ?? null) ?? '') . '"). Corrija ou deixe em branco.'); continue; } }
+    $aceitar = function () use (&$vistoNome, &$vistoDoc, $chave, $doc, $n, $nome) { $vistoNome[$chave] = [$n, $nome]; if ($doc !== null) $vistoDoc[$doc] = [$n, $nome]; };
+    if ($doc !== null && isset($vistoDoc[$doc])) {
+      [$ln, $nomeVisto] = $vistoDoc[$doc];
+      if (!psi_imp_mesmo_nome($nome, $nomeVisto)) { $plano[] = psi_imp_item($n, $rotulo, 'erro', 'O mesmo CPF/CNPJ já aparece na linha ' . $ln . ' para «' . $nomeVisto . '». Confira as duas linhas.', ['avisos' => $avisos]); continue; }
+      $plano[] = psi_imp_item($n, $rotulo, 'ignorado', "Repetido no arquivo (mesmo CPF/CNPJ e nome da linha $ln).", ['avisos' => $avisos]); continue;
+    }
+    if (isset($vistoNome[$chave])) { $plano[] = psi_imp_item($n, $rotulo, 'ignorado', 'Repetido no arquivo (mesmo nome da linha ' . $vistoNome[$chave][0] . ').', ['avisos' => $avisos]); continue; }
     $achou = ($doc !== null && isset($porDoc[$doc])) ? $porDoc[$doc] : ($porNome[$chave] ?? null);
     if ($achou !== null) {
-      if (!$atualizar) { $plano[] = psi_imp_item($n, $rotulo, 'ignorado', 'Já cadastrado (mesmo ' . ($doc !== null && isset($porDoc[$doc]) ? 'CPF/CNPJ' : 'nome') . ').', ['avisos' => $avisos]); continue; }
+      if (!$atualizar) { $aceitar(); $plano[] = psi_imp_item($n, $rotulo, 'ignorado', 'Já cadastrado (mesmo ' . ($doc !== null && isset($porDoc[$doc]) ? 'CPF/CNPJ' : 'nome') . ').', ['avisos' => $avisos]); continue; }
       $ex = $existentes[$achou] ?? null; $mesclado = ['nome' => $ex['nome'] ?? $dados['nome'], 'documento' => $ex['documento'] ?? null, 'email' => $ex['email'] ?? null, 'telefone' => $ex['telefone'] ?? null,
         'categoriaId' => $ex['categoria_id'] ?? null, 'obs' => $ex['obs'] ?? null, 'ativo' => $ex['ativo'] ?? 1];
       foreach (['documento', 'email', 'telefone', 'categoriaId', 'obs'] as $k) if (isset($dados[$k])) $mesclado[$k] = $dados[$k];
       [$val, $er] = psi_tentar(fn() => psi_ler_fornecedor($mesclado));
       if ($er !== null) { $plano[] = psi_imp_item($n, $rotulo, 'erro', $er); continue; }
+      $aceitar();
       $cols = []; foreach (['documento' => 'documento', 'email' => 'email', 'telefone' => 'telefone', 'categoriaId' => 'categoria_id', 'obs' => 'obs'] as $k => $col) if (isset($dados[$k])) $cols[$col] = $val[$col];
       if (!$cols) { $plano[] = psi_imp_item($n, $rotulo, 'ignorado', 'Já cadastrado e sem dados novos para atualizar.', ['avisos' => $avisos]); continue; }
       $plano[] = psi_imp_item($n, $rotulo, 'atualizar', 'Atualiza o fornecedor existente (' . count($cols) . ' campo' . (count($cols) === 1 ? '' : 's') . ').', ['id' => $achou, 'colunas' => $cols, 'avisos' => $avisos]);
@@ -283,8 +311,8 @@ function psi_imp_planejar_fornecedores(array $linhas, bool $atualizar): array {
     }
     [$val, $er] = psi_tentar(fn() => psi_ler_fornecedor($dados));
     if ($er !== null) { $plano[] = psi_imp_item($n, $rotulo, 'erro', $er); continue; }
+    $aceitar();
     $plano[] = psi_imp_item($n, $rotulo, 'novo', null, ['valores' => $val, 'avisos' => $avisos]);
-    $porNome[$chave] = -1; if ($doc !== null) $porDoc[$doc] = -1;
   }
   return $plano;
 }
