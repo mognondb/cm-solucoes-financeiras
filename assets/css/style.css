@@ -484,12 +484,6 @@ img { max-width: 100%; display: block; }
 .plat-fig { margin: 0; min-width: 0; }
 .plat-fig img { width: 100%; height: auto; border-radius: 18px; background: var(--h-bg); box-shadow: 0 34px 64px -26px rgba(0, 0, 0, .6); }
 .plat-fig figcaption { font-size: 0.8rem; color: rgba(243, 239, 230, .62); margin-top: 14px; text-align: center; }
-.plat-prox { margin-top: 76px; padding-top: 40px; border-top: 1px solid rgba(255, 255, 255, .15); }
-.plat-prox h3 { color: #fff; font-size: 1.2rem; margin-bottom: 20px; }
-.plat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
-.plat-card { background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 255, 255, .17); border-radius: 20px; padding: 30px 32px; display: flex; flex-direction: column; align-items: flex-start; }
-.plat-card h4 { color: #fff; font-size: 1.15rem; margin-bottom: 8px; }
-.plat-card p:not(.plat-selos) { color: rgba(243, 239, 230, .76); font-size: 0.94rem; margin-bottom: 20px; flex: 1; }
 
 /* Contato */
 .contato-grid { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 64px; align-items: start; }
@@ -650,7 +644,6 @@ img { max-width: 100%; display: block; }
   .form-relatorio { padding: 28px 22px; }
   .section-plataformas { padding: 72px 0 80px; }
   .section-plataformas::before { display: none; }
-  .plat-card { padding: 26px 24px; }
   .plat-acoes .btn { width: 100%; text-align: center; }
   .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px 20px; }
   .footer-brand { grid-column: 1 / -1; }

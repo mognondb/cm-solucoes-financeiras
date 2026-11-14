@@ -29,13 +29,11 @@ legacy-jekyll-boilerplate/  Arquivos antigos do scaffold padrão do GitHub Pages
 1. **Hero** — apresentação rápida da CM, com o aviso "Novo · Diagnóstico financeiro gratuito" no alto, o botão principal
    "Fazer o diagnóstico gratuito" e o microtexto (gratuito · cerca de 6 minutos). O menu tem o item destacado
    "Diagnóstico grátis" (primeiro da lista, também nas páginas de conteúdo e do diagnóstico).
-2. **CM Diagnóstico / Plataformas digitais** (`#plataformas`, faixa escura logo depois do topo) — o diagnóstico como
-   protagonista (selos "Disponível agora" e "Gratuito", benefícios, prévia do painel e botões para `/diagnostico/`) e,
-   abaixo, "Mais plataformas a caminho". Para anunciar uma nova (por exemplo uma de gestão por assinatura), copie um
-   bloco `.plat-card` dentro de `.plat-grid` no `index.html`: troque o selo ("Em breve"/"Disponível"), o nome, o resumo e
-   o link do botão. A grade se reorganiza sozinha. Se o diagnóstico deixar de ser gratuito, altere o selo "Gratuito",
-   o aviso do topo, o microtexto e o item do menu. A imagem `assets/img/diagnostico-painel.png` é uma captura do
-   relatório de exemplo (dados fictícios); ao mudar o visual do painel, gere outra a partir de `/diagnostico/?exemplo=preciso`.
+2. **CM Diagnóstico** (`#plataformas`, faixa escura logo depois do topo) — o diagnóstico como protagonista (selos
+   "Plataforma digital" e "Gratuito", benefícios, prévia do painel e botões para `/diagnostico/`). Se o diagnóstico
+   deixar de ser gratuito, altere o selo "Gratuito", o aviso do topo, o microtexto e o item do menu. A imagem
+   `assets/img/diagnostico-painel.png` é uma captura do relatório de exemplo (dados fictícios); ao mudar o visual do
+   painel, gere outra a partir de `/diagnostico/?exemplo=preciso`.
 3. **Sobre** — quem é a CM e como ela trabalha.
 4. **Conteúdos** — o conteúdo mais recente (some enquanto nada foi publicado); a lista completa fica em `/conteudos/`.
 5. **Painel** — dashboard interativo de demonstração.
