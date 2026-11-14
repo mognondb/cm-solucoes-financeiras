@@ -1,0 +1,24 @@
+/* Ícones de traço (24×24), todos no mesmo estilo. */
+const P = {
+  inicio: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
+  agenda: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  pacientes: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.7-3.6 3.2-5.5 6.5-5.5s5.8 1.9 6.5 5.5"/><path d="M16 4.6a3.4 3.4 0 010 6.3M18.5 14.8c1.7.7 2.7 2.3 3 4.7"/>',
+  receber: '<path d="M12 3v13M7 11l5 5 5-5"/><path d="M4 20h16"/>',
+  pagar: '<path d="M12 21V8M7 13l5-5 5 5"/><path d="M4 4h16"/>',
+  caixa: '<path d="M4 19V5M4 19h16"/><path d="M8 15l3-4 3 2 5-6"/>',
+  contas: '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/>',
+  extrato: '<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4M10 12h6M10 16h6"/>',
+  recibos: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
+  relatorios: '<path d="M5 20V10M12 20V4M19 20v-7"/>',
+  config: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>',
+  mais: '<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>',
+  sair: '<path d="M10 4H5v16h5M15 8l4 4-4 4M19 12H9"/>',
+  mais_: '<path d="M12 5v14M5 12h14"/>',
+  voltar: '<path d="M15 5l-7 7 7 7"/>',
+  prox: '<path d="M9 5l7 7-7 7"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  zap: '<path d="M13 2L5 14h6l-1 8 8-12h-6z"/>',
+  whats: '<path d="M4 20l1.3-4.2A8 8 0 1112 20a8 8 0 01-4-1.1z"/><path d="M9 9c0 3 3 6 6 6l1-2-2-1-1 .8c-.9-.4-1.8-1.3-2.2-2.2l.8-1-1-2z"/>',
+  alerta: '<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17.5v.5"/>',
+};
+export const icone = (nome, tam = 22) => `<svg class="ico" width="${tam}" height="${tam}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[nome] || ''}</svg>`;

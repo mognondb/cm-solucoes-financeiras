@@ -1,0 +1,2 @@
+# Bibliotecas internas: só o roteador (../index.php) carrega estes arquivos.
+Require all denied
