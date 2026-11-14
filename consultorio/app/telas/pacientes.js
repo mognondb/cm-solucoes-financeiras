@@ -4,6 +4,7 @@ import { api, qs } from '../api.js';
 import { App, carregarBase, servicoPorId, profissionalPorId, somenteLeitura } from '../estado.js';
 import { cobrarWhatsApp, detalheLancamento, abrirContato, abrirLancamento, CANAL_NOME } from '../financeiro.js';
 import { html, raw, montar, $, $$, abrirModal, confirmar, aviso, campo, campoDinheiro, dadosForm, lerReais, brl, selo, vazio, fmtCPF, fmtTel, dataBR, dataCurta, dataDe, hhmm, diasEntre, linkWhats, preencher, primeiroNome, DIAS, DIAS_CURTOS } from '../ui.js';
+import { venderPacote, abrirPacote, barraPacote, textoSaldo, SELO_PACOTE, pacotesDoPaciente } from '../pacotes.js';
 
 const STATUS = { ativo: 'Ativo', pausado: 'Em pausa', alta: 'Alta', arquivado: 'Arquivado' };
 const TIPOS = [['individual', 'Individual'], ['casal', 'Casal'], ['familia', 'Família'], ['infantil', 'Criança ou adolescente'], ['grupo', 'Grupo']];
@@ -99,7 +100,7 @@ async function ficha(el, id) {
   try { r = await api.get('pacientes/' + id); } catch (e) {
     montar(el, html`<a class="voltar" href="#/pacientes">← Pacientes</a><div class="cartao vazio"><h3>Paciente não encontrado</h3><p>${e.message}</p></div>`); return;
   }
-  const p = r.paciente; const f = r.financeiro; const podeEditar = !somenteLeitura();
+  const p = r.paciente; const f = r.financeiro; const podeEditar = !somenteLeitura(); const pacotes = await pacotesDoPaciente(id);
   const prof = profissionalPorId(p.profissionalId); const servico = servicoPorId(p.servicoId);
   const contato = p.respTelefone && (p.tipo === 'infantil' || p.respNome) ? p.respTelefone : p.telefone;
   const zap = linkWhats(p.telefone || p.respTelefone, '');
@@ -112,7 +113,7 @@ async function ficha(el, id) {
       <p class="suave" style="margin:2px 0 0">${(TIPOS.find(([k]) => k === p.tipo) || [])[1]} ${selo(STATUS[p.status], p.status === 'ativo' ? 'ok' : 'neutro')}${p.social ? html` ${selo('Preço social', 'info')}` : ''}${p.desde ? ` · desde ${dataBR(p.desde)}` : ''}${prof && (App.eu.profissionais || []).length > 1 ? ` · ${prof.nome}` : ''}</p></div></div>
       <div class="pac-acoes">${zap ? html`<a class="btn btn-sec btn-peq" href="${zap}" target="_blank" rel="noopener">WhatsApp</a>` : ''}
         ${podeEditar ? html`<button class="btn btn-sec btn-peq" data-editar>Editar cadastro</button>
-          <a class="btn btn-pri btn-peq" href="#/agenda?paciente=${p.id}">Agendar sessão</a>` : ''}</div></div>
+          <a class="btn btn-pri btn-peq" href="#/agenda?paciente=${p.id}">Agendar sessão</a><button class="btn btn-sec btn-peq" data-vender-pacote>Vender pacote</button>` : ''}</div></div>
     <div class="kpis" style="margin-top:16px">
       <div class="kpi ${f.vencido > 0 ? 'alerta' : ''}"><span>Em atraso</span><strong>${brl(f.vencido)}</strong></div>
       <div class="kpi"><span>A receber (total)</span><strong>${brl(f.aberto)}</strong></div>
@@ -123,6 +124,8 @@ async function ficha(el, id) {
         <div class="cartao"><div class="cartao-t"><h3>Em aberto</h3><span class="pac-acoes" style="margin:0">${r.abertos.length && contato ? html`<button class="btn btn-sec btn-peq" data-cobrar>Cobrar no WhatsApp</button>` : ''}${r.abertos.length && podeEditar ? html`<button class="btn btn-ghost btn-peq" data-contato>Registrar contato</button>` : ''}${podeEditar ? html`<button class="btn btn-ghost btn-peq" data-nova-cobranca>+ Cobrança</button>` : ''}</span></div>
           ${r.abertos.length ? html`<ul class="lista">${r.abertos.map((l) => html`<li class="linha linha-link" data-lanc="${l.id}" tabindex="0" role="button"><div class="corpo"><span class="tit">${l.descricao}</span><span class="sub">Vence em ${dataBR(l.vencimento)}${l.pago ? ` · já pagou ${brl(l.pago)}` : ''}</span></div>
             <span class="dir"><strong class="num">${brl(restante(l))}</strong>${atrasado(l) ? selo(`${diasAtraso(l)} dia${diasAtraso(l) === 1 ? '' : 's'} de atraso`, 'ruim') : ''}</span></li>`)}</ul>` : html`<p class="suave">Nada em aberto. Quando uma sessão for realizada, a cobrança aparece aqui.</p>`}</div>
+        ${pacotes.length || podeEditar ? html`<div class="cartao" data-pacotes><div class="cartao-t"><h3>Pacotes de sessões</h3>${podeEditar ? html`<button class="btn btn-ghost btn-peq" data-vender-pacote>+ Vender pacote</button>` : ''}</div>
+          ${pacotes.length ? html`<ul class="lista">${pacotes.map((k) => html`<li class="linha linha-link pk-linha" data-pacote="${k.id}" tabindex="0" role="button"><div class="corpo"><span class="tit">${k.nome}</span><span class="sub">${textoSaldo(k)}</span>${barraPacote(k)}</div><span class="dir">${selo(...SELO_PACOTE[k.situacao])}${k.aReceber ? selo(`a receber ${brl(k.aReceber)}`, 'aten') : ''}</span></li>`)}</ul>` : html`<p class="suave">Nenhum pacote. Se ${p.nome.split(' ')[0]} pagar várias sessões de uma vez, venda um pacote: as sessões marcadas com ele não geram nova cobrança.</p>`}</div>` : ''}
         ${(r.cobrancas || []).length ? html`<div class="cartao"><div class="cartao-t"><h3>Contatos de cobrança</h3></div><ul class="lista">${r.cobrancas.map((c) => html`<li class="linha"><div class="corpo"><span class="tit">${CANAL_NOME[c.canal] || c.canal} · ${dataBR(String(c.criado_em).slice(0, 10))}</span><span class="sub">${c.obs || ''}${c.promessa_em ? ` · prometeu pagar até ${dataBR(c.promessa_em)}` : ''}</span></div></li>`)}</ul></div>` : ''}
         <div class="cartao"><div class="cartao-t"><h3>Próximas sessões</h3></div>
           ${(r.series || []).length ? html`<p class="peq" style="margin:0 0 8px">${(r.series).map((s) => html`<span class="selo selo-info" style="margin-right:6px">↻ ${s.frequencia === 'quinzenal' ? 'A cada 15 dias, ' : 'Toda '}${DIAS[s.diaSemana]} às ${s.hora}</span>`)}</p>` : ''}
@@ -147,9 +150,11 @@ async function ficha(el, id) {
             <button class="btn btn-ghost btn-peq" data-apagar style="color:var(--perigo)">Apagar cadastro</button></div></div>` : ''}
       </div></div>`);
 
-  el.onkeydown = (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('li[data-lanc]')) { e.preventDefault(); detalheLancamento(Number(e.target.dataset.lanc), () => ficha(el, id)); } };
+  el.onkeydown = (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('li[data-lanc]')) { e.preventDefault(); detalheLancamento(Number(e.target.dataset.lanc), () => ficha(el, id)); } else if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('li[data-pacote]')) { e.preventDefault(); abrirPacote(Number(e.target.dataset.pacote), () => ficha(el, id)); } };
   el.onclick = async (e) => {
     if (e.target.closest('[data-editar]')) return formulario(p, () => ficha(el, id));
+    if (e.target.closest('[data-vender-pacote]')) return venderPacote({ pacienteId: id, depois: () => ficha(el, id) });
+    const pk = e.target.closest('[data-pacote]'); if (pk) return abrirPacote(Number(pk.dataset.pacote), () => ficha(el, id));
     const st = e.target.closest('[data-st]');
     if (st) { try { await api.post(`pacientes/${id}/status`, { status: st.dataset.st }); aviso('Situação atualizada.'); await ficha(el, id); } catch (er) { aviso(er.message, 'erro'); } return; }
     if (e.target.closest('[data-apagar]')) {

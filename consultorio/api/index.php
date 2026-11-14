@@ -22,6 +22,7 @@ require __DIR__ . '/lib/rotas_extrato.php';
 require __DIR__ . '/lib/sugestao.php';
 require __DIR__ . '/lib/rotas_documentos.php';
 require __DIR__ . '/lib/rotas_fornecedores.php';
+require __DIR__ . '/lib/rotas_pacotes.php';
 require __DIR__ . '/lib/rotas_importar.php';
 require __DIR__ . '/lib/rotas_admin.php';
 
@@ -56,6 +57,7 @@ psi_registrar_rotas_contas($roteador);
 psi_registrar_rotas_extrato($roteador);
 psi_registrar_rotas_documentos($roteador);
 psi_registrar_rotas_fornecedores($roteador);
+psi_registrar_rotas_pacotes($roteador);
 psi_registrar_rotas_importar($roteador);
 psi_registrar_rotas_admin($roteador);
 $roteador->despachar($metodo, $caminho);

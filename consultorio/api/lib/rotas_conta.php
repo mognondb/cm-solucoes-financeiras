@@ -51,7 +51,7 @@ function psi_registrar_rotas_conta(PsiRoteador $r): void {
     /* cada tabela com as colunas que fazem sentido para o usuário (sem segredos, sem ids internos de sessão) */
     $tabelas = ['profissionais' => 'psi_profissionais', 'categorias' => 'psi_categorias', 'servicos' => 'psi_servicos', 'contas_financeiras' => 'psi_contas_fin', 'pacientes' => 'psi_pacientes', 'series_de_sessoes' => 'psi_series',
       'agendamentos' => 'psi_agendamentos', 'lancamentos' => 'psi_lancamentos', 'pagamentos' => 'psi_baixas', 'cobrancas_feitas' => 'psi_cobrancas', 'transferencias' => 'psi_transferencias', 'despesas_fixas' => 'psi_recorrentes',
-      'extratos' => 'psi_extratos', 'linhas_de_extrato' => 'psi_extrato_itens', 'recibos' => 'psi_recibos', 'fornecedores' => 'psi_fornecedores'];
+      'extratos' => 'psi_extratos', 'linhas_de_extrato' => 'psi_extrato_itens', 'recibos' => 'psi_recibos', 'fornecedores' => 'psi_fornecedores', 'pacotes_de_sessoes' => 'psi_pacotes'];
     $saida = ['exportado_em' => gmdate('c'), 'aviso' => 'Dados do Portal CLINCM. Valores em centavos. Datas e horas da agenda no horário local do consultório.',
       'consultorio' => ['nome' => $conta['nome'], 'documento' => $conta['documento'] ?? null, 'crp' => $conta['crp'] ?? null, 'telefone' => $conta['telefone'] ?? null, 'cidade' => $conta['cidade'] ?? null, 'uf' => $conta['uf'] ?? null, 'endereco' => $conta['endereco'] ?? null, 'configuracoes' => psi_config()],
       'usuario' => ['nome' => PsiSessao::$usuario['nome'], 'email' => PsiSessao::$usuario['email']]];
@@ -153,7 +153,7 @@ function psi_categoria_id($v, string $tipo): ?int {
 function psi_da_conta(string $tabela, $id, string $rotulo, bool $obrig = false): ?int {
   $n = psi_int($id, 1, null, $rotulo, $obrig);
   if ($n === null) return null;
-  if (!in_array($tabela, ['psi_pacientes', 'psi_profissionais', 'psi_servicos', 'psi_contas_fin', 'psi_lancamentos', 'psi_agendamentos', 'psi_series', 'psi_fornecedores'], true)) throw new LogicException('tabela inválida');
+  if (!in_array($tabela, ['psi_pacientes', 'psi_profissionais', 'psi_servicos', 'psi_contas_fin', 'psi_lancamentos', 'psi_agendamentos', 'psi_series', 'psi_fornecedores', 'psi_pacotes'], true)) throw new LogicException('tabela inválida');
   $s = psi_db()->prepare("SELECT 1 FROM $tabela WHERE id = ? AND conta_id = ?"); $s->execute([$n, psi_conta_id()]);
   if (!$s->fetchColumn()) psi_erro("$rotulo não encontrado.", 422);
   return $n;

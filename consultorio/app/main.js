@@ -7,7 +7,7 @@ import * as acesso from './telas/acesso.js';
 
 const raiz = document.getElementById('app');
 const NAV = [
-  { itens: [['inicio', 'Início'], ['agenda', 'Agenda'], ['pacientes', 'Pacientes']] },
+  { itens: [['inicio', 'Início'], ['agenda', 'Agenda'], ['pacientes', 'Pacientes'], ['pacotes', 'Pacotes de sessões']] },
   { titulo: 'Financeiro', itens: [['receber', 'A receber'], ['pagar', 'A pagar'], ['caixa', 'Fluxo de caixa'], ['contas', 'Contas e cartões'], ['extrato', 'Extrato bancário']] },
   { titulo: 'Documentos', itens: [['recibos', 'Recibos'], ['relatorios', 'Relatórios']] },
   { titulo: 'Cadastros', itens: [['fornecedores', 'Fornecedores'], ['importar', 'Importar planilha']] },
@@ -17,7 +17,7 @@ const NAV_INF = ['inicio', 'agenda', 'pacientes', 'receber'];
 const ROTULO = Object.fromEntries(NAV.flatMap((g) => g.itens));
 /* Telas já construídas (cada uma é um módulo em telas/). As demais mostram "Em construção" sem fazer pedido ao servidor;
    ao construir uma tela, acrescente-a aqui. Se uma tela listada falhar ao carregar, o erro aparece de verdade (não vira "em construção"). */
-const PRONTAS = new Set(['inicio', 'config', 'pacientes', 'agenda', 'receber', 'pagar', 'contas', 'caixa', 'extrato', 'recibos', 'relatorios', 'fornecedores', 'importar']);
+const PRONTAS = new Set(['inicio', 'config', 'pacientes', 'agenda', 'receber', 'pagar', 'contas', 'caixa', 'extrato', 'recibos', 'relatorios', 'fornecedores', 'importar', 'pacotes']);
 const PUBLICAS = new Set(['entrar', 'cadastro', 'esqueci', 'redefinir', 'verificar']);
 let limpar = null;
 let casca = false;
@@ -49,6 +49,7 @@ async function iniciar() {
   rotear();
 }
 
+let navegacao = 0;
 async function rotear() {
   const { seg, resto } = rota();
   if (seg === 'verificar') return acesso.verificar(raiz, resto[0]);
@@ -62,7 +63,10 @@ async function rotear() {
   if (PUBLICAS.has(seg) || seg === '') { location.replace('#/inicio'); return; }
   if (!casca) montarCasca();
   atualizarNavegacao(seg);
-  const alvo = $('#conteudo');
+  /* Cada navegação ganha um "#conteudo" novo: uma tela que ainda esperava o servidor quando a pessoa trocou de página termina escrevendo num elemento
+     que já saiu da página, em vez de sobrescrever (ou quebrar) a tela atual. */
+  const minha = ++navegacao;
+  const antigo = $('#conteudo'); const alvo = antigo.cloneNode(false); antigo.replaceWith(alvo);
   if (limpar) limpar();
   limpar = null;
   montar(alvo, html`<div class="carregando">Carregando…</div>`);
@@ -74,9 +78,11 @@ async function rotear() {
   try {
     const mod = await import(`./telas/${seg}.js`);
     const r = rota(); const aoSair = await mod.abrir(alvo, r.resto, r.consulta);
+    if (minha !== navegacao) { if (typeof aoSair === 'function') aoSair(); return; }   // a pessoa já foi para outra página: desfaz o que esta tela deixou ligado
     if (typeof aoSair === 'function') limpar = aoSair;
   } catch (e) {
     console.error(e);
+    if (minha !== navegacao) return;
     montar(alvo, html`<div class="cartao vazio"><h3>Não foi possível abrir esta página</h3><p>${e.message || 'Erro inesperado.'}</p><button class="btn btn-sec" onclick="location.reload()">Recarregar</button></div>`);
   }
   window.scrollTo(0, 0);

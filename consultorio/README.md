@@ -26,6 +26,7 @@ Pense em um "Conta Azul" feito para essa rotina, com a agenda no centro: o que a
 | G2 | Extrato: sugestão de categoria pela descrição (fornecedor, paciente, histórico, dicionário) e lançamento em lote | feito |
 | G3 | Preço social: marca no paciente, na sessão e na cobrança, valor social por atendimento e desconto concedido nos relatórios | feito |
 | G4 | Extrato: apagar importação errada, sugestões v2 (categoria, fornecedor, grupos), edição em massa, conciliação manual com busca e seletor de categoria/fornecedor com busca | feito |
+| G5 | Pacotes de sessões pagos antecipadamente: vender, marcar todas as sessões ligadas ao pacote sem nova cobrança, saldo, validade e encerramento | feito |
 
 Rotas do aplicativo que ainda não têm tela aparecem como "Em construção" (lista `PRONTAS` em `app/main.js`: ao criar uma tela, acrescente-a ali).
 O hash aceita parâmetros (`#/agenda?paciente=12`): a tela recebe `abrir(el, resto, consulta)`.
@@ -63,6 +64,8 @@ consultorio/
 - Listeners em elementos que sobrevivem à re-renderização usam `elemento.onclick = ...` (não `addEventListener`), para não acumular
   a cada recarga da lista (isso já causou janelas duplicadas).
 - Telas são carregadas sob demanda (`import()`); uma tela listada em `PRONTAS` que falhar mostra o erro de verdade.
+- O roteador dá a **cada navegação um `#conteudo` novo** (`rotear` em `app/main.js`). Uma tela que ainda esperava a API quando a pessoa foi para outra página termina escrevendo num elemento que já saiu da página,
+  em vez de sobrescrever a tela atual; e a função de limpeza que ela devolver é executada na hora, não registrada. Telas novas devem escrever sempre no `el` que recebem (`$('…', el)`), não em consultas globais por id.
 - O leitor de planilhas/extratos (`assets/js/diagnostico-importar.js`) é compartilhado com o CM Diagnóstico e o site manda o navegador guardar `assets/` por 7 dias. **Sempre que esse arquivo ganhar função nova, suba o `?v=` em `app/planilha.js`** (`LEITOR`) e em `diagnostico/index.php`; `carregarLeitor()` também refaz o pedido com parâmetro novo se achar uma cópia antiga (sem `lerMatriz`) em vez de falhar.
 
 ## Acesso restrito
@@ -238,6 +241,22 @@ Um lançamento (`psi_lancamentos`) é uma conta a receber ou a pagar; `psi_baixa
 - **Conciliar não depende de existir conta lançada**: o diálogo "Conciliar esta linha" tem duas abas. **"Lançar como novo"** cria o lançamento já pago na data do extrato escolhendo categoria e fornecedor (ou paciente, nas entradas), sem nada lançado antes; **"Conta em aberto"** busca nas cobranças/contas a pagar por nome, descrição ou valor (as de saldo menor que a linha não aparecem) e concilia com a escolhida. Sem conta em aberto, a aba explica e leva ao lançamento novo; com uma de valor igual, o diálogo abre nela, mas "lançar como novo" continua a um clique.
 - **Seletor com busca** (`app/combo.js`): digitar filtra sem diferenciar acento, ↑ ↓ Enter/Esc/Tab, lista aberta ao focar, "Criar categoria «…»" que grava e já escolhe. Dois modos: lista (valor em campo oculto, `dadosForm`
   continua valendo) e livre (fornecedor: o texto é o valor). Usado no lançamento do extrato, em lote, na cobrança/conta a pagar, na despesa fixa e no cadastro de fornecedor. A lista usa posição fixa para não ser cortada pelo diálogo.
+
+### Pacotes de sessões (G5)
+
+Para o paciente que paga N sessões de uma vez. O pacote (`psi_pacotes`: paciente, tipo de atendimento, nome, `qtd_sessoes`, `valor_total` em centavos, `validade`, `encerrado`) é só o **vínculo e o saldo**;
+o dinheiro continua sendo lançamento comum, então o **caixa não muda**: a receita entra quando o valor é recebido, nunca por sessão realizada.
+
+- **Vender** (`POST pacotes`): `qtdSessoes` (1 a 60), `valorTotal`, `servicoId`, `nome`, `validade`, `obs` e **uma** forma de pagamento: `recebido: {data, forma, contaFinId}` (cria o lançamento já quitado, com a baixa na conta)
+  ou `vencimento` + `parcelas` (até 12, lançamentos em aberto que aparecem em "A receber" e na inadimplência). Os lançamentos levam `pacote_id` e `origem = manual` (a coluna `origem` é um ENUM do esquema).
+  Na tela: **Pacotes de sessões** no menu ou "Vender pacote" na ficha do paciente; o valor sugerido é a quantidade × o valor do paciente/atendimento e o diálogo mostra o valor por sessão e o desconto.
+- **Marcar as sessões**: na agenda, "Usar o pacote de sessões" (aparece quando o paciente tem pacote com vaga). A sessão fica com `pacote_id`, `cobrar = 0` e o valor de referência do pacote (total ÷ quantidade): **não gera cobrança nova**.
+  Com "Repetir" semanal/quinzenal e "Quantas sessões marcar" (padrão: as que restam), o servidor cria o horário fixo e **todas as sessões de uma vez** (a série termina na última). Depois de vender, o sistema oferece "Marcar as N sessões".
+- **Saldo calculado, nunca guardado** (`psi_pacote_contagens`): *usadas* = realizadas (e faltas, só se a política "cobrar falta" estiver ligada); *agendadas* = agendada/confirmada; *livres* = quantidade − usadas − agendadas.
+  Cancelar ou desmarcar **devolve a vaga**. Situação: `ativo`, `concluido` (nada livre nem agendado), `encerrado` ou `vencido` (passou da validade). `adiantado` = o que foi recebido menos as sessões já usadas.
+- **Regras**: validade impede marcar sessões depois da data; reativar sessão cancelada exige vaga; a série deve caber em 800 dias (`PSI_HORIZONTE_SERIE_DIAS`); `PUT pacotes/{id}` não baixa a quantidade abaixo de usadas + agendadas.
+  **Encerrar** (`POST pacotes/{id}/encerrar`) solta as sessões futuras, que voltam à cobrança normal do paciente; `reabrir` desfaz. **Apagar** só sem sessões nem baixas (409 com o motivo); devolução de dinheiro é estorno em "A receber".
+- Sessão avulsa ligada ou desligada do pacote na edição (`pacoteId` ou `null`, sempre só "esta sessão"). O backup/exportação inclui `pacotes_de_sessoes`.
 
 ## Testar localmente
 

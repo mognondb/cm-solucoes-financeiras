@@ -13,17 +13,18 @@ const PSI_GERAR_AO_CRIAR_DIAS = 180;      // quanto da série já nasce pronto
 const PSI_ESCOPOS = ['este', 'seguintes'];
 
 const PSI_SQL_AGENDAMENTO = "SELECT a.*, p.nome AS p_nome, p.apelido AS p_apelido, p.telefone AS p_tel, p.resp_nome AS p_resp_nome, p.resp_telefone AS p_resp_tel,
-    p.tipo AS p_tipo, p.modalidade_cobranca AS p_modal, p.status AS p_status, s.frequencia AS s_freq
+    p.tipo AS p_tipo, p.modalidade_cobranca AS p_modal, p.status AS p_status, s.frequencia AS s_freq, k.nome AS k_nome
   FROM psi_agendamentos a
   LEFT JOIN psi_pacientes p ON p.id = a.paciente_id AND p.conta_id = a.conta_id
-  LEFT JOIN psi_series s ON s.id = a.serie_id";
+  LEFT JOIN psi_series s ON s.id = a.serie_id
+  LEFT JOIN psi_pacotes k ON k.id = a.pacote_id AND k.conta_id = a.conta_id";
 
 function psi_agendamento_json(array $a): array {
   $n = fn($v) => $v === null ? null : (int)$v;
   return [
     'id' => (int)$a['id'], 'tipo' => $a['tipo'], 'titulo' => $a['titulo'], 'pacienteId' => $n($a['paciente_id']), 'profissionalId' => $n($a['profissional_id']), 'servicoId' => $n($a['servico_id']),
     'inicio' => $a['inicio'], 'fim' => $a['fim'], 'status' => $a['status'], 'modalidade' => $a['modalidade'], 'valor' => (int)$a['valor'], 'cobrar' => (bool)$a['cobrar'], 'social' => (bool)($a['social'] ?? 0), 'valorCheio' => (int)($a['valor_cheio'] ?? 0),
-    'serieId' => $n($a['serie_id']), 'frequencia' => $a['s_freq'] ?? null, 'obs' => $a['obs'],
+    'serieId' => $n($a['serie_id']), 'frequencia' => $a['s_freq'] ?? null, 'pacoteId' => $n($a['pacote_id'] ?? null), 'pacoteNome' => $a['k_nome'] ?? null, 'obs' => $a['obs'],
     'pac' => $a['paciente_id'] === null ? null : ['id' => (int)$a['paciente_id'], 'nome' => $a['p_nome'], 'apelido' => $a['p_apelido'], 'telefone' => $a['p_tel'], 'respNome' => $a['p_resp_nome'], 'respTelefone' => $a['p_resp_tel'], 'tipo' => $a['p_tipo'], 'modalidade' => $a['p_modal']],
   ];
 }
@@ -118,11 +119,11 @@ function psi_materializar_serie(array $s, string $ate): void {
   $ultimo = $s['gerado_ate']; $prox = $ultimo === null ? $s['inicio'] : psi_somar_dias($ultimo, $passo);
   if ($prox > $limite) return;
   $db = psi_db(); $agora = psi_agora();
-  $ins = $db->prepare('INSERT IGNORE INTO psi_agendamentos (conta_id, profissional_id, paciente_id, servico_id, tipo, titulo, inicio, fim, status, modalidade, valor, cobrar, social, valor_cheio, serie_id, criado_em, atualizado_em)
-    VALUES (?,?,?,?,?,?,?,?,\'agendada\',?,?,?,?,?,?,?,?)');
+  $ins = $db->prepare('INSERT IGNORE INTO psi_agendamentos (conta_id, profissional_id, paciente_id, servico_id, tipo, titulo, inicio, fim, status, modalidade, valor, cobrar, social, valor_cheio, serie_id, pacote_id, criado_em, atualizado_em)
+    VALUES (?,?,?,?,?,?,?,?,\'agendada\',?,?,?,?,?,?,?,?,?)');
   for ($n = 0; $prox <= $limite && $n < 400; $n++, $prox = psi_somar_dias($prox, $passo)) {
     $ini = $prox . ' ' . $s['hora']; $fim = (new DateTimeImmutable($ini))->modify('+' . (int)$s['duracao_min'] . ' minutes')->format('Y-m-d H:i:s');
-    $ins->execute([$s['conta_id'], $s['profissional_id'], $s['paciente_id'], $s['servico_id'], $s['tipo'], $s['titulo'], $ini, $fim, $s['modalidade'], $s['valor'], $s['cobrar'], $s['social'] ?? 0, $s['valor_cheio'] ?? 0, $s['id'], $agora, $agora]);
+    $ins->execute([$s['conta_id'], $s['profissional_id'], $s['paciente_id'], $s['servico_id'], $s['tipo'], $s['titulo'], $ini, $fim, $s['modalidade'], $s['valor'], $s['cobrar'], $s['social'] ?? 0, $s['valor_cheio'] ?? 0, $s['id'], $s['pacote_id'] ?? null, $agora, $agora]);
     $ultimo = $prox;
   }
   $db->prepare('UPDATE psi_series SET gerado_ate = ? WHERE id = ? AND conta_id = ?')->execute([$ultimo, $s['id'], $s['conta_id']]);
@@ -176,21 +177,37 @@ function psi_registrar_rotas_agenda(PsiRoteador $r): void {
     $rec = is_array($d['recorrencia'] ?? null) ? $d['recorrencia'] : null;
     $freq = $rec ? psi_opcao($rec['frequencia'] ?? null, ['semanal', 'quinzenal'], '') : ''; $ate = $rec ? psi_data($rec['ate'] ?? null, false, 'data final da repetição') : null;
     $agora = psi_agora(); $dia = substr($inicio, 0, 10); $hora = substr($inicio, 11, 8);
+    /* sessão de um pacote já pago: não gera cobrança; o valor guardado é só a referência (total / quantidade) */
+    $pacoteId = $tipo === 'sessao' && isset($d['pacoteId']) && $d['pacoteId'] !== '' ? psi_da_conta('psi_pacotes', $d['pacoteId'], 'Pacote', true) : null;
+    $datasPacote = null;
+    if ($pacoteId !== null) {
+      [$pk, $livres] = psi_pacote_para_uso($pacoteId, (int)$pac['id'], [$dia]);
+      $valor = psi_pacote_valor_sessao($pk); $cobrar = 0; $social = 0; $valorCheio = 0;
+      if ($freq !== '') {
+        $quantidade = psi_int($rec['quantidade'] ?? null, 1, PSI_PACOTE_MAX_SESSOES, 'quantidade de sessões') ?? $livres;
+        if ($quantidade > $livres) psi_erro('O pacote só tem ' . $livres . ($livres === 1 ? ' sessão livre.' : ' sessões livres.'), 422, ['livres' => $livres]);
+        $passoP = $freq === 'quinzenal' ? 14 : 7;
+        $datasPacote = psi_datas_serie($dia, $passoP, $ate ?? psi_somar_dias($dia, $passoP * ($quantidade - 1)), $quantidade);
+        psi_pacote_para_uso($pacoteId, (int)$pac['id'], $datasPacote);
+        if (end($datasPacote) > psi_somar_dias(psi_hoje(), PSI_HORIZONTE_SERIE_DIAS)) psi_erro('Essas sessões ficam longe demais na agenda. Marque menos sessões agora e o resto depois.', 422);
+      }
+    }
 
     if ($freq === '') {
       psi_exigir_sem_conflito($prof, [[$inicio, $fim]], $ignorar);
-      $db->prepare('INSERT INTO psi_agendamentos (conta_id, profissional_id, paciente_id, servico_id, tipo, titulo, inicio, fim, status, modalidade, valor, cobrar, social, valor_cheio, obs, criado_em, atualizado_em) VALUES (?,?,?,?,?,?,?,?,\'agendada\',?,?,?,?,?,?,?,?)')
-        ->execute([$c, $prof, $pac ? (int)$pac['id'] : null, $servId, $tipo, $titulo, $inicio, $fim, $modal, $valor, $cobrar, $social, $valorCheio, $obs, $agora, $agora]);
+      $db->prepare('INSERT INTO psi_agendamentos (conta_id, profissional_id, paciente_id, servico_id, tipo, titulo, inicio, fim, status, modalidade, valor, cobrar, social, valor_cheio, pacote_id, obs, criado_em, atualizado_em) VALUES (?,?,?,?,?,?,?,?,\'agendada\',?,?,?,?,?,?,?,?,?)')
+        ->execute([$c, $prof, $pac ? (int)$pac['id'] : null, $servId, $tipo, $titulo, $inicio, $fim, $modal, $valor, $cobrar, $social, $valorCheio, $pacoteId, $obs, $agora, $agora]);
       $id = (int)$db->lastInsertId(); psi_auditar('criar', 'sessao', $id);
       return ['id' => $id];
     }
     if ($ate !== null && $ate < $dia) psi_erro('A repetição precisa terminar depois da primeira sessão.', 422);
     $passo = $freq === 'quinzenal' ? 14 : 7;
-    $limite = psi_somar_dias(psi_hoje(), PSI_GERAR_AO_CRIAR_DIAS); if ($ate !== null && $ate < $limite) $limite = $ate; if ($limite < $dia) $limite = $dia;
-    $intervalos = array_map(fn($x) => [$x . ' ' . $hora, psi_fim_da_sessao($x . ' ' . $hora, $dur)], psi_datas_serie($dia, $passo, $limite, 60));
+    if ($datasPacote !== null) { $limite = end($datasPacote); $ate = $limite; }   // pacote: só as sessões do pacote, todas de uma vez (a série termina na última)
+    else { $limite = psi_somar_dias(psi_hoje(), PSI_GERAR_AO_CRIAR_DIAS); if ($ate !== null && $ate < $limite) $limite = $ate; if ($limite < $dia) $limite = $dia; }
+    $intervalos = array_map(fn($x) => [$x . ' ' . $hora, psi_fim_da_sessao($x . ' ' . $hora, $dur)], $datasPacote ?? psi_datas_serie($dia, $passo, $limite, 60));
     psi_exigir_sem_conflito($prof, $intervalos, $ignorar);
-    $db->prepare('INSERT INTO psi_series (conta_id, profissional_id, paciente_id, servico_id, tipo, titulo, frequencia, dia_semana, hora, duracao_min, modalidade, valor, cobrar, social, valor_cheio, inicio, fim, ativa, criado_em) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?)')
-      ->execute([$c, $prof, $pac ? (int)$pac['id'] : null, $servId, $tipo, $titulo, $freq, (int)date('w', strtotime($dia)), $hora, $dur, $modal, $valor, $cobrar, $social, $valorCheio, $dia, $ate, $agora]);
+    $db->prepare('INSERT INTO psi_series (conta_id, profissional_id, paciente_id, servico_id, tipo, titulo, frequencia, dia_semana, hora, duracao_min, modalidade, valor, cobrar, social, valor_cheio, pacote_id, inicio, fim, ativa, criado_em) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?)')
+      ->execute([$c, $prof, $pac ? (int)$pac['id'] : null, $servId, $tipo, $titulo, $freq, (int)date('w', strtotime($dia)), $hora, $dur, $modal, $valor, $cobrar, $social, $valorCheio, $pacoteId, $dia, $ate, $agora]);
     $serieId = (int)$db->lastInsertId();
     $sr = $db->prepare('SELECT * FROM psi_series WHERE id = ?'); $sr->execute([$serieId]); psi_materializar_serie($sr->fetch(), $limite);
     $n = $db->prepare('SELECT COUNT(*) FROM psi_agendamentos WHERE serie_id = ?'); $n->execute([$serieId]);
@@ -218,19 +235,34 @@ function psi_registrar_rotas_agenda(PsiRoteador $r): void {
     $obs = array_key_exists('obs', $d) ? psi_txt($d['obs'], 255) : $a['obs'];
     $titulo = $a['tipo'] === 'bloqueio' && array_key_exists('titulo', $d) ? psi_txt($d['titulo'], 120, true, 'motivo do bloqueio') : $a['titulo'];
     if ($a['tipo'] === 'bloqueio') { $valor = 0; $cobrar = 0; $social = 0; $valorCheio = 0; }
+    /* pacote: vincular a um pacote já pago, tirar dele (volta a ser cobrada) ou só manter (continua sem cobrança) */
+    $pacoteAtual = $a['pacote_id'] === null ? null : (int)$a['pacote_id'];
+    $pacoteNovo = array_key_exists('pacoteId', $d) ? (($d['pacoteId'] === null || $d['pacoteId'] === '') ? null : psi_da_conta('psi_pacotes', $d['pacoteId'], 'Pacote', true)) : $pacoteAtual;
+    if ($a['tipo'] !== 'sessao') $pacoteNovo = null;
+    if ($pacoteNovo !== $pacoteAtual && $escopo === 'seguintes') psi_erro('Ligar ou tirar do pacote vale para uma sessão por vez: escolha "só esta sessão".', 422);
+    if ($pacoteNovo !== null) {
+      if ($pacoteNovo !== $pacoteAtual) {
+        if ($a['status'] === 'cancelada') psi_erro('Esta sessão está cancelada. Reative a sessão antes de ligá-la a um pacote.', 422);
+        $pk = psi_pacote_para_uso($pacoteNovo, (int)$a['paciente_id'], [substr($inicio, 0, 10)])[0];
+      } else { $pk = psi_carregar_pacote($pacoteNovo); psi_pacote_exigir_validade($pk, [substr($inicio, 0, 10)]); }
+      $valor = psi_pacote_valor_sessao($pk); $cobrar = 0; $social = 0; $valorCheio = 0;
+    } elseif ($pacoteAtual !== null && $a['tipo'] === 'sessao') {
+      $q = $db->prepare('SELECT * FROM psi_pacientes WHERE id = ? AND conta_id = ?'); $q->execute([(int)$a['paciente_id'], $c]); $pr = $q->fetch();
+      if ($pr) { $pad = psi_padrao_sessao($pr); $cobrar = array_key_exists('cobrar', $d) ? psi_bool($d['cobrar']) : (int)$pad['cobrar']; if (!array_key_exists('valor', $d)) $valor = (int)$pad['valor']; if (!array_key_exists('social', $d)) { $social = (int)$pad['social']; $valorCheio = (int)$pad['valor_cheio']; } }
+    }
 
     if ($escopo === 'este') {
       if ($a['status'] !== 'cancelada') psi_exigir_sem_conflito($prof, [[$inicio, $fim]], $ignorar, [$id]);
       try {
-        $db->prepare('UPDATE psi_agendamentos SET profissional_id = ?, titulo = ?, inicio = ?, fim = ?, modalidade = ?, valor = ?, cobrar = ?, social = ?, valor_cheio = ?, obs = ?, atualizado_em = ? WHERE id = ? AND conta_id = ?')
-          ->execute([$prof, $titulo, $inicio, $fim, $modal, $valor, $cobrar, $social, $valorCheio, $obs, psi_agora(), $id, $c]);
+        $db->prepare('UPDATE psi_agendamentos SET profissional_id = ?, titulo = ?, inicio = ?, fim = ?, modalidade = ?, valor = ?, cobrar = ?, social = ?, valor_cheio = ?, pacote_id = ?, obs = ?, atualizado_em = ? WHERE id = ? AND conta_id = ?')
+          ->execute([$prof, $titulo, $inicio, $fim, $modal, $valor, $cobrar, $social, $valorCheio, $pacoteNovo, $obs, psi_agora(), $id, $c]);
       } catch (PDOException $e) { if ($e->getCode() === '23000') psi_erro('Já existe uma sessão desta série nesse horário.', 409); throw $e; }
       psi_auditar('alterar', 'sessao', $id);
       return ['ok' => true, 'cobranca' => in_array($a['status'], ['realizada', 'falta'], true) ? psi_sincronizar_cobranca($id) : ['acao' => null]];
     }
     /* esta e as seguintes: o "horário fixo" muda e as sessões futuras ainda não realizadas acompanham */
     $serieId = (int)$a['serie_id']; $delta = (int)round((strtotime(substr($inicio, 0, 10)) - strtotime(substr($a['inicio'], 0, 10))) / 86400); $hora = substr($inicio, 11, 8);
-    $q = $db->prepare("SELECT id, inicio FROM psi_agendamentos WHERE conta_id = ? AND serie_id = ? AND inicio >= ? AND status IN ('agendada','confirmada') ORDER BY inicio"); $q->execute([$c, $serieId, $a['inicio']]); $seguintes = $q->fetchAll();
+    $q = $db->prepare("SELECT id, inicio FROM psi_agendamentos WHERE conta_id = ? AND serie_id = ? AND inicio >= ? AND status IN ('agendada','confirmada') AND pacote_id <=> ? ORDER BY inicio"); $q->execute([$c, $serieId, $a['inicio'], $pacoteAtual]); $seguintes = $q->fetchAll();
     $intervalos = array_map(function ($x) use ($delta, $hora, $dur) { $ini = psi_somar_dias(substr($x['inicio'], 0, 10), $delta) . ' ' . $hora; return [$ini, psi_fim_da_sessao($ini, $dur)]; }, $seguintes);
     psi_exigir_sem_conflito($prof, $intervalos, $ignorar, [], [$serieId]);
     $db->beginTransaction();
@@ -243,8 +275,8 @@ function psi_registrar_rotas_agenda(PsiRoteador $r): void {
       $ordem = $delta > 0 ? 'DESC' : 'ASC';
       /* "fim" vem antes de "inicio" no SET de propósito: o MySQL aplica as atribuições da esquerda para a direita, e o fim precisa do início antigo */
       $db->prepare("UPDATE psi_agendamentos SET profissional_id = ?, titulo = ?, fim = DATE_ADD(CONCAT(DATE_ADD(DATE(inicio), INTERVAL ? DAY), ' ', ?), INTERVAL ? MINUTE), inicio = CONCAT(DATE_ADD(DATE(inicio), INTERVAL ? DAY), ' ', ?), modalidade = ?, valor = ?, cobrar = ?, social = ?, valor_cheio = ?, atualizado_em = ?
-        WHERE conta_id = ? AND serie_id = ? AND inicio >= ? AND status IN ('agendada','confirmada') ORDER BY inicio $ordem")
-        ->execute([$prof, $titulo, $delta, $hora, $dur, $delta, $hora, $modal, $valor, $cobrar, $social, $valorCheio, psi_agora(), $c, $serieId, $a['inicio']]);
+        WHERE conta_id = ? AND serie_id = ? AND inicio >= ? AND status IN ('agendada','confirmada') AND pacote_id <=> ? ORDER BY inicio $ordem")
+        ->execute([$prof, $titulo, $delta, $hora, $dur, $delta, $hora, $modal, $valor, $cobrar, $social, $valorCheio, psi_agora(), $c, $serieId, $a['inicio'], $pacoteAtual]);
       $db->commit();
     } catch (Throwable $e) { $db->rollBack(); throw $e; }
     psi_auditar('alterar', 'serie', $serieId);
@@ -259,6 +291,12 @@ function psi_registrar_rotas_agenda(PsiRoteador $r): void {
     if ($a['tipo'] === 'bloqueio') psi_erro('Um horário bloqueado não tem situação. Apague o bloqueio se não precisar mais dele.', 422);
     if (in_array($st, ['realizada', 'falta', 'falta_justificada'], true) && substr($a['inicio'], 0, 10) > psi_hoje()) psi_erro('Só dá para marcar como realizada ou falta uma sessão de hoje ou de dias anteriores.', 422);
     $escopo = psi_opcao($d['escopo'] ?? null, PSI_ESCOPOS, 'este'); $removidas = 0;
+    if ($a['pacote_id'] !== null && $a['status'] === 'cancelada' && $st !== 'cancelada') {   // a vaga foi devolvida ao pacote quando cancelou: reativar precisa de vaga livre
+      $pk = psi_carregar_pacote((int)$a['pacote_id']);
+      if ((int)$pk['encerrado']) psi_erro('O pacote desta sessão foi encerrado. Tire a sessão do pacote (Remarcar / editar) para reativá-la.', 422);
+      $cont = psi_pacote_contagens([(int)$pk['id']])[(int)$pk['id']] ?? ['usadas' => 0, 'agendadas' => 0];
+      if ((int)$pk['qtd_sessoes'] - $cont['usadas'] - $cont['agendadas'] < 1) psi_erro('O pacote já não tem vaga livre para reativar esta sessão. Tire a sessão do pacote (Remarcar / editar) ou aumente o pacote.', 422);
+    }
     $db->beginTransaction();
     try {
       $db->prepare('UPDATE psi_agendamentos SET status = ?, atualizado_em = ? WHERE id = ? AND conta_id = ?')->execute([$st, psi_agora(), $id, $c]);

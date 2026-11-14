@@ -7,11 +7,15 @@
 declare(strict_types=1);
 
 const PSI_TABELAS_DA_CONTA = [ // tudo o que tem conta_id: usado ao excluir uma conta
-  'psi_auditoria', 'psi_cobrancas', 'psi_transferencias', 'psi_recorrentes', 'psi_extrato_itens', 'psi_extratos', 'psi_recibo_baixas', 'psi_recibos', 'psi_baixas', 'psi_lancamentos', 'psi_agendamentos', 'psi_series', 'psi_pacientes', 'psi_servicos',
+  'psi_auditoria', 'psi_cobrancas', 'psi_transferencias', 'psi_recorrentes', 'psi_extrato_itens', 'psi_extratos', 'psi_recibo_baixas', 'psi_recibos', 'psi_baixas', 'psi_lancamentos', 'psi_agendamentos', 'psi_series', 'psi_pacotes', 'psi_pacientes', 'psi_servicos',
   'psi_contas_fin', 'psi_fornecedores', 'psi_categorias', 'psi_profissionais', 'psi_sessoes', 'psi_usuarios',
 ];
 
 /** Adiciona uma coluna se ainda não existir (migrações idempotentes: rodar de novo não faz nada). */
+function psi_add_indice(PDO $db, string $tabela, string $nome, string $colunas): void {
+  $s = $db->prepare('SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ?'); $s->execute([$tabela, $nome]);
+  if ((int)$s->fetchColumn() === 0) $db->exec("ALTER TABLE $tabela ADD KEY $nome ($colunas)");
+}
 function psi_add_coluna(PDO $db, string $tabela, string $coluna, string $definicao): void {
   $s = $db->prepare('SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?'); $s->execute([$tabela, $coluna]);
   if ((int)$s->fetchColumn() === 0) $db->exec("ALTER TABLE $tabela ADD COLUMN $coluna $definicao");
@@ -184,6 +188,20 @@ function psi_migracoes(): array {
       fn(PDO $db) => psi_add_coluna($db, 'psi_agendamentos', 'valor_cheio', 'INT NOT NULL DEFAULT 0'),
       fn(PDO $db) => psi_add_coluna($db, 'psi_lancamentos', 'social', 'TINYINT(1) NOT NULL DEFAULT 0'),
       fn(PDO $db) => psi_add_coluna($db, 'psi_lancamentos', 'valor_cheio', 'INT NOT NULL DEFAULT 0'),
+    ],
+    /* v8 (pacotes de sessões pré-pagas): o paciente paga N sessões de uma vez. O pagamento é um lançamento normal (a receber, com baixa) ligado ao pacote (psi_lancamentos.pacote_id);
+       as sessões do pacote (psi_agendamentos.pacote_id, e a série que as repete) NÃO geram cobrança nova: usadas = realizadas (+ faltas, se a falta é cobrada), reservadas = agendadas/confirmadas. */
+    8 => [
+      "CREATE TABLE IF NOT EXISTS psi_pacotes (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, conta_id BIGINT UNSIGNED NOT NULL, paciente_id BIGINT UNSIGNED NOT NULL, servico_id BIGINT UNSIGNED NULL,
+        nome VARCHAR(120) NOT NULL, qtd_sessoes SMALLINT UNSIGNED NOT NULL, valor_total INT NOT NULL, validade DATE NULL, encerrado TINYINT(1) NOT NULL DEFAULT 0, encerrado_em DATETIME NULL,
+        obs VARCHAR(300) NULL, criado_em DATETIME NOT NULL, atualizado_em DATETIME NOT NULL, KEY k_pac (conta_id, paciente_id), KEY k_enc (conta_id, encerrado)
+      ) $t",
+      fn(PDO $db) => psi_add_coluna($db, 'psi_agendamentos', 'pacote_id', 'BIGINT UNSIGNED NULL'),
+      fn(PDO $db) => psi_add_coluna($db, 'psi_series', 'pacote_id', 'BIGINT UNSIGNED NULL'),
+      fn(PDO $db) => psi_add_coluna($db, 'psi_lancamentos', 'pacote_id', 'BIGINT UNSIGNED NULL'),
+      fn(PDO $db) => psi_add_indice($db, 'psi_agendamentos', 'k_pacote', 'conta_id, pacote_id'),
+      fn(PDO $db) => psi_add_indice($db, 'psi_lancamentos', 'k_pacote', 'conta_id, pacote_id'),
     ],
   ];
 }

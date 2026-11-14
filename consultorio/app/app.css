@@ -210,3 +210,8 @@ details.bloco { border: 1px solid var(--linha); border-radius: 12px; padding: 10
 .btn-perigo-txt { color: var(--perigo); } .btn-perigo-txt:hover { background: var(--perigo-bg); }
 .ex-resumo-lote { max-height: 220px; overflow-y: auto; } .cc-lista .linha { flex-wrap: wrap; } .cc-lista .tit { white-space: normal; }
 .linha.ex .sug-cat .selo { white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
+
+/* ---- pacotes de sessões ---- */
+.pk-barra { display: flex; height: 8px; border-radius: 999px; background: var(--salvia-lin); overflow: hidden; margin-top: 6px; } .pk-barra i { display: block; height: 100%; } .pk-usadas { background: var(--oliva-esc); } .pk-agendadas { background: var(--ouro); opacity: .75; }
+.pk-linha .corpo { min-width: 0; } .pk-sessoes { max-height: 240px; overflow-y: auto; }
+.pk-box { border: 1.5px solid var(--salvia-lin); background: var(--salvia); border-radius: 12px; padding: 10px 14px; margin: 0 0 14px; } .pk-box .marca { margin-bottom: 6px; } .pk-box select, .pk-box input[type=number] { max-width: 220px; }

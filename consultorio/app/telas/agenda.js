@@ -24,10 +24,10 @@ export async function abrir(el, args, consulta) {
   raiz = el;
   est.vista = est.vista || lerPref() || (celular() ? 'dia' : 'semana'); if (!['dia', 'semana', 'mes'].includes(est.vista)) est.vista = 'semana';
   est.data = est.data || App.hoje;
-  const pacId = consulta && consulta.get('paciente');
+  const pacId = consulta && consulta.get('paciente'); const pacoteQ = consulta && consulta.get('pacote');
   if (pacId) history.replaceState(null, '', '#/agenda');
   await carregar();
-  if (pacId && !somenteLeitura()) formSessao({ pacienteId: Number(pacId), data: est.data });
+  if (pacId && !somenteLeitura()) formSessao({ pacienteId: Number(pacId), pacoteId: pacoteQ ? Number(pacoteQ) : undefined, data: est.data });
   let eraCelular = celular(); // o teclado do celular também dispara "resize": só redesenha ao cruzar o limite celular/computador
   const redimensionou = () => { if (celular() !== eraCelular) { eraCelular = celular(); desenhar(); } };
   window.addEventListener('resize', redimensionou);
@@ -99,7 +99,7 @@ function grade(diasMostrados, { cabecalho = true } = {}) {
           const top = (minutos(a.inicio) - h0 * 60) * PX_HORA / 60; const alt = Math.max((minutos(a.fim) - minutos(a.inicio)) * PX_HORA / 60, 24);
           const cor = (App.eu.profissionais || []).length > 1 && a.profissionalId ? (profissionalPorId(a.profissionalId) || {}).cor : '';
           return html`<button type="button" class="ag-ev ag-${a.tipo === 'bloqueio' ? 'bloqueio' : a.status}" data-id="${a.id}" style="top:${top}px;height:${alt}px;left:calc(${col * 100 / cols}% + 2px);width:calc(${100 / cols}% - 4px);${cor ? `border-left-color:${cor}` : ''}" aria-label="${hhmm(a.inicio)}, ${nomeCurto(a)}, ${a.tipo === 'bloqueio' ? 'horário bloqueado' : SESSAO[a.status][0]}">
-            <b>${hhmm(a.inicio)}</b> ${nomeCurto(a)}${a.modalidade === 'online' && a.tipo === 'sessao' ? raw(' <small>· online</small>') : ''}${a.serieId ? raw(' <small>↻</small>') : ''}${a.tipo === 'sessao' && a.social ? raw(' <small class="ag-social" title="Preço social">social</small>') : ''}</button>`;
+            <b>${hhmm(a.inicio)}</b> ${nomeCurto(a)}${a.modalidade === 'online' && a.tipo === 'sessao' ? raw(' <small>· online</small>') : ''}${a.serieId ? raw(' <small>↻</small>') : ''}${a.pacoteId ? raw(' <small title="Sessão de pacote já pago">· pacote</small>') : ''}${a.tipo === 'sessao' && a.social ? raw(' <small class="ag-social" title="Preço social">social</small>') : ''}</button>`;
         })}</div>`)}
     </div></div></div>`;
 }
@@ -154,6 +154,7 @@ document.addEventListener('change', (e) => { if (raiz && raiz.isConnected && e.t
 /* ================================================================= janela da sessão */
 function textoCobranca(a) {
   if (a.tipo === 'bloqueio') return 'Horário bloqueado: ninguém é agendado aqui.';
+  if (a.pacoteId) return `Pacote «${a.pacoteNome}»: sessão já paga, sem nova cobrança.`;
   if (!a.cobrar) return a.pac.modalidade === 'mensal' ? 'Coberta pela mensalidade.' : 'Sem cobrança.';
   return a.valor ? `${brl(a.valor)}${a.social ? ` · preço social${a.valorCheio > a.valor ? ` (desconto de ${brl(a.valorCheio - a.valor)})` : ''}` : ''} · gera cobrança quando for realizada.` : 'Valor não definido.';
 }
@@ -200,7 +201,7 @@ async function apagar(a) {
 }
 
 /* ================================================================= formulário */
-async function formSessao({ data, hora, pacienteId, editar }) {
+async function formSessao({ data, hora, pacienteId, editar, pacoteId }) {
   const a = editar || null; let pacientes = [];
   if (!a || a.tipo === 'sessao') { try { pacientes = (await api.get('pacientes?status=todos')).itens.filter((p) => p.status !== 'arquivado'); } catch (e) { aviso(e.message, 'erro'); return; } }
   if (!a && !pacientes.length) { aviso('Cadastre um paciente antes de marcar uma sessão.', 'erro'); location.hash = '#/pacientes'; return; }
@@ -215,20 +216,33 @@ async function formSessao({ data, hora, pacienteId, editar }) {
   const centavosEmTexto = (c) => (c ? (c / 100).toFixed(2).replace('.', ',') : '');
   const ini = a ? a : null; const pacIni = a ? null : (pacientes.find((p) => p.id === pacienteId) || null);
   const social0 = a ? !!a.social : !!(pacIni && padraoDe(pacIni).social); const cheio0 = a ? a.valorCheio : (pacIni ? padraoDe(pacIni).cheio : 0);
+  /* pacotes de sessões já pagos: se o paciente tem um com vaga, a sessão pode sair dele (sem cobrança nova) */
+  const carregarPacotes = async (pid) => { if (!pid) return []; try { return (await api.get(`pacotes?paciente=${pid}&situacao=ativos&comVaga=1`)).itens; } catch { return []; } };
+  let pacotes = (a ? (a.tipo === 'sessao' && !a.pacoteId ? await carregarPacotes(a.pacienteId) : []) : (pacIni ? await carregarPacotes(pacIni.id) : []));
+  let pacoteSel = (pacotes.find((k) => k.id === pacoteId) || pacotes[0] || {}).id; let pacoteMarcado = true;
+  const caixaPacote = () => {
+    if (a && a.pacoteId) return html`<div class="pk-box" data-pk><p style="margin:0 0 6px"><strong>Esta sessão usa o pacote «${a.pacoteNome}»</strong>: já paga, sem cobrança nova.</p><label class="marca" style="margin:0"><input type="checkbox" name="tirarPacote"><span>Tirar do pacote (passa a ser cobrada normalmente)</span></label></div>`;
+    if (!pacotes.length) return '';
+    const k = pacotes.find((x) => x.id === pacoteSel) || pacotes[0];
+    return html`<div class="pk-box" data-pk><label class="marca"><input type="checkbox" name="usarPacote" ${pacoteMarcado ? raw('checked') : ''}><span><strong>Usar o pacote de sessões</strong> <small class="suave">já pago: a sessão não gera cobrança nova</small></span></label>
+      ${pacotes.length > 1 ? campo({ id: 'pacoteId', rotulo: 'Qual pacote', valor: k.id, opcoes: pacotes.map((x) => [x.id, `${x.nome} · ${x.livres} livre${x.livres === 1 ? '' : 's'} de ${x.qtd}`]) })
+        : html`<input type="hidden" name="pacoteId" value="${k.id}"><p class="suave peq" style="margin:0">«${k.nome}»: ${k.livres === 1 ? 'resta 1 sessão livre' : `restam ${k.livres} sessões livres`} de ${k.qtd} (${brl(k.valorSessao)} cada).</p>`}</div>`;
+  };
 
   const m = abrirModal({ titulo: a ? (a.tipo === 'bloqueio' ? 'Editar bloqueio' : 'Remarcar / editar sessão') : 'Nova sessão', largo: true, corpo: html`<div id="ag-form"><p class="erro-form" role="alert" hidden></p>
     ${!a ? html`<div class="chips" role="group" aria-label="O que marcar" style="margin-bottom:14px"><button type="button" class="chip" data-tipo="sessao" aria-pressed="true">Sessão com paciente</button><button type="button" class="chip" data-tipo="bloqueio" aria-pressed="false">Bloquear horário</button></div>` : ''}
     <input type="hidden" name="tipo" value="${a ? a.tipo : 'sessao'}">
-    <div data-so="sessao">${a ? html`<p style="margin:0 0 12px"><strong>${a.pac ? a.pac.nome : ''}</strong></p>` : campo({ id: 'pacienteId', rotulo: 'Paciente', obrig: true, valor: pacIni ? pacIni.id : '', opcoes: [['', 'Escolha o paciente'], ...pacientes.map((p) => [p.id, p.nome + (p.status !== 'ativo' ? ` (${p.status === 'pausado' ? 'em pausa' : 'alta'})` : '')])] })}</div>
+    <div data-so="sessao" id="ag-pacote-pac">${a ? html`<p style="margin:0 0 12px"><strong>${a.pac ? a.pac.nome : ''}</strong></p>` : campo({ id: 'pacienteId', rotulo: 'Paciente', obrig: true, valor: pacIni ? pacIni.id : '', opcoes: [['', 'Escolha o paciente'], ...pacientes.map((p) => [p.id, p.nome + (p.status !== 'ativo' ? ` (${p.status === 'pausado' ? 'em pausa' : 'alta'})` : '')])] })}</div>
+    <div data-so="sessao" id="ag-pacote">${caixaPacote()}</div>
     <div data-so="bloqueio" hidden>${campo({ id: 'titulo', rotulo: 'Motivo do bloqueio', valor: a && a.tipo === 'bloqueio' ? a.titulo || '' : '', placeholder: 'Ex.: almoço, reunião, folga' })}</div>
     <div class="grade-3">${campo({ id: 'data', rotulo: 'Dia', tipo: 'date', valor: v.data, obrig: true })}${campo({ id: 'hora', rotulo: 'Hora', tipo: 'time', valor: v.hora, obrig: true, extra: 'step="300"' })}${campo({ id: 'duracaoMin', rotulo: 'Duração (min)', tipo: 'number', valor: v.dur, extra: 'min="10" max="600" step="5"' })}</div>
     <div data-so="sessao"><div class="grade-2">${campo({ id: 'modalidade', rotulo: 'Modalidade', valor: a ? a.modalidade : 'presencial', opcoes: [['presencial', 'Presencial'], ['online', 'Online']] })}${campoDinheiro({ id: 'valor', rotulo: 'Valor desta sessão', valor: a ? a.valor : (pacIni ? padraoDe(pacIni).valor : 0) })}</div>
-      <label class="marca" style="margin-bottom:12px"><input type="checkbox" name="cobrar" ${(a ? a.cobrar : pacIni ? padraoDe(pacIni).cobrar : true) ? raw('checked') : ''}><span>Cobrar esta sessão <small class="suave" id="ag-cobrar-dica"></small></span></label>
+      <div id="ag-cobranca"><label class="marca" style="margin-bottom:12px"><input type="checkbox" name="cobrar" ${(a ? a.cobrar : pacIni ? padraoDe(pacIni).cobrar : true) ? raw('checked') : ''}><span>Cobrar esta sessão <small class="suave" id="ag-cobrar-dica"></small></span></label>
       <label class="marca" style="margin-bottom:8px"><input type="checkbox" name="social" ${social0 ? raw('checked') : ''}><span><strong>Preço social</strong> <small class="suave">valor reduzido para quem está em vulnerabilidade socioeconômica. Marca só o preço: não registre o motivo.</small></span></label>
-      <div id="ag-cheio" ${social0 ? '' : raw('hidden')}>${campoDinheiro({ id: 'valorCheio', rotulo: 'Valor de tabela (sem desconto)', valor: cheio0, ajuda: 'Serve para medir o desconto concedido nos relatórios. Pode ficar em branco.' })}</div></div>
+      <div id="ag-cheio" ${social0 ? '' : raw('hidden')}>${campoDinheiro({ id: 'valorCheio', rotulo: 'Valor de tabela (sem desconto)', valor: cheio0, ajuda: 'Serve para medir o desconto concedido nos relatórios. Pode ficar em branco.' })}</div></div></div>
     ${profs.length > 1 ? campo({ id: 'profissionalId', rotulo: 'Profissional', valor: a ? a.profissionalId || '' : (pacIni && pacIni.profissionalId) || (profs[0] && profs[0].id), opcoes: profs.map((p) => [p.id, p.nome]) }) : ''}
     ${a && a.serieId ? html`<fieldset class="campo" style="border:1px solid var(--linha);border-radius:12px;padding:10px 14px"><legend class="peq forte">Esta sessão é de um horário fixo</legend><label class="marca"><input type="radio" name="escopo" value="este" checked><span>Mudar só esta sessão</span></label><label class="marca"><input type="radio" name="escopo" value="seguintes"><span>Mudar esta e as próximas (o horário fixo também muda)</span></label></fieldset>` : ''}
-    ${!a ? html`<div class="grade-2">${campo({ id: 'repetir', rotulo: 'Repetir', valor: '', opcoes: [['', 'Não repete'], ['semanal', 'Toda semana'], ['quinzenal', 'A cada 15 dias']] })}<div data-so="repetir" hidden>${campo({ id: 'ate', rotulo: 'Até (opcional)', tipo: 'date', ajuda: 'Em branco = continua até você encerrar.' })}</div></div>` : ''}
+    ${!a ? html`<div class="grade-2">${campo({ id: 'repetir', rotulo: 'Repetir', valor: '', opcoes: [['', 'Não repete'], ['semanal', 'Toda semana'], ['quinzenal', 'A cada 15 dias']] })}<div data-so="repetir" hidden><div data-pk-ate>${campo({ id: 'ate', rotulo: 'Até (opcional)', tipo: 'date', ajuda: 'Em branco = continua até você encerrar.' })}</div><div data-pk-q hidden>${campo({ id: 'quantidade', rotulo: 'Quantas sessões marcar', tipo: 'number', extra: 'min="1" max="60"', ajuda: 'Todas ligadas ao pacote, com o mesmo dia e horário.' })}</div></div></div>` : ''}
     ${campo({ id: 'obs', rotulo: 'Observação (administrativa)', valor: a ? a.obs || '' : '', extra: 'maxlength="255"' })}</div>`,
     acoes: [{ id: 'cancelar', rotulo: 'Cancelar' }, { id: 'salvar', rotulo: a ? 'Salvar' : 'Marcar', classe: 'btn-pri' }] });
 
@@ -236,12 +250,33 @@ async function formSessao({ data, hora, pacienteId, editar }) {
   const tipoAtual = () => el('tipo').value;
   const alternar = () => { $$('[data-so]', form).forEach((d) => { const k = d.dataset.so; d.hidden = k === 'repetir' ? !(el('repetir') && el('repetir').value) : k !== tipoAtual(); }); $$('[data-tipo]', form).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tipo === tipoAtual()))); };
   const dica = () => { const d = $('#ag-cobrar-dica', form); const p = pacientes.find((x) => x.id === Number(el('pacienteId') && el('pacienteId').value)); d.textContent = p && p.modalidade === 'mensal' ? '(este paciente paga mensalidade: já está coberta)' : ''; };
-  form.addEventListener('click', (e) => { const b = e.target.closest('[data-tipo]'); if (b) { el('tipo').value = b.dataset.tipo; alternar(); } });
-  if (el('repetir')) el('repetir').addEventListener('change', alternar);
-  if (el('pacienteId')) el('pacienteId').addEventListener('change', () => {
-    const p = pacientes.find((x) => x.id === Number(el('pacienteId').value)); dica(); if (!p) return;
+  const usandoPacote = () => !!(el('usarPacote') ? el('usarPacote').checked : (a && a.pacoteId && !(el('tirarPacote') && el('tirarPacote').checked)));
+  const aplicarPacote = () => {
+    const usando = tipoAtual() === 'sessao' && usandoPacote(); const rep = !!(el('repetir') && el('repetir').value);
+    const vc = el('valor') && el('valor').closest('.campo'); if (vc) vc.hidden = usando; const cob = $('#ag-cobranca', form); if (cob) cob.hidden = usando;
+    const q = $('[data-pk-q]', form); const ate = $('[data-pk-ate]', form); if (q) q.hidden = !(usando && !a && rep); if (ate) ate.hidden = !!(usando && !a);
+    if (usando && !a && el('quantidade')) { const k = pacotes.find((x) => x.id === Number(el('pacoteId') ? el('pacoteId').value : pacoteSel)); if (k) { el('quantidade').max = k.livres; if (!el('quantidade').dataset.tocado) el('quantidade').value = k.livres; } }
+  };
+  form.addEventListener('input', (e) => { if (e.target.name === 'quantidade') e.target.dataset.tocado = '1'; });
+  form.addEventListener('change', (e) => {
+    const n = e.target.name;
+    if (n === 'usarPacote') pacoteMarcado = e.target.checked; if (n === 'pacoteId') pacoteSel = Number(e.target.value);
+    if (n === 'tirarPacote' && e.target.checked && a) { const p = pacientes.find((x) => x.id === a.pacienteId); if (p) { const dd = padraoDe(p); el('valor').value = centavosEmTexto(dd.valor); el('cobrar').checked = dd.cobrar; el('social').checked = dd.social; $('#ag-cheio', form).hidden = !dd.social; el('valorCheio').value = centavosEmTexto(dd.cheio); } }
+    if (['usarPacote', 'pacoteId', 'tirarPacote'].includes(n)) aplicarPacote();
+  });
+  form.addEventListener('click', (e) => { const b = e.target.closest('[data-tipo]'); if (b) { el('tipo').value = b.dataset.tipo; alternar(); aplicarPacote(); } });
+  if (el('repetir')) el('repetir').addEventListener('change', () => { alternar(); aplicarPacote(); });
+  let buscaPacotes = 0;
+  if (el('pacienteId')) el('pacienteId').addEventListener('change', async () => {
+    const p = pacientes.find((x) => x.id === Number(el('pacienteId').value)); dica();
+    /* 1º o que vale na hora (valor, cobrança, duração do paciente); só depois os pacotes, que vêm do servidor */
+    pacotes = []; pacoteSel = undefined; pacoteMarcado = true; montar($('#ag-pacote', form), caixaPacote()); aplicarPacote();
+    if (!p) return;
     const d = padraoDe(p); el('valor').value = centavosEmTexto(d.valor); el('cobrar').checked = d.cobrar; el('duracaoMin').value = d.dur; el('social').checked = d.social; $('#ag-cheio', form).hidden = !d.social; el('valorCheio').value = centavosEmTexto(d.cheio);
     if (el('profissionalId') && p.profissionalId) el('profissionalId').value = p.profissionalId;
+    const minha = ++buscaPacotes; const achados = await carregarPacotes(p.id);
+    if (minha !== buscaPacotes || Number(el('pacienteId').value) !== p.id) return;   // trocou de paciente enquanto buscava: ignora a resposta antiga
+    pacotes = achados; pacoteSel = (pacotes[0] || {}).id; montar($('#ag-pacote', form), caixaPacote()); aplicarPacote();
   });
   /* marcar/desmarcar o preço social troca o valor sugerido (o social do tipo de atendimento ou o de tabela); depois dá para ajustar à mão */
   el('social').addEventListener('change', () => {
@@ -250,20 +285,27 @@ async function formSessao({ data, hora, pacienteId, editar }) {
     if (ligou) { const v = valorSocialDe(s); if (v) el('valor').value = centavosEmTexto(v); const atual = lerReais(el('valor').value) ?? 0; el('valorCheio').value = centavosEmTexto(tabela > atual ? tabela : 0); }
     else { const base = tabela || (p && p.valorSessao) || 0; if (base) el('valor').value = centavosEmTexto(base); el('valorCheio').value = ''; }
   });
-  alternar(); dica();
+  alternar(); aplicarPacote(); dica();
 
   const salvar = async (ignorarConflitos = false) => {
     const d = dadosForm(form); const bloq = d.tipo === 'bloqueio'; const corpo = { inicio: `${d.data} ${d.hora}`, duracaoMin: Number(d.duracaoMin) || undefined, obs: d.obs };
-    if (bloq) corpo.titulo = d.titulo; else { corpo.modalidade = d.modalidade; corpo.cobrar = d.cobrar; if (d.valor !== '') corpo.valor = lerReais(d.valor) ?? 0; corpo.social = !!d.social; if (d.social && d.valorCheio !== '') corpo.valorCheio = lerReais(d.valorCheio) ?? 0; }
+    const usando = !bloq && usandoPacote();   // sessão de pacote: valor e cobrança ficam por conta do servidor (sem cobrança, valor de referência do pacote)
+    if (bloq) corpo.titulo = d.titulo; else { corpo.modalidade = d.modalidade; if (!usando) { corpo.cobrar = d.cobrar; if (d.valor !== '') corpo.valor = lerReais(d.valor) ?? 0; corpo.social = !!d.social; if (d.social && d.valorCheio !== '') corpo.valorCheio = lerReais(d.valorCheio) ?? 0; } }
     if (d.profissionalId) corpo.profissionalId = Number(d.profissionalId);
     if (ignorarConflitos) corpo.ignorarConflitos = true;
     const btn = $('[data-acao="salvar"]', m.el); btn.disabled = true; $('.erro-form', form).hidden = true;
     try {
-      if (a) { corpo.escopo = d.escopo || 'este'; await api.put('agenda/' + a.id, corpo); aviso('Sessão atualizada.'); }
+      if (a) {
+        const tirar = !!(a.pacoteId && d.tirarPacote); const ligar = !!(!a.pacoteId && d.usarPacote);
+        if (tirar) corpo.pacoteId = null; else if (ligar) corpo.pacoteId = Number(d.pacoteId);
+        corpo.escopo = (tirar || ligar) ? 'este' : (d.escopo || 'este');   // ligar ou tirar do pacote vale por sessão
+        await api.put('agenda/' + a.id, corpo); aviso(ligar ? 'Sessão ligada ao pacote.' : tirar ? 'Sessão tirada do pacote: volta a ser cobrada.' : 'Sessão atualizada.');
+      }
       else {
         corpo.tipo = d.tipo; if (!bloq) corpo.pacienteId = d.pacienteId ? Number(d.pacienteId) : null;
-        if (d.repetir) corpo.recorrencia = { frequencia: d.repetir, ate: d.ate || null };
-        const r = await api.post('agenda', corpo); aviso(r.serieId ? `Horário fixo criado (${r.criados} sessões já na agenda).` : bloq ? 'Horário bloqueado.' : 'Sessão marcada.');
+        if (usando) corpo.pacoteId = Number(d.pacoteId);
+        if (d.repetir) corpo.recorrencia = usando ? { frequencia: d.repetir, quantidade: Number(d.quantidade) || undefined } : { frequencia: d.repetir, ate: d.ate || null };
+        const r = await api.post('agenda', corpo); aviso(r.serieId ? (usando ? `${r.criados} sessões do pacote marcadas.` : `Horário fixo criado (${r.criados} sessões já na agenda).`) : bloq ? 'Horário bloqueado.' : usando ? 'Sessão marcada com o pacote.' : 'Sessão marcada.');
       }
       m.fechar(); est.data = d.data; await carregar();
     } catch (er) {
