@@ -153,7 +153,7 @@ function linha(i, pode) {
     <strong class="num ${entrada ? 'bom' : 'ruim'}">${entrada ? '+' : '−'} ${brl(Math.abs(i.valor))}</strong>
     ${pend && pode ? html`<span class="acoes-rapidas">${i.sugestoes.map((s) => html`<button class="btn ${s.restante === Math.abs(i.valor) ? 'btn-pri' : 'btn-sec'} btn-peq" data-conciliar="${i.id}" data-lanc="${s.lancamentoId}" title="${s.descricao}">Conciliar com ${s.quem || s.descricao} · ${brl(s.restante)}</button>`)}
       ${i.acaoSugerida === 'transferencia' ? html`<button class="btn btn-pri btn-peq" data-transf="${i.id}">Transferência entre contas</button>` : ''}
-      ${comCategoria(i) && !temParExato(i) && i.acaoSugerida !== 'transferencia' ? html`<button class="btn ${i.categoriaSugerida.confianca === 'alta' ? 'btn-pri' : 'btn-sec'} btn-peq" data-lancar-sug="${i.id}" title="${ROTULO_CONFIANCA[i.categoriaSugerida.confianca]}: ${i.categoriaSugerida.motivo}">Lançar como ${i.categoriaSugerida.categoria}</button>` : ''}<button class="btn btn-sec btn-peq" data-lancar="${i.id}">Lançar</button><button class="btn btn-ghost btn-peq" data-buscar="${i.id}">Conciliar com outra conta…</button>${i.acaoSugerida === 'transferencia' ? '' : html`<button class="btn btn-ghost btn-peq" data-transf="${i.id}">Transferência</button>`}<button class="btn btn-ghost btn-peq" data-ignorar="${i.id}">Ignorar</button></span>`
+      ${comCategoria(i) && !temParExato(i) && i.acaoSugerida !== 'transferencia' ? html`<button class="btn ${i.categoriaSugerida.confianca === 'alta' ? 'btn-pri' : 'btn-sec'} btn-peq" data-lancar-sug="${i.id}" title="${ROTULO_CONFIANCA[i.categoriaSugerida.confianca]}: ${i.categoriaSugerida.motivo}">Lançar como ${i.categoriaSugerida.categoria}</button>` : ''}<button class="btn btn-sec btn-peq" data-lancar="${i.id}" title="Cria um lançamento novo, escolhendo a categoria e o fornecedor">Lançar como novo…</button><button class="btn btn-ghost btn-peq" data-buscar="${i.id}" title="Concilia com uma cobrança ou conta que você já tinha lançado">Conciliar com conta em aberto…</button>${i.acaoSugerida === 'transferencia' ? '' : html`<button class="btn btn-ghost btn-peq" data-transf="${i.id}">Transferência</button>`}<button class="btn btn-ghost btn-peq" data-ignorar="${i.id}">Ignorar</button></span>`
       : !pend ? html`${selo(i.situacao === 'conciliado' ? 'Conciliada' : 'Ignorada', i.situacao === 'conciliado' ? 'ok' : 'neutro')}${pode ? html`${i.situacao === 'conciliado' && l ? html`<button class="btn btn-ghost btn-peq" data-alterar="${i.id}">Mudar categoria</button>` : ''}<button class="btn btn-ghost btn-peq" data-desfazer="${i.id}">Desfazer</button>` : ''}` : ''}</li>`;
 }
 
@@ -169,33 +169,6 @@ function ligarCadastroFornecedor(form) {
   campoForn.addEventListener('input', atualizar); campoForn.addEventListener('change', atualizar); atualizar();
 }
 const caixaCadastrar = () => html`<label class="marca" data-cad-forn hidden><input type="checkbox" name="cadastrar" checked><span>Cadastrar «<b data-nome></b>» como fornecedor (a categoria escolhida vira o padrão dele)</span></label>`;
-
-/** Lançar uma linha: categoria e fornecedor/paciente com busca, e a opção de estender às linhas parecidas. */
-async function formLancar(i) {
-  const entrada = i.valor > 0; const sug = i.situacao === 'pendente' ? i.categoriaSugerida : null; const fs = !entrada ? i.fornecedorSugerido : null;
-  if (entrada) await garantirPacientes();
-  const parecidas = i.grupo ? dados.itens.filter((x) => x.id !== i.id && x.situacao === 'pendente' && (x.valor > 0) === entrada && x.grupo && x.grupo.chave === i.grupo.chave) : [];
-  const m = abrirModal({ titulo: entrada ? 'Lançar como receita' : 'Lançar como despesa', largo: true, corpo: html`<div><p class="erro-form" role="alert" hidden></p><p class="suave peq" style="margin-top:0">${dataBR(i.data)} · <strong>${entrada ? '+' : '−'} ${brl(Math.abs(i.valor))}</strong> · ${i.descricao}</p>
-    ${campo({ id: 'descricao', rotulo: 'Descrição', valor: i.descricao.slice(0, 150), obrig: true })}
-    <div class="grade-2">${comboCategoria({ tipo: entrada ? 'receita' : 'despesa', valor: sug && sug.categoriaId ? sug.categoriaId : '' })}
-      ${entrada ? combo({ id: 'pacienteId', rotulo: 'Paciente (opcional)', valor: sug && sug.pacienteId ? sug.pacienteId : '', vazio: 'Sem paciente', opcoes: pacientes.map((p) => [p.id, p.nome]) })
-        : comboFornecedor({ valor: fs ? fs.nome : sug && sug.contraparte ? sug.contraparte : '' })}</div>
-    ${sug || fs ? html`<p class="suave peq" data-hint-sug style="margin:-4px 0 10px">${sug ? selo(ROTULO_CONFIANCA[sug.confianca], TOM_CONFIANCA[sug.confianca]) : ''} ${sug && sug.categoria ? 'Categoria sugerida pela descrição.' : ''} ${sug ? sug.motivo : ''} ${fs && (!sug || fs.motivo !== sug.motivo) ? fs.motivo : ''}</p>` : ''}
-    ${entrada ? '' : caixaCadastrar()}
-    ${parecidas.length ? html`<label class="marca" style="margin-top:6px"><input type="checkbox" name="parecidas"><span>Fazer o mesmo com as <strong>${parecidas.length}</strong> linha${parecidas.length === 1 ? '' : 's'} parecida${parecidas.length === 1 ? '' : 's'} ("${i.grupo.nome}", saldo ${saldoDe(parecidas) >= 0 ? '+' : '−'} ${brl(Math.abs(saldoDe(parecidas)))})</span></label>` : ''}</div>`,
-    acoes: [{ id: 'cancelar', rotulo: 'Cancelar' }, { id: 'ok', rotulo: 'Lançar', classe: 'btn-pri' }] });
-  const form = $('form', m.el); ligarSeletores(m.el); ligarCadastroFornecedor(form);
-  m.el.addEventListener('click', async (e) => {
-    const b = e.target.closest('[data-acao]'); if (!b) return; if (b.dataset.acao === 'cancelar') return m.fechar(); const d = dadosForm(form); b.disabled = true;
-    const catId = d.categoriaId ? Number(d.categoriaId) : null; const contra = !entrada && d.contraparte ? d.contraparte : undefined; const cad = !entrada && !!d.contraparte && d.cadastrar === true && !(form.querySelector('[data-cad-forn]') || {}).hidden;
-    try {
-      await api.post(`extrato-itens/${i.id}/lancar`, { descricao: d.descricao, categoriaId: catId, contraparte: contra, criarFornecedor: cad || undefined, pacienteId: entrada && d.pacienteId ? Number(d.pacienteId) : undefined });
-      let extra = 0;
-      if (d.parecidas) { const r = await api.post('extrato-itens/lote', { ids: parecidas.map((x) => x.id), acao: 'lancar', categoriaId: catId, contraparte: contra, pacienteId: entrada && d.pacienteId ? Number(d.pacienteId) : undefined }); extra = r.feitas; }
-      m.fechar(); aviso(extra ? `Lançamento criado e mais ${mais(extra, 'linha parecida lançada', 'linhas parecidas lançadas')}.` : 'Lançamento criado e conciliado.'); carregar();
-    } catch (er) { erroNoForm(form, b, er.message); }
-  });
-}
 
 /** Ação em massa: lançar (ou mudar categoria/fornecedor) várias linhas de uma vez. */
 async function formLote(ids, modo) {
@@ -228,14 +201,40 @@ async function formLote(ids, modo) {
   });
 }
 
-/** Conciliar com uma conta em aberto escolhida à mão: busca por nome, descrição ou valor. */
-async function formConciliar(i) {
-  const tipo = i.valor > 0 ? 'receber' : 'pagar'; const abs = Math.abs(i.valor); let timer = null; let lista = [];
-  const m = abrirModal({ titulo: tipo === 'receber' ? 'Conciliar com uma cobrança' : 'Conciliar com uma conta a pagar', largo: true, corpo: html`<div><p class="erro-form" role="alert" hidden></p>
-    <p class="suave peq" style="margin-top:0">${dataBR(i.data)} · <strong>${tipo === 'receber' ? '+' : '−'} ${brl(abs)}</strong> · ${i.descricao}</p>
-    <div class="campo"><label for="cc-busca">Buscar</label><input id="cc-busca" type="search" placeholder="Nome ${tipo === 'receber' ? 'do paciente' : 'do fornecedor'}, descrição ou valor" autocomplete="off"></div>
-    <div id="cc-lista" aria-live="polite"><p class="suave">Carregando…</p></div></div>`, acoes: [{ id: 'cancelar', rotulo: 'Fechar' }] });
-  const form = $('form', m.el); const caixa = $('#cc-lista', m.el); const campoBusca = $('#cc-busca', m.el);
+/** Conciliar uma linha. Dois caminhos no mesmo diálogo, sem depender de existir conta lançada antes:
+    • "Lançar como novo": cria o lançamento já pago, escolhendo categoria e fornecedor (ou paciente), com a opção de estender às linhas parecidas;
+    • "Conta em aberto": concilia com uma cobrança/conta a pagar que já existe (busca por nome, descrição ou valor). */
+async function formConciliar(i, abaInicial) {
+  const entrada = i.valor > 0; const tipo = entrada ? 'receber' : 'pagar'; const abs = Math.abs(i.valor); const sug = i.situacao === 'pendente' ? i.categoriaSugerida : null; const fs = !entrada ? i.fornecedorSugerido : null;
+  if (entrada) await garantirPacientes();
+  const parecidas = i.grupo ? dados.itens.filter((x) => x.id !== i.id && x.situacao === 'pendente' && (x.valor > 0) === entrada && x.grupo && x.grupo.chave === i.grupo.chave) : [];
+  let aba = abaInicial || (i.sugestoes.some((s) => s.restante === abs) ? 'aberto' : 'novo'); let timer = null; let lista = [];
+  const rotAberto = entrada ? 'Cobrança em aberto' : 'Conta a pagar em aberto';
+  const m = abrirModal({ titulo: 'Conciliar esta linha', largo: true, corpo: html`<div><p class="erro-form" role="alert" hidden></p>
+    <p class="suave peq" style="margin-top:0">${dataBR(i.data)} · <strong>${entrada ? '+' : '−'} ${brl(abs)}</strong> · ${i.descricao}</p>
+    <div class="abas" role="tablist" aria-label="Como conciliar"><button type="button" role="tab" data-aba="novo" aria-selected="${aba === 'novo'}">Lançar como novo</button><button type="button" role="tab" data-aba="aberto" aria-selected="${aba === 'aberto'}"><span data-rot-aberto>${rotAberto}</span></button></div>
+    <div data-painel="novo" role="tabpanel" ${aba === 'novo' ? '' : raw('hidden')}>
+      <p class="suave peq" style="margin:0 0 10px">Cria o lançamento ${entrada ? 'de receita' : 'de despesa'} já ${entrada ? 'recebido' : 'pago'} na data do extrato. Não precisa existir nada lançado antes.</p>
+      ${campo({ id: 'descricao', rotulo: 'Descrição', valor: i.descricao.slice(0, 150), obrig: true })}
+      <div class="grade-2">${comboCategoria({ tipo: entrada ? 'receita' : 'despesa', valor: sug && sug.categoriaId ? sug.categoriaId : '' })}
+        ${entrada ? combo({ id: 'pacienteId', rotulo: 'Paciente (opcional)', valor: sug && sug.pacienteId ? sug.pacienteId : '', vazio: 'Sem paciente', opcoes: pacientes.map((p) => [p.id, p.nome]) })
+          : comboFornecedor({ valor: fs ? fs.nome : sug && sug.contraparte ? sug.contraparte : '' })}</div>
+      ${sug || fs ? html`<p class="suave peq" data-hint-sug style="margin:-4px 0 10px">${sug ? selo(ROTULO_CONFIANCA[sug.confianca], TOM_CONFIANCA[sug.confianca]) : ''} ${sug && sug.categoria ? 'Categoria sugerida pela descrição.' : ''} ${sug ? sug.motivo : ''} ${fs && (!sug || fs.motivo !== sug.motivo) ? fs.motivo : ''}</p>` : ''}
+      ${entrada ? '' : caixaCadastrar()}
+      ${parecidas.length ? html`<label class="marca" style="margin-top:6px"><input type="checkbox" name="parecidas"><span>Fazer o mesmo com as <strong>${parecidas.length}</strong> linha${parecidas.length === 1 ? '' : 's'} parecida${parecidas.length === 1 ? '' : 's'} ("${i.grupo.nome}", saldo ${saldoDe(parecidas) >= 0 ? '+' : '−'} ${brl(Math.abs(saldoDe(parecidas)))})</span></label>` : ''}
+      <p class="suave peq" style="margin:12px 0 0">Esta linha é de ${entrada ? 'uma cobrança' : 'uma conta'} que você já tinha lançado? <button type="button" class="link" data-ir-aberto>Conciliar com ${entrada ? 'a cobrança' : 'a conta'} em aberto</button>.</p></div>
+    <div data-painel="aberto" role="tabpanel" ${aba === 'aberto' ? '' : raw('hidden')}>
+      <div class="campo"><label for="cc-busca">Buscar</label><input id="cc-busca" type="search" placeholder="Nome ${entrada ? 'do paciente' : 'do fornecedor'}, descrição ou valor" autocomplete="off"></div>
+      <div id="cc-lista" aria-live="polite"><p class="suave">Carregando…</p></div></div></div>`,
+    acoes: [{ id: 'cancelar', rotulo: 'Cancelar' }, { id: 'ok', rotulo: 'Lançar', classe: 'btn-pri' }] });
+  const form = $('form', m.el); ligarSeletores(m.el); ligarCadastroFornecedor(form);
+  const caixa = $('#cc-lista', m.el); const campoBusca = $('#cc-busca', m.el); const botaoOk = $('[data-acao="ok"]', m.el);
+  const mostrar = (qual) => {
+    aba = qual; m.el.querySelectorAll('[data-aba]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.aba === qual)));
+    m.el.querySelectorAll('[data-painel]').forEach((p) => { p.hidden = p.dataset.painel !== qual; });
+    botaoOk.hidden = qual !== 'novo'; botaoOk.disabled = qual !== 'novo';   // "Lançar" só vale na aba do lançamento novo (e Enter na busca não pode lançar)
+    const alvo = qual === 'novo' ? $('#descricao', m.el) : campoBusca; if (alvo) alvo.focus();
+  };
   const somenteNumero = (q) => /^[\d.,\s]+$/.test(q) && /\d/.test(q);
   const desenharResultado = () => {
     const q = campoBusca.value.trim(); let itens = lista;
@@ -243,23 +242,36 @@ async function formConciliar(i) {
     const cabem = itens.filter((l) => l.restante >= abs); const maiores = itens.length - cabem.length;
     const ordenados = cabem.sort((a, b) => (a.restante === abs ? 0 : 1) - (b.restante === abs ? 0 : 1) || Math.abs(new Date(a.vencimento) - new Date(i.data)) - Math.abs(new Date(b.vencimento) - new Date(i.data)));
     montar(caixa, ordenados.length ? html`<ul class="lista cc-lista">${ordenados.slice(0, 60).map((l) => html`<li class="linha"><div class="corpo"><span class="tit">${(l.paciente && l.paciente.nome) || l.contraparte || l.descricao}</span><span class="sub">${l.descricao}${l.categoria ? ` · ${l.categoria}` : ''} · vence em ${dataBR(l.vencimento)}${l.estado === 'atrasado' ? ' (atrasada)' : ''}</span></div>
-        <span class="dir"><strong class="num">${brl(l.restante)}</strong>${l.restante === abs ? selo('Valor igual', 'ok') : selo('Sobra ' + brl(l.restante - abs), 'info')}</span><button class="btn ${l.restante === abs ? 'btn-pri' : 'btn-sec'} btn-peq" data-cc="${l.id}">Conciliar</button></li>`)}</ul>
+        <span class="dir"><strong class="num">${brl(l.restante)}</strong>${l.restante === abs ? selo('Valor igual', 'ok') : selo('Sobra ' + brl(l.restante - abs), 'info')}</span><button type="button" class="btn ${l.restante === abs ? 'btn-pri' : 'btn-sec'} btn-peq" data-cc="${l.id}">Conciliar</button></li>`)}</ul>
       ${ordenados.length > 60 ? html`<p class="suave peq">Mostrando 60 de ${ordenados.length}: refine a busca.</p>` : ''}`
-      : html`<p class="suave">Nenhuma ${tipo === 'receber' ? 'cobrança' : 'conta'} em aberto encontrada${q ? ' para essa busca' : ''}.</p>`);
-    if (maiores > 0) caixa.insertAdjacentHTML('beforeend', `<p class="suave peq">${maiores} conta${maiores === 1 ? '' : 's'} com saldo menor que ${abs === 0 ? '' : 'esta linha'} não ${maiores === 1 ? 'aparece' : 'aparecem'}: use "Lançar" para criar um lançamento novo.</p>`);
+      : html`<div class="cc-vazio"><p class="suave" style="margin:0 0 10px">Nenhuma ${entrada ? 'cobrança' : 'conta'} em aberto${q ? ' para essa busca' : ' com saldo suficiente'}. Sem problema: dá para lançar esta linha como um lançamento novo.</p><button type="button" class="btn btn-pri btn-peq" data-ir-novo>Lançar como novo lançamento</button></div>`);
+    if (maiores > 0 && ordenados.length) caixa.insertAdjacentHTML('beforeend', `<p class="suave peq">${maiores} ${entrada ? 'cobrança' : 'conta'}${maiores === 1 ? '' : 's'} com saldo menor que esta linha não ${maiores === 1 ? 'aparece' : 'aparecem'}.</p>`);
+    if (ordenados.length) caixa.insertAdjacentHTML('beforeend', `<p class="suave peq" style="margin-top:10px">Não é nenhuma destas? <button type="button" class="link" data-ir-novo>Lançar como novo lançamento</button>.</p>`);
   };
   const buscar = async () => {
     const q = campoBusca.value.trim(); const servidor = q && !somenteNumero(q) ? `&busca=${encodeURIComponent(q)}` : '';
-    try { lista = (await api.get(`lancamentos?tipo=${tipo}&situacao=aberto&limite=500${servidor}`)).itens; desenharResultado(); } catch (er) { erroNoForm(form, null, er.message); }
+    try { lista = (await api.get(`lancamentos?tipo=${tipo}&situacao=aberto&limite=500${servidor}`)).itens; desenharResultado(); if (!q) { const n = lista.filter((l) => l.restante >= abs).length; $('[data-rot-aberto]', m.el).textContent = `${rotAberto}${n ? ` (${n})` : ''}`; } } catch (er) { erroNoForm(form, null, er.message); }
   };
   campoBusca.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(buscar, 250); });
   m.el.addEventListener('click', async (e) => {
+    const ab = e.target.closest('[data-aba]'); if (ab) return mostrar(ab.dataset.aba);
+    if (e.target.closest('[data-ir-novo]')) return mostrar('novo');
+    if (e.target.closest('[data-ir-aberto]')) return mostrar('aberto');
     const cc = e.target.closest('[data-cc]');
     if (cc) { cc.disabled = true; try { await api.post(`extrato-itens/${i.id}/conciliar`, { lancamentoId: Number(cc.dataset.cc) }); m.fechar(); aviso('Conciliado.'); carregar(); } catch (er) { erroNoForm(form, cc, er.message); } return; }
-    const b = e.target.closest('[data-acao]'); if (b && b.dataset.acao === 'cancelar') m.fechar();
+    const b = e.target.closest('[data-acao]'); if (!b) return; if (b.dataset.acao === 'cancelar') return m.fechar();
+    const d = dadosForm(form); b.disabled = true;
+    const catId = d.categoriaId ? Number(d.categoriaId) : null; const contra = !entrada && d.contraparte ? d.contraparte : undefined; const cad = !entrada && !!d.contraparte && d.cadastrar === true && !(form.querySelector('[data-cad-forn]') || {}).hidden;
+    try {
+      await api.post(`extrato-itens/${i.id}/lancar`, { descricao: d.descricao, categoriaId: catId, contraparte: contra, criarFornecedor: cad || undefined, pacienteId: entrada && d.pacienteId ? Number(d.pacienteId) : undefined });
+      let extra = 0;
+      if (d.parecidas) { const r = await api.post('extrato-itens/lote', { ids: parecidas.map((x) => x.id), acao: 'lancar', categoriaId: catId, contraparte: contra, pacienteId: entrada && d.pacienteId ? Number(d.pacienteId) : undefined }); extra = r.feitas; }
+      m.fechar(); aviso(extra ? `Lançamento criado e mais ${mais(extra, 'linha parecida lançada', 'linhas parecidas lançadas')}.` : 'Lançamento criado e conciliado.'); carregar();
+    } catch (er) { erroNoForm(form, b, er.message); }
   });
-  buscar();
+  mostrar(aba); buscar();
 }
+const formLancar = (i) => formConciliar(i, 'novo');
 
 function formTransferencia(i) {
   const outras = contas.filter((c) => c.id !== i.contaFinId); const sai = i.valor < 0;
@@ -320,7 +332,7 @@ async function clique(e) {
     return carregar();
   }
   const lan = t.closest('[data-lancar]'); if (lan) return formLancar(achar(lan.dataset.lancar));
-  const bus = t.closest('[data-buscar]'); if (bus) return formConciliar(achar(bus.dataset.buscar));
+  const bus = t.closest('[data-buscar]'); if (bus) return formConciliar(achar(bus.dataset.buscar), 'aberto');
   const tr = t.closest('[data-transf]'); if (tr) return formTransferencia(achar(tr.dataset.transf));
   const ig = t.closest('[data-ignorar]'); if (ig) return agir(`extrato-itens/${ig.dataset.ignorar}/ignorar`, {}, 'Linha ignorada.');
   const des = t.closest('[data-desfazer]'); if (des) return agir(`extrato-itens/${des.dataset.desfazer}/desfazer`, {}, 'Desfeito: a linha voltou a ficar pendente.');
