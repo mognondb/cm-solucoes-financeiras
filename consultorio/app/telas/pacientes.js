@@ -2,7 +2,7 @@
    Só dados administrativos e financeiros: nada clínico (os campos de texto avisam). */
 import { api, qs } from '../api.js';
 import { App, carregarBase, servicoPorId, profissionalPorId, somenteLeitura } from '../estado.js';
-import { html, raw, montar, $, $$, abrirModal, confirmar, aviso, campo, campoDinheiro, dadosForm, lerReais, brl, selo, vazio, fmtCPF, fmtTel, dataBR, dataCurta, dataDe, hhmm, diasEntre, linkWhats, preencher, primeiroNome, DIAS_CURTOS } from '../ui.js';
+import { html, raw, montar, $, $$, abrirModal, confirmar, aviso, campo, campoDinheiro, dadosForm, lerReais, brl, selo, vazio, fmtCPF, fmtTel, dataBR, dataCurta, dataDe, hhmm, diasEntre, linkWhats, preencher, primeiroNome, DIAS, DIAS_CURTOS } from '../ui.js';
 
 const STATUS = { ativo: 'Ativo', pausado: 'Em pausa', alta: 'Alta', arquivado: 'Arquivado' };
 const TIPOS = [['individual', 'Individual'], ['casal', 'Casal'], ['familia', 'Família'], ['infantil', 'Criança ou adolescente'], ['grupo', 'Grupo']];
@@ -123,6 +123,7 @@ async function ficha(el, id) {
           ${r.abertos.length ? html`<ul class="lista">${r.abertos.map((l) => html`<li class="linha"><div class="corpo"><span class="tit">${l.descricao}</span><span class="sub">Vence em ${dataBR(l.vencimento)}${l.pago ? ` · já pagou ${brl(l.pago)}` : ''}</span></div>
             <span class="dir"><strong class="num">${brl(restante(l))}</strong>${atrasado(l) ? selo(`${diasAtraso(l)} dia${diasAtraso(l) === 1 ? '' : 's'} de atraso`, 'ruim') : ''}</span></li>`)}</ul>` : html`<p class="suave">Nada em aberto. Quando uma sessão for realizada, a cobrança aparece aqui.</p>`}</div>
         <div class="cartao"><div class="cartao-t"><h3>Próximas sessões</h3></div>
+          ${(r.series || []).length ? html`<p class="peq" style="margin:0 0 8px">${(r.series).map((s) => html`<span class="selo selo-info" style="margin-right:6px">↻ ${s.frequencia === 'quinzenal' ? 'A cada 15 dias, ' : 'Toda '}${DIAS[s.diaSemana]} às ${s.hora}</span>`)}</p>` : ''}
           ${r.proximas.length ? html`<ul class="lista">${r.proximas.map((a) => html`<li class="linha"><div class="corpo"><span class="tit">${quando(a.inicio)}</span><span class="sub">${a.modalidade === 'online' ? 'Online' : 'Presencial'}${a.valor ? ` · ${brl(a.valor)}` : ''}</span></div>${selo(...SESSAO[a.status] || [a.status])}</li>`)}</ul>` : html`<p class="suave">Nenhuma sessão marcada.</p>`}</div>
         <div class="cartao"><div class="cartao-t"><h3>Histórico</h3></div>
           ${r.historico.length ? html`<ul class="lista">${r.historico.map((a) => html`<li class="linha"><div class="corpo"><span class="tit">${dataBR(a.inicio.slice(0, 10))} · ${hhmm(a.inicio)}</span></div>${selo(...SESSAO[a.status] || [a.status])}</li>`)}</ul>` : html`<p class="suave">Ainda sem sessões anteriores.</p>`}</div>

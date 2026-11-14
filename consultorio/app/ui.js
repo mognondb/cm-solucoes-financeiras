@@ -75,6 +75,9 @@ export const preencher = (modelo, v) => String(modelo).replace(/\{(\w+)\}/g, (_,
 let toastEl;
 export function aviso(msg, tipo = 'ok', ms = 3800) {
   if (!toastEl) { toastEl = document.createElement('div'); toastEl.className = 'toasts'; toastEl.setAttribute('role', 'status'); toastEl.setAttribute('aria-live', 'polite'); document.body.appendChild(toastEl); }
+  // avisos iguais não se repetem e no máximo 3 ficam na tela (o mais antigo sai)
+  Array.from(toastEl.children).filter((x) => x.textContent === msg).forEach((x) => x.remove());
+  while (toastEl.children.length >= 3) toastEl.firstChild.remove();
   const t = document.createElement('div'); t.className = 'toast toast-' + tipo; t.textContent = msg; toastEl.appendChild(t);
   setTimeout(() => { t.classList.add('saindo'); setTimeout(() => t.remove(), 300); }, ms);
 }

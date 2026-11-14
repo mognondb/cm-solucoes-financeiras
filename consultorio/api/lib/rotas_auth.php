@@ -16,7 +16,7 @@ function psi_eu(): array {
     'logado' => true, 'csrf' => PsiSessao::$csrf,
     'usuario' => ['id' => $u['id'], 'nome' => $u['nome'], 'email' => $u['email'], 'papel' => $u['papel'], 'verificado' => $u['verificado']],
     'conta' => ['id' => (int)$c['id'], 'nome' => $c['nome'], 'documento' => $c['documento'], 'crp' => $c['crp'], 'telefone' => $c['telefone'], 'cidade' => $c['cidade'], 'uf' => $c['uf'], 'endereco' => $c['endereco'], 'fuso' => $c['fuso']],
-    'plano' => psi_plano(), 'config' => psi_config(), 'profissionais' => array_map(fn($p) => ['id' => (int)$p['id'], 'nome' => $p['nome'], 'crp' => $p['crp'], 'cor' => $p['cor']], $s->fetchAll()),
+    'plano' => psi_plano(), 'config' => psi_config(), 'profissionais' => array_map(fn($p) => ['id' => (int)$p['id'], 'nome' => $p['nome'], 'crp' => $p['crp'], 'cor' => $p['cor'], 'ativo' => true], $s->fetchAll()),
     'hoje' => psi_hoje(),
   ];
 }

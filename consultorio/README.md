@@ -16,7 +16,7 @@ Pense em um "Conta Azul" feito para essa rotina, com a agenda no centro: o que a
 |---|---|---|
 | F0 | Base: API, segurança, acesso restrito, cadastro/login/teste grátis, configurações, painel admin | feito |
 | F1 | Pacientes e tipos de atendimento | feito |
-| F1 | Agenda (calendário, recorrência, status das sessões) | a fazer |
+| F1 | Agenda (dia/semana/mês, sessões fixas, conflitos, bloqueios, status, confirmação por WhatsApp) | feito |
 | F1 | Contas a receber, baixas, inadimplência, cobrança | a fazer |
 | F2 | Contas a pagar, contas bancárias, cartão e fatura, despesas fixas, fluxo de caixa | a fazer |
 | F3 | Importar extrato (OFX/CSV/Excel) e conciliar | a fazer |
@@ -106,6 +106,17 @@ validar a entrega de e-mail (SPF/DKIM do domínio) e então usar "Abrir ao públ
 | `psi_auditoria` | Quem fez o quê |
 
 Fases seguintes acrescentam: `psi_transferencias`, `psi_recorrentes` (F2); `psi_extratos`, `psi_extrato_itens` (F3); `psi_recibos` (F4).
+
+### Agenda (F1)
+
+- Cada sessão é uma linha em `psi_agendamentos`; o "horário fixo" é uma linha em `psi_series` (semanal ou quinzenal). As ocorrências são **geradas de verdade**
+  (180 dias ao criar, estendidas sob demanda quando a agenda é consultada, no máximo 800 dias à frente). Assim cada uma pode ser remarcada, faltar ou ser cancelada sozinha.
+- O cursor `psi_series.gerado_ate` só anda para frente: sessão remarcada ou apagada **não volta** quando a série é estendida. O índice único `(serie_id, inicio)`
+  (migração v2) e o `INSERT IGNORE` tornam a geração idempotente mesmo com consultas simultâneas.
+- **Conflitos:** sobreposição na agenda da mesma profissional (sessões e bloqueios, menos canceladas) → 409 com a lista; `ignorarConflitos: true` (booleano) marca mesmo assim.
+- **"Esta e as próximas":** remarcar desloca a série (dia da semana e horário) e as sessões futuras ainda não realizadas; cancelar/apagar encerra a série na data.
+  Sessões realizadas ou com falta nunca são deslocadas nem apagadas (cancele em vez de apagar).
+- Marcar realizada/falta só vale para hoje ou dias anteriores. Valor e "cobrar" nascem do paciente (mensalista: valor 0 e não cobra; convênio: valor do convênio).
 
 ### Regras de cobrança previstas (F1)
 

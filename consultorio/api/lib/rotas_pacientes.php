@@ -132,7 +132,9 @@ function psi_registrar_rotas_pacientes(PsiRoteador $r): void {
     $s = $db->prepare("SELECT COALESCE(SUM(b.valor), 0) FROM psi_baixas b JOIN psi_lancamentos l ON l.id = b.lancamento_id WHERE l.conta_id = ? AND l.paciente_id = ? AND l.tipo = 'receber'"); $s->execute([$c, $id]);
     $s2 = $db->prepare("SELECT COUNT(*) FROM psi_agendamentos WHERE conta_id = ? AND paciente_id = ? AND status = 'realizada'"); $s2->execute([$c, $id]);
     $s3 = $db->prepare('SELECT canal, obs, promessa_em, criado_em FROM psi_cobrancas WHERE conta_id = ? AND paciente_id = ? ORDER BY id DESC LIMIT 5'); $s3->execute([$c, $id]);
-    return ['paciente' => psi_paciente_json($pac), 'financeiro' => $sd + ['recebido' => (int)$s->fetchColumn(), 'sessoesRealizadas' => (int)$s2->fetchColumn()],
+    $sr = $db->prepare('SELECT id, frequencia, dia_semana, hora, duracao_min, inicio, fim FROM psi_series WHERE conta_id = ? AND paciente_id = ? AND ativa = 1 ORDER BY dia_semana, hora'); $sr->execute([$c, $id]);
+    $series = array_map(fn($x) => ['id' => (int)$x['id'], 'frequencia' => $x['frequencia'], 'diaSemana' => (int)$x['dia_semana'], 'hora' => substr($x['hora'], 0, 5), 'duracaoMin' => (int)$x['duracao_min'], 'inicio' => $x['inicio'], 'fim' => $x['fim']], $sr->fetchAll());
+    return ['paciente' => psi_paciente_json($pac), 'series' => $series, 'financeiro' => $sd + ['recebido' => (int)$s->fetchColumn(), 'sessoesRealizadas' => (int)$s2->fetchColumn()],
       'proximas' => $proximas, 'historico' => $historico, 'abertos' => $abertos, 'cobrancas' => $s3->fetchAll()];
   });
 

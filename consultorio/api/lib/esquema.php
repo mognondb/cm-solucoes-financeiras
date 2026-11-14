@@ -115,6 +115,13 @@ function psi_migracoes(): array {
         entidade VARCHAR(40) NOT NULL, entidade_id VARCHAR(40) NULL, detalhe_json TEXT NULL, criado_em DATETIME NOT NULL, KEY k_conta (conta_id, criado_em)
       ) $t",
     ],
+    /* v2 (agenda): impede duas ocorrências da mesma série no mesmo horário (geração concorrente das sessões fixas). */
+    2 => [
+      function (PDO $db): void {
+        $s = $db->query("SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'psi_agendamentos' AND INDEX_NAME = 'uq_serie_inicio'");
+        if ((int)$s->fetchColumn() === 0) $db->exec('ALTER TABLE psi_agendamentos ADD UNIQUE KEY uq_serie_inicio (serie_id, inicio)');
+      },
+    ],
   ];
 }
 
@@ -137,7 +144,7 @@ function psi_migrar(PDO $db): void {
     try { $v = $db->query("SELECT valor FROM psi_ajustes WHERE chave = 'schema_versao'")->fetchColumn(); $versaoAtual = $v === false ? 0 : (int)$v; } catch (Throwable $e) { $versaoAtual = 0; }
     foreach ($migs as $versao => $comandos) {
       if ($versao <= $versaoAtual) continue;
-      foreach ($comandos as $sql) $db->exec($sql);
+      foreach ($comandos as $sql) { if (is_callable($sql)) $sql($db); else $db->exec($sql); }
       $db->prepare("INSERT INTO psi_ajustes (chave, valor) VALUES ('schema_versao', ?) ON DUPLICATE KEY UPDATE valor = VALUES(valor)")->execute([(string)$versao]);
     }
   } finally {
