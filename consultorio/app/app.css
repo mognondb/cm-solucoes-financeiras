@@ -156,6 +156,10 @@ details.bloco { border: 1px solid var(--linha); border-radius: 12px; padding: 10
 
 .linha.ex { flex-wrap: wrap; } .linha.ex .acoes-rapidas { flex-basis: 100%; justify-content: flex-start; padding-left: 58px; margin-top: -2px; } .linha.ex > .selo { margin-left: auto; } .linha.ex .tit { white-space: normal; }
 
+.linha.inativa { opacity: .65; }
+.rl-barra { height: 8px; background: var(--creme); border-radius: 99px; overflow: hidden; margin: 6px 0 2px; } .rl-barra > i { display: block; height: 100%; border-radius: 99px; }
+.linha > .acoes-rapidas { flex-basis: auto; padding-left: 0; margin-top: 0; }
+
 /* ---------- onboarding ---------- */
 .passos { counter-reset: p; list-style: none; padding: 0; margin: 0; } .passos li { display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; border-top: 1px solid var(--linha); } .passos li:first-child { border-top: 0; }
 .passo-n { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #d9d2c3; display: grid; place-items: center; flex: none; font-size: .8rem; font-weight: 600; color: var(--suave); } .passo-ok .passo-n { background: var(--ok); border-color: var(--ok); color: #fff; } .passo-ok .tit { text-decoration: line-through; color: var(--suave); }

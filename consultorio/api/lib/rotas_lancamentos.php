@@ -93,8 +93,8 @@ function psi_registrar_rotas_lancamentos(PsiRoteador $r): void {
   $r->add('GET', 'lancamentos/{id}', function ($p) {
     $id = psi_da_conta('psi_lancamentos', $p['id'], 'Lançamento', true); $c = psi_conta_id(); $db = psi_db();
     $l = psi_lancamento_json(psi_carregar_lancamento($id));
-    $b = $db->prepare('SELECT b.id, b.data, b.valor, b.forma, b.conta_fin_id, b.obs, f.nome AS conta FROM psi_baixas b LEFT JOIN psi_contas_fin f ON f.id = b.conta_fin_id WHERE b.lancamento_id = ? AND b.conta_id = ? ORDER BY b.data, b.id'); $b->execute([$id, $c]);
-    $baixas = array_map(fn($x) => ['id' => (int)$x['id'], 'data' => $x['data'], 'valor' => (int)$x['valor'], 'forma' => $x['forma'], 'contaFinId' => $x['conta_fin_id'] === null ? null : (int)$x['conta_fin_id'], 'conta' => $x['conta'], 'obs' => $x['obs']], $b->fetchAll());
+    $b = $db->prepare('SELECT b.id, b.data, b.valor, b.forma, b.conta_fin_id, b.obs, f.nome AS conta, r.id AS recibo_id, r.numero AS recibo_numero FROM psi_baixas b LEFT JOIN psi_contas_fin f ON f.id = b.conta_fin_id LEFT JOIN psi_recibo_baixas rb ON rb.baixa_id = b.id LEFT JOIN psi_recibos r ON r.id = rb.recibo_id AND r.cancelado = 0 WHERE b.lancamento_id = ? AND b.conta_id = ? ORDER BY b.data, b.id'); $b->execute([$id, $c]);
+    $baixas = array_map(fn($x) => ['id' => (int)$x['id'], 'data' => $x['data'], 'valor' => (int)$x['valor'], 'forma' => $x['forma'], 'contaFinId' => $x['conta_fin_id'] === null ? null : (int)$x['conta_fin_id'], 'conta' => $x['conta'], 'obs' => $x['obs'], 'reciboId' => $x['recibo_id'] === null ? null : (int)$x['recibo_id'], 'reciboNumero' => $x['recibo_numero'] === null ? null : (int)$x['recibo_numero']], $b->fetchAll());
     $co = $db->prepare('SELECT canal, obs, promessa_em, criado_em FROM psi_cobrancas WHERE conta_id = ? AND lancamento_id = ? ORDER BY id DESC LIMIT 10'); $co->execute([$c, $id]);
     return ['item' => $l, 'baixas' => $baixas, 'cobrancas' => $co->fetchAll()];
   });

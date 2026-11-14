@@ -7,7 +7,7 @@
 declare(strict_types=1);
 
 const PSI_TABELAS_DA_CONTA = [ // tudo o que tem conta_id: usado ao excluir uma conta
-  'psi_auditoria', 'psi_cobrancas', 'psi_transferencias', 'psi_recorrentes', 'psi_extrato_itens', 'psi_extratos', 'psi_baixas', 'psi_lancamentos', 'psi_agendamentos', 'psi_series', 'psi_pacientes', 'psi_servicos',
+  'psi_auditoria', 'psi_cobrancas', 'psi_transferencias', 'psi_recorrentes', 'psi_extrato_itens', 'psi_extratos', 'psi_recibo_baixas', 'psi_recibos', 'psi_baixas', 'psi_lancamentos', 'psi_agendamentos', 'psi_series', 'psi_pacientes', 'psi_servicos',
   'psi_contas_fin', 'psi_categorias', 'psi_profissionais', 'psi_sessoes', 'psi_usuarios',
 ];
 
@@ -145,6 +145,18 @@ function psi_migracoes(): array {
         data DATE NOT NULL, valor INT NOT NULL, descricao VARCHAR(200) NOT NULL, hash CHAR(40) NOT NULL, situacao ENUM('pendente','conciliado','ignorado') NOT NULL DEFAULT 'pendente',
         baixa_id BIGINT UNSIGNED NULL, lancamento_id BIGINT UNSIGNED NULL, transferencia_id BIGINT UNSIGNED NULL, criado_em DATETIME NOT NULL,
         UNIQUE KEY uq_item (conta_id, conta_fin_id, hash), KEY k_sit (conta_id, conta_fin_id, situacao, data), KEY k_extrato (extrato_id)
+      ) $t",
+    ],
+    /* v5 (documentos): recibos numerados por consultório (com os dados do emitente "congelados" no momento da emissão) e o vínculo de cada pagamento com no máximo um recibo ativo. */
+    5 => [
+      "CREATE TABLE IF NOT EXISTS psi_recibos (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, conta_id BIGINT UNSIGNED NOT NULL, numero INT NOT NULL, paciente_id BIGINT UNSIGNED NULL, pagador_nome VARCHAR(120) NOT NULL, pagador_cpf VARCHAR(14) NULL,
+        valor INT NOT NULL, data DATE NOT NULL, referencia VARCHAR(250) NOT NULL, forma VARCHAR(30) NULL, emitente_nome VARCHAR(120) NOT NULL, emitente_crp VARCHAR(30) NULL, emitente_doc VARCHAR(14) NULL,
+        consultorio VARCHAR(120) NULL, local VARCHAR(120) NULL, cancelado TINYINT(1) NOT NULL DEFAULT 0, cancelado_motivo VARCHAR(160) NULL, criado_em DATETIME NOT NULL,
+        UNIQUE KEY uq_num (conta_id, numero), KEY k_pac (conta_id, paciente_id), KEY k_data (conta_id, data)
+      ) $t",
+      "CREATE TABLE IF NOT EXISTS psi_recibo_baixas (
+        recibo_id BIGINT UNSIGNED NOT NULL, baixa_id BIGINT UNSIGNED NOT NULL, conta_id BIGINT UNSIGNED NOT NULL, PRIMARY KEY (recibo_id, baixa_id), UNIQUE KEY uq_baixa (baixa_id), KEY k_conta (conta_id)
       ) $t",
     ],
   ];

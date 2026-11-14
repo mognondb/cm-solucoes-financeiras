@@ -36,6 +36,41 @@ function psi_registrar_rotas_conta(PsiRoteador $r): void {
     return psi_eu();
   });
 
+  /* ---- seus dados (LGPD): exportar tudo e excluir a conta. Funcionam mesmo com o teste encerrado. ---- */
+  $r->add('GET', 'conta/exportar', function () {
+    $c = psi_conta_id(); $db = psi_db(); $conta = PsiSessao::$conta;
+    /* cada tabela com as colunas que fazem sentido para o usuário (sem segredos, sem ids internos de sessão) */
+    $tabelas = ['profissionais' => 'psi_profissionais', 'categorias' => 'psi_categorias', 'servicos' => 'psi_servicos', 'contas_financeiras' => 'psi_contas_fin', 'pacientes' => 'psi_pacientes', 'series_de_sessoes' => 'psi_series',
+      'agendamentos' => 'psi_agendamentos', 'lancamentos' => 'psi_lancamentos', 'pagamentos' => 'psi_baixas', 'cobrancas_feitas' => 'psi_cobrancas', 'transferencias' => 'psi_transferencias', 'despesas_fixas' => 'psi_recorrentes',
+      'extratos' => 'psi_extratos', 'linhas_de_extrato' => 'psi_extrato_itens', 'recibos' => 'psi_recibos'];
+    $saida = ['exportado_em' => gmdate('c'), 'aviso' => 'Dados do CM Consultório. Valores em centavos. Datas e horas da agenda no horário local do consultório.',
+      'consultorio' => ['nome' => $conta['nome'], 'documento' => $conta['documento'] ?? null, 'crp' => $conta['crp'] ?? null, 'telefone' => $conta['telefone'] ?? null, 'cidade' => $conta['cidade'] ?? null, 'uf' => $conta['uf'] ?? null, 'endereco' => $conta['endereco'] ?? null, 'configuracoes' => psi_config()],
+      'usuario' => ['nome' => PsiSessao::$usuario['nome'], 'email' => PsiSessao::$usuario['email']]];
+    foreach ($tabelas as $nome => $tab) { $s = $db->prepare("SELECT * FROM $tab WHERE conta_id = ?"); $s->execute([$c]); $linhas = $s->fetchAll(); foreach ($linhas as &$l) unset($l['conta_id']); unset($l); $saida[$nome] = $linhas; }
+    psi_auditar('exportar', 'conta', $c);
+    header('Content-Disposition: attachment; filename="cm-consultorio-dados-' . gmdate('Y-m-d') . '.json"');
+    return $saida;
+  }, 'login_sempre');
+
+  /* Exclusão definitiva: exige a senha e a palavra EXCLUIR. Apaga tudo da conta (pacientes, agenda, financeiro, extratos, recibos) e encerra a sessão. */
+  $r->add('POST', 'conta/excluir', function () {
+    $d = psi_corpo(); $db = psi_db(); $u = PsiSessao::$usuario; $c = psi_conta_id(); $chave = 'ex|' . $u['id'];
+    if (psi_limite_excedido('excluir', $chave, 5, 900)) psi_erro('Muitas tentativas. Aguarde alguns minutos e tente de novo.', 429);
+    if (trim((string)($d['confirmacao'] ?? '')) !== 'EXCLUIR') psi_erro('Digite EXCLUIR para confirmar.', 422);
+    $s = $db->prepare('SELECT senha_hash FROM psi_usuarios WHERE id = ?'); $s->execute([$u['id']]);
+    if (!password_verify((string)($d['senha'] ?? ''), (string)$s->fetchColumn())) { psi_registrar_tentativa('excluir', $chave); psi_erro('Senha incorreta.', 422); }
+    $db->beginTransaction();
+    try {
+      $db->prepare('DELETE FROM psi_tokens WHERE usuario_id IN (SELECT id FROM (SELECT id FROM psi_usuarios WHERE conta_id = ?) x)')->execute([$c]);   // antes dos usuários
+      foreach (PSI_TABELAS_DA_CONTA as $tab) $db->prepare("DELETE FROM $tab WHERE conta_id = ?")->execute([$c]);
+      $db->prepare('DELETE FROM psi_contas WHERE id = ?')->execute([$c]);
+      $db->commit();
+    } catch (Throwable $e) { if ($db->inTransaction()) $db->rollBack(); throw $e; }
+    error_log('[consultorio] conta excluida pelo proprio usuario: conta ' . $c);   // sem dados pessoais
+    psi_sessao_encerrar();
+    return ['ok' => true];
+  }, 'login_sempre');
+
   /* ---- profissionais (uma ou duas pessoas atendendo no mesmo consultório) ---- */
   $r->add('GET', 'profissionais', function () {
     $s = psi_db()->prepare('SELECT id, nome, crp, cor, ativo FROM psi_profissionais WHERE conta_id = ? ORDER BY id'); $s->execute([psi_conta_id()]);

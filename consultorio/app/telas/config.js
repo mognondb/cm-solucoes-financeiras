@@ -146,7 +146,28 @@ function conta(alvo) {
     <p>Plano: <strong>${planoTxt}</strong>${p.plano === 'teste' && p.trialAte ? html` · termina em ${dataBR(p.trialAte)}` : ''}</p></div>
     <form class="cartao" novalidate><p class="erro-form" role="alert" hidden></p><h3>Trocar senha</h3>
       ${campo({ id: 'atual', rotulo: 'Senha atual', tipo: 'password', extra: 'autocomplete="current-password"' })}${campo({ id: 'nova', rotulo: 'Nova senha', tipo: 'password', extra: 'autocomplete="new-password" minlength="8"', ajuda: 'Pelo menos 8 caracteres.' })}
-      <button class="btn btn-pri" type="submit">Trocar senha</button></form>`);
+      <button class="btn btn-pri" type="submit">Trocar senha</button></form>
+    <div class="cartao"><h3>Seus dados</h3><p class="suave">Os dados do consultório e dos pacientes são seus. Você pode levar tudo embora ou apagar a conta quando quiser.</p>
+      <div class="pac-acoes" style="margin-top:0"><button class="btn btn-sec" id="baixar-dados">Baixar todos os meus dados</button><button class="btn btn-ghost" id="excluir-conta" style="color:var(--perigo)">Excluir minha conta</button></div>
+      <p class="suave peq" style="margin:10px 0 0">O arquivo (JSON) inclui pacientes, agenda, cobranças, pagamentos, contas, extratos e recibos. Mesmo com o teste grátis encerrado, você pode baixar seus dados.</p></div>`);
   const form = $('form', alvo);
   form.addEventListener('submit', (e) => { e.preventDefault(); enviar(form, async (d) => { await api.post('auth/senha', d); form.reset(); }, 'Senha alterada.'); });
+  $('#baixar-dados', alvo).addEventListener('click', async (e) => {
+    const b = e.currentTarget; b.disabled = true;
+    try { const dados = await api.get('conta/exportar'); const url = URL.createObjectURL(new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' })); const a = document.createElement('a'); a.href = url; a.download = `cm-consultorio-dados-${App.hoje}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000); aviso('Arquivo gerado.'); }
+    catch (er) { aviso(er.message, 'erro'); } finally { b.disabled = false; }
+  });
+  $('#excluir-conta', alvo).addEventListener('click', () => {
+    const m = abrirModal({ titulo: 'Excluir minha conta', corpo: html`<div><p class="erro-form" role="alert" hidden></p>
+      <p><strong>Isto apaga tudo, para sempre:</strong> pacientes, agenda, cobranças, pagamentos, contas, extratos e recibos. Não há como desfazer. Baixe seus dados antes, se quiser guardá-los.</p>
+      ${campo({ id: 'senha', rotulo: 'Sua senha', tipo: 'password', obrig: true, extra: 'autocomplete="current-password"' })}${campo({ id: 'confirmacao', rotulo: 'Digite EXCLUIR para confirmar', obrig: true, extra: 'autocomplete="off"' })}</div>`,
+      acoes: [{ id: 'cancelar', rotulo: 'Cancelar' }, { id: 'ok', rotulo: 'Excluir definitivamente', classe: 'btn-perigo' }] });
+    const f = $('form', m.el);
+    m.el.addEventListener('click', async (e) => {
+      const b = e.target.closest('[data-acao]'); if (!b) return; if (b.dataset.acao === 'cancelar') return m.fechar();
+      const d = dadosForm(f); b.disabled = true; const x = $('.erro-form', f); x.hidden = true;
+      try { await api.post('conta/excluir', { senha: d.senha, confirmacao: d.confirmacao }); m.fechar(); aviso('Conta excluída. Seus dados foram apagados.', 'ok', 8000); location.hash = '#/entrar'; location.reload(); }
+      catch (er) { x.textContent = er.message; x.hidden = false; b.disabled = false; }
+    });
+  });
 }

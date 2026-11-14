@@ -2,6 +2,7 @@
    registrar um contato de cobrança e chamar o paciente pelo WhatsApp com a mensagem já preenchida. */
 import { api } from './api.js';
 import { App, carregarBase, categoriasDe, profissionalPorId, somenteLeitura } from './estado.js';
+import { baixarReciboPdf } from './recibo-pdf.js';
 import { html, raw, montar, $, abrirModal, confirmar, aviso, campo, campoDinheiro, dadosForm, lerReais, brl, selo, dataBR, hhmm, linkWhats, preencher, primeiroNome, dataDe, DIAS, MESES } from './ui.js';
 
 export const FORMAS = [['', 'Não informar'], ['pix', 'PIX'], ['dinheiro', 'Dinheiro'], ['debito', 'Cartão de débito'], ['credito', 'Cartão de crédito'], ['transferencia', 'Transferência bancária'], ['boleto', 'Boleto'], ['convenio', 'Convênio'], ['debito_automatico', 'Débito automático'], ['outro', 'Outro']];
@@ -54,6 +55,16 @@ export async function cobrarWhatsApp(pac, itens, depois) {
   window.open(url, '_blank', 'noopener');
   if (somenteLeitura()) return;
   try { await api.post(`pacientes/${pac.id ?? pac.pacienteId}/cobrancas`, { canal: 'whatsapp', obs: 'Mensagem de cobrança aberta no WhatsApp' }); if (depois) depois(); } catch { /* o registro é um extra: não atrapalha a cobrança */ }
+}
+
+/** Emite um recibo (dos pagamentos indicados ou avulso) e já baixa o PDF. Devolve o recibo ou null. */
+export async function emitirRecibo(corpo) {
+  try {
+    const r = await api.post('recibos', corpo); const rec = (await api.get('recibos/' + r.id)).item;
+    aviso(`Recibo nº ${String(rec.numero).padStart(4, '0')} emitido.`);
+    try { await baixarReciboPdf(rec); } catch (e) { aviso('O recibo foi emitido, mas o PDF não pôde ser gerado: ' + e.message, 'erro', 7000); }
+    return rec;
+  } catch (er) { aviso(er.message, 'erro', 6000); return null; }
 }
 
 /** Link do WhatsApp pedindo a confirmação de uma sessão (mensagem editável em Configurações). */
@@ -112,7 +123,7 @@ export async function detalheLancamento(id, depois) {
       ${l.categoria ? html`<dt>Categoria</dt><dd>${l.categoria}</dd>` : ''}${l.canceladoMotivo ? html`<dt>Motivo do cancelamento</dt><dd>${l.canceladoMotivo}</dd>` : ''}</dl>
     ${l.obs ? html`<p class="peq" style="white-space:pre-wrap;margin-top:10px">${l.obs}</p>` : ''}
     <h4 style="margin:16px 0 6px">${pagar ? 'Pagamentos feitos' : 'Pagamentos recebidos'}</h4>
-    ${r.baixas.length ? html`<ul class="lista">${r.baixas.map((b) => html`<li class="linha"><div class="corpo"><span class="tit">${brl(b.valor)} · ${dataBR(b.data)}</span><span class="sub">${FORMA_NOME[b.forma] || 'Forma não informada'}${b.conta ? ` · ${b.conta}` : ''}${b.obs ? ` · ${b.obs}` : ''}</span></div>${pode ? html`<button class="btn btn-ghost btn-peq" data-estornar="${b.id}" style="color:var(--perigo)">Estornar</button>` : ''}</li>`)}</ul>` : html`<p class="suave peq">Nenhum pagamento ainda.</p>`}
+    ${r.baixas.length ? html`<ul class="lista">${r.baixas.map((b) => html`<li class="linha"><div class="corpo"><span class="tit">${brl(b.valor)} · ${dataBR(b.data)}</span><span class="sub">${FORMA_NOME[b.forma] || 'Forma não informada'}${b.conta ? ` · ${b.conta}` : ''}${b.obs ? ` · ${b.obs}` : ''}</span></div>${pode && !pagar && l.pacienteId ? (b.reciboId ? html`<button class="btn btn-ghost btn-peq" data-recibo-pdf="${b.reciboId}">Recibo nº ${String(b.reciboNumero).padStart(4, '0')}</button>` : html`<button class="btn btn-ghost btn-peq" data-recibo="${b.id}">Emitir recibo</button>`) : ''}${pode ? html`<button class="btn btn-ghost btn-peq" data-estornar="${b.id}" style="color:var(--perigo)">Estornar</button>` : ''}</li>`)}</ul>` : html`<p class="suave peq">Nenhum pagamento ainda.</p>`}
     ${r.cobrancas.length ? html`<h4 style="margin:16px 0 6px">Contatos de cobrança</h4><ul class="lista">${r.cobrancas.map((c) => html`<li class="linha"><div class="corpo"><span class="tit">${CANAL_NOME[c.canal] || c.canal} · ${dataBR(String(c.criado_em).slice(0, 10))}</span><span class="sub">${c.obs || ''}${c.promessa_em ? ` · prometeu pagar até ${dataBR(c.promessa_em)}` : ''}</span></div></li>`)}</ul>` : ''}
     ${pode ? html`<div class="pac-acoes" style="margin-top:16px">
       ${l.situacao === 'aberto' ? html`<button class="btn btn-pri btn-peq" data-pagar>${pagar ? 'Registrar pagamento' : 'Receber'}</button>` : ''}
@@ -128,6 +139,10 @@ export async function detalheLancamento(id, depois) {
     if (t.closest('[data-editar]')) { m.fechar(); return abrirLancamento({ editar: l }, depois); }
     if (t.closest('[data-zap]')) return cobrarWhatsApp({ ...l.paciente, id: l.paciente.id }, [l], depois);
     if (t.closest('[data-contato]')) { m.fechar(); return abrirContato(l.paciente.id, l.paciente.nome, depois, l.id); }
+    const rp = t.closest('[data-recibo-pdf]');
+    if (rp) { rp.disabled = true; try { await baixarReciboPdf((await api.get('recibos/' + rp.dataset.reciboPdf)).item); } catch (er) { aviso(er.message, 'erro'); } rp.disabled = false; return; }
+    const rb = t.closest('[data-recibo]');
+    if (rb) { rb.disabled = true; await emitirRecibo({ pacienteId: l.pacienteId, baixaIds: [Number(rb.dataset.recibo)] }); rb.disabled = false; return; }
     const est = t.closest('[data-estornar]');
     if (est) { if (!(await confirmar('Estornar este pagamento? O valor volta a ficar em aberto.', { titulo: 'Estornar pagamento', ok: 'Estornar', perigo: true }))) return; try { await api.del('baixas/' + est.dataset.estornar); aviso('Pagamento estornado.'); fecharERecarregar(); } catch (er) { aviso(er.message, 'erro'); } return; }
     if (t.closest('[data-cancelar]')) {

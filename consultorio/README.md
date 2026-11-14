@@ -20,7 +20,7 @@ Pense em um "Conta Azul" feito para essa rotina, com a agenda no centro: o que a
 | F1 | Contas a receber, pagamentos parciais e estorno, inadimplência, cobrança por WhatsApp, painel do dia | feito |
 | F2 | Contas a pagar, contas bancárias, cartão e fatura, despesas fixas, fluxo de caixa | feito |
 | F3 | Importar extrato (OFX/CSV/Excel) e conciliar | feito |
-| F4 | Recibos em PDF, relatórios, apoio ao carnê-leão, exportar dados, excluir conta (LGPD) | a fazer |
+| F4 | Recibos em PDF, relatórios, apoio ao carnê-leão, exportar dados, excluir conta (LGPD) | feito |
 
 Rotas do aplicativo que ainda não têm tela aparecem como "Em construção" (lista `PRONTAS` em `app/main.js`: ao criar uma tela, acrescente-a ali).
 O hash aceita parâmetros (`#/agenda?paciente=12`): a tela recebe `abrir(el, resto, consulta)`.
@@ -85,7 +85,9 @@ validar a entrega de e-mail (SPF/DKIM do domínio) e então usar "Abrir ao públ
 - Teste grátis (`trial_dias`, padrão 30): contas `teste`, `ativo`, `expirado`, `suspenso`. Conta expirada ou suspensa fica **somente leitura**
   (escritas respondem 402), e o profissional continua vendo e exportando os dados.
 - Papéis na LGPD: o profissional é o controlador dos dados dos pacientes; a CM é operadora. Para o cadastro do profissional a CM é controladora.
-- Fase final: criptografia de campo para CPF, exportação completa dos dados e exclusão da conta.
+- **Seus dados** (Configurações → Minha conta): exportação completa em JSON (`GET conta/exportar`, sem senhas nem tokens) e exclusão definitiva da conta
+  (`POST conta/excluir`, exige a senha e a palavra EXCLUIR; apaga todas as tabelas `psi_*` da conta, lista em `PSI_TABELAS_DA_CONTA`). Ambas funcionam também com o teste expirado.
+- Pendente antes de abrir ao público: criptografia de campo para CPF, revisão jurídica dos textos e verificação de SPF/DKIM do e-mail.
 
 ## Modelo de dados (prefixo `psi_`)
 
@@ -103,9 +105,11 @@ validar a entrega de e-mail (SPF/DKIM do domínio) e então usar "Abrir ao públ
 | `psi_cobrancas` | Registro de cobranças feitas (WhatsApp, e-mail...) e promessas de pagamento |
 | `psi_contas_fin` | Bancos, carteira, cartão de crédito e plataformas (quantidade livre) |
 | `psi_categorias` | 13 de receita e 22 de despesa já sugeridas (fixa/variável; "pode entrar no livro-caixa"), editáveis |
+| `psi_extratos`, `psi_extrato_itens` | Extratos importados e suas linhas (pendente, conciliada, lançada, transferência, ignorada) |
+| `psi_recibos`, `psi_recibo_baixas` | Recibos numerados (com cópia dos dados do emitente e do pagador no momento da emissão) e os pagamentos que cada um cobre |
 | `psi_auditoria` | Quem fez o quê |
 
-Migrações: v1 base · v2 agenda (índice único das séries) · v3 `psi_transferencias` e `psi_recorrentes`. · v4 `psi_extratos` e `psi_extrato_itens`. Próxima: `psi_recibos` (F4).
+Migrações: v1 base · v2 agenda (índice único das séries) · v3 `psi_transferencias` e `psi_recorrentes`. · v4 `psi_extratos` e `psi_extrato_itens` · v5 `psi_recibos` e `psi_recibo_baixas`.
 
 ### Agenda (F1)
 
@@ -154,6 +158,18 @@ Um lançamento (`psi_lancamentos`) é uma conta a receber ou a pagar; `psi_baixa
   **Ignorar** descarta. **Desfazer** remove o que foi criado e devolve a linha a "pendente". Cada linha só vira um movimento, então o dinheiro nunca é contado duas vezes.
 - **Sugestões:** valor igual ao restante (+50), nome do paciente/fornecedor na descrição (+20 por palavra, até 40) e vencimento próximo (+20/+10/+3). Só aparece sugestão com valor igual ou nome batendo.
   "Conciliar todas" aplica só as de valor exato e pontuação ≥ 70.
+
+### Recibos e relatórios (F4)
+
+- **Recibo:** emitido a partir de pagamentos já registrados (um ou vários do mesmo paciente) ou **avulso** (valor, referência e pagador livres, inclusive empresa com CNPJ).
+  Numeração sequencial por consultório (`0001`, `0002`...), que **nunca se repete**: cancelar mantém o número como "cancelado" (o PDF sai com a marca CANCELADO) e libera os pagamentos para um novo recibo.
+  Cada pagamento tem no máximo **um recibo ativo** (índice único). Criança ou paciente com responsável financeiro: o recibo sai no nome e CPF do responsável.
+  Os dados do emitente (nome, CPF/CNPJ, CRP, cidade) e do pagador são **copiados na emissão**; editar o cadastro depois não altera recibos antigos.
+- **PDF** montado no navegador com o jsPDF do site (`/assets/vendor/jspdf.umd.min.js`, texto vetorial; `app/recibo-pdf.js`), com o valor por extenso. Nada além do download sai do computador.
+  No detalhe de um pagamento aparece "Recibo nº ..." (baixa o PDF existente) ou "Emitir recibo".
+- **Resultado do mês:** regime de caixa (o que foi recebido e pago no mês; compra no cartão conta no dia da compra), por categoria, fixas × variáveis, ticket médio, quem mais pagou e comparação com o mês anterior. Exporta CSV (`;`, vírgula decimal, BOM) e imprime.
+- **Apoio ao carnê-leão:** rendimentos de pessoas físicas por pagador (com CPF), recebidos sem paciente, pagadores sem CPF, despesas de categorias marcadas como "livro-caixa" e uma base estimada (rendimentos − despesas).
+  Convênios e empresas (retenção na fonte) ficam de fora. **Não calcula imposto**: é um apoio à organização, e a tela avisa que o contador confirma.
 
 ## Testar localmente
 
