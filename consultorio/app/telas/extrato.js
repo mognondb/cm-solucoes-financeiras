@@ -58,22 +58,29 @@ function desenhar() {
   const pode = !somenteLeitura(); const c = dados.contagem || {}; const itens = dados.itens; const conta = contas.find((x) => x.id === est.conta);
   const pend = est.situacao === 'pendente' ? itens : []; const entradas = pend.filter((i) => i.valor > 0).reduce((a, i) => a + i.valor, 0); const saidas = pend.filter((i) => i.valor < 0).reduce((a, i) => a - i.valor, 0);
   const faceis = pend.filter((i) => i.sugestoes[0] && i.sugestoes[0].restante === Math.abs(i.valor) && i.sugestoes[0].score >= 70);
+  const lote = pend.filter(elegivelParaLote); const medias = pend.filter((i) => comCategoria(i) && i.categoriaSugerida.confianca === 'media' && !temParExato(i)).length;
   montar(raiz, html`<div class="cabeca"><div><h1>Extrato bancário</h1><p>Traga o extrato do banco e confirme o que já foi pago ou recebido.</p></div>${pode ? html`<button class="btn btn-pri" data-importar>Importar extrato</button><input type="file" id="ex-arquivo" accept=".ofx,.csv,.xlsx,.txt" hidden>` : ''}</div>
     <div class="filtros"><div class="campo"><label class="sr" for="ex-conta">Conta</label><select id="ex-conta">${contas.map((x) => html`<option value="${x.id}" ${x.id === est.conta ? raw('selected') : ''}>${x.nome}${x.tipo === 'cartao' ? ' (cartão)' : ''}</option>`)}</select></div>
       <div class="chips" role="group" aria-label="Situação das linhas">${[['pendente', 'Pendentes'], ['conciliado', 'Conciliadas'], ['ignorado', 'Ignoradas']].map(([k, t]) => html`<button type="button" class="chip" data-sit="${k}" aria-pressed="${est.situacao === k}">${t}${c[k] ? ` · ${c[k]}` : ''}</button>`)}</div></div>
     ${est.situacao === 'pendente' && itens.length ? html`<div class="kpis" style="grid-template-columns:repeat(3,1fr)"><div class="kpi"><span>Linhas para tratar</span><strong>${itens.length}</strong></div><div class="kpi ok"><span>Entradas pendentes</span><strong>${brl(entradas)}</strong></div><div class="kpi"><span>Saídas pendentes</span><strong>${brl(saidas)}</strong></div></div>` : ''}
     ${pode && faceis.length ? html`<div class="cartao" style="border-color:var(--ok)"><div class="cartao-t"><div><h3 style="margin:0">${faceis.length} linha${faceis.length === 1 ? '' : 's'} com par certo</h3><span class="suave peq">O valor é igual ao de uma cobrança ou conta em aberto e o nome ou a data batem.</span></div><button class="btn btn-pri btn-peq" data-todos>Conciliar ${faceis.length === 1 ? 'esta' : 'todas'}</button></div></div>` : ''}
+    ${pode && lote.length ? html`<div class="cartao" style="border-color:var(--info)" data-cartao-lote><div class="cartao-t"><div><h3 style="margin:0">${lote.length} linha${lote.length === 1 ? '' : 's'} com categoria sugerida de alta confiança</h3><span class="suave peq">Pelo fornecedor cadastrado, pelo paciente ou pelo que você já classificou antes. Confira na lista e lance de uma vez${medias ? ` (mais ${medias} de confiança média para lançar uma a uma)` : ''}.</span></div><button class="btn btn-pri btn-peq" data-lote>Lançar ${lote.length}</button></div></div>` : ''}
     ${itens.length ? html`<div class="cartao" style="padding:6px 14px"><ul class="lista">${itens.map((i) => linha(i, pode))}</ul></div>` : html`<div class="cartao">${vazio(est.situacao === 'pendente' ? (c.conciliado || c.ignorado ? 'Tudo tratado' : 'Nenhuma linha importada') : 'Nada aqui', est.situacao === 'pendente' ? (c.conciliado || c.ignorado ? 'Todas as linhas deste extrato já foram conciliadas ou ignoradas.' : `Importe o extrato de ${conta ? conta.nome : 'uma conta'} (OFX, CSV ou Excel) para começar.`) : '')}</div>`}
     <p class="suave peq" style="margin:12px 4px">Conciliar registra o pagamento na data do extrato e na conta escolhida, sem contar o mesmo dinheiro duas vezes. Dá para desfazer a qualquer momento.</p>`);
 }
 
+const comCategoria = (i) => i.situacao === 'pendente' && i.categoriaSugerida && i.categoriaSugerida.categoriaId !== null;
+const temParExato = (i) => i.sugestoes.some((s) => s.restante === Math.abs(i.valor));   // com par em aberto, o certo é conciliar, não lançar outra despesa
+const elegivelParaLote = (i) => comCategoria(i) && i.categoriaSugerida.confianca === 'alta' && !temParExato(i);
+const TOM_CONFIANCA = { alta: 'ok', media: 'info', baixa: 'neutro' }; const ROTULO_CONFIANCA = { alta: 'Alta confiança', media: 'Confiança média', baixa: 'Confiança baixa' };
+
 function linha(i, pode) {
   const entrada = i.valor > 0; const [dd, mm, aa] = dataBR(i.data).split('/');
   return html`<li class="linha ex" data-item="${i.id}"><div class="rc-data"><b>${dd}/${mm}</b><small>${aa}</small></div>
-    <div class="corpo"><span class="tit" title="${i.descricao}">${i.descricao}</span>${i.situacao === 'conciliado' ? html`<span class="sub">${i.transferenciaId ? 'Transferência entre contas' : 'Conciliada com um lançamento'}</span>` : ''}</div>
+    <div class="corpo"><span class="tit" title="${i.descricao}">${i.descricao}</span>${i.situacao === 'pendente' && i.categoriaSugerida ? html`<span class="sub sug-cat" data-sug="${i.id}">${selo(i.categoriaSugerida.categoria ? 'Sugestão: ' + i.categoriaSugerida.categoria : 'Fornecedor: ' + i.categoriaSugerida.contraparte, TOM_CONFIANCA[i.categoriaSugerida.confianca])} <span class="suave peq">${i.categoriaSugerida.motivo}</span></span>` : ''}${i.situacao === 'conciliado' ? html`<span class="sub">${i.transferenciaId ? 'Transferência entre contas' : 'Conciliada com um lançamento'}</span>` : ''}</div>
     <strong class="num ${entrada ? 'bom' : 'ruim'}">${entrada ? '+' : '−'} ${brl(Math.abs(i.valor))}</strong>
     ${i.situacao === 'pendente' && pode ? html`<span class="acoes-rapidas">${i.sugestoes.map((s) => html`<button class="btn ${s.restante === Math.abs(i.valor) ? 'btn-pri' : 'btn-sec'} btn-peq" data-conciliar="${i.id}" data-lanc="${s.lancamentoId}" title="${s.descricao}">Conciliar com ${s.quem || s.descricao} · ${brl(s.restante)}</button>`)}
-      <button class="btn btn-sec btn-peq" data-lancar="${i.id}">Lançar</button><button class="btn btn-ghost btn-peq" data-transf="${i.id}">Transferência</button><button class="btn btn-ghost btn-peq" data-ignorar="${i.id}">Ignorar</button></span>`
+      ${comCategoria(i) && !temParExato(i) ? html`<button class="btn ${i.categoriaSugerida.confianca === 'alta' ? 'btn-pri' : 'btn-sec'} btn-peq" data-lancar-sug="${i.id}" title="${ROTULO_CONFIANCA[i.categoriaSugerida.confianca]}: ${i.categoriaSugerida.motivo}">Lançar como ${i.categoriaSugerida.categoria}</button>` : ''}<button class="btn btn-sec btn-peq" data-lancar="${i.id}">Lançar</button><button class="btn btn-ghost btn-peq" data-transf="${i.id}">Transferência</button><button class="btn btn-ghost btn-peq" data-ignorar="${i.id}">Ignorar</button></span>`
       : i.situacao !== 'pendente' ? html`${selo(i.situacao === 'conciliado' ? 'Conciliada' : 'Ignorada', i.situacao === 'conciliado' ? 'ok' : 'neutro')}${pode ? html`<button class="btn btn-ghost btn-peq" data-desfazer="${i.id}">Desfazer</button>` : ''}` : ''}</li>`;
 }
 
@@ -82,14 +89,15 @@ const achar = (id) => dados.itens.find((x) => x.id === Number(id));
 async function agir(rota, corpo, msg) { try { await api.post(rota, corpo || {}); if (msg) aviso(msg); await carregar(); return true; } catch (er) { aviso(er.message, 'erro', 6000); return false; } }
 
 function formLancar(i) {
-  const entrada = i.valor > 0; const cats = categoriasDe(entrada ? 'receita' : 'despesa');
+  const entrada = i.valor > 0; const cats = categoriasDe(entrada ? 'receita' : 'despesa'); const sug = i.situacao === 'pendente' ? i.categoriaSugerida : null;
   const m = abrirModal({ titulo: entrada ? 'Lançar como receita' : 'Lançar como despesa', corpo: html`<div><p class="erro-form" role="alert" hidden></p><p class="suave peq" style="margin-top:0">${dataBR(i.data)} · <strong>${entrada ? '+' : '−'} ${brl(Math.abs(i.valor))}</strong> · ${i.descricao}</p>
-    ${campo({ id: 'descricao', rotulo: 'Descrição', valor: i.descricao.slice(0, 150), obrig: true })}${campo({ id: 'categoriaId', rotulo: 'Categoria', valor: '', opcoes: [['', 'Sem categoria'], ...cats.map((c) => [c.id, c.nome])] })}
-    ${entrada ? '' : campo({ id: 'contraparte', rotulo: 'Fornecedor (opcional)' })}</div>`, acoes: [{ id: 'cancelar', rotulo: 'Cancelar' }, { id: 'ok', rotulo: 'Lançar', classe: 'btn-pri' }] });
+    ${campo({ id: 'descricao', rotulo: 'Descrição', valor: i.descricao.slice(0, 150), obrig: true })}${campo({ id: 'categoriaId', rotulo: 'Categoria', valor: sug && sug.categoriaId ? sug.categoriaId : '', opcoes: [['', 'Sem categoria'], ...cats.map((c) => [c.id, c.nome])] })}
+    ${sug ? html`<p class="suave peq" data-hint-sug style="margin:-4px 0 10px">${selo(ROTULO_CONFIANCA[sug.confianca], TOM_CONFIANCA[sug.confianca])} ${sug.categoria ? 'Categoria sugerida pela descrição.' : ''} ${sug.motivo}</p>` : ''}
+    ${entrada ? '' : campo({ id: 'contraparte', rotulo: 'Fornecedor (opcional)', valor: sug && sug.contraparte ? sug.contraparte : '' })}</div>`, acoes: [{ id: 'cancelar', rotulo: 'Cancelar' }, { id: 'ok', rotulo: 'Lançar', classe: 'btn-pri' }] });
   const form = $('form', m.el);
   m.el.addEventListener('click', async (e) => {
     const b = e.target.closest('[data-acao]'); if (!b) return; if (b.dataset.acao === 'cancelar') return m.fechar(); const d = dadosForm(form); b.disabled = true;
-    try { await api.post(`extrato-itens/${i.id}/lancar`, { descricao: d.descricao, categoriaId: d.categoriaId ? Number(d.categoriaId) : null, contraparte: d.contraparte }); m.fechar(); aviso('Lançamento criado e conciliado.'); carregar(); } catch (er) { const x = $('.erro-form', form); x.textContent = er.message; x.hidden = false; b.disabled = false; }
+    try { await api.post(`extrato-itens/${i.id}/lancar`, { descricao: d.descricao, categoriaId: d.categoriaId ? Number(d.categoriaId) : null, contraparte: d.contraparte, pacienteId: entrada && sug && sug.pacienteId ? sug.pacienteId : undefined }); m.fechar(); aviso('Lançamento criado e conciliado.'); carregar(); } catch (er) { const x = $('.erro-form', form); x.textContent = er.message; x.hidden = false; b.disabled = false; }
   });
 }
 function formTransferencia(i) {
@@ -114,6 +122,15 @@ async function clique(e) {
   if (t.closest('[data-importar]')) return $('#ex-arquivo', raiz).click();
   const sit = t.closest('[data-sit]'); if (sit) { est.situacao = sit.dataset.sit; return carregar(); }
   const conc = t.closest('[data-conciliar]'); if (conc) return agir(`extrato-itens/${conc.dataset.conciliar}/conciliar`, { lancamentoId: Number(conc.dataset.lanc) }, 'Conciliado.');
+  const sg = t.closest('[data-lancar-sug]');
+  if (sg) { const i = achar(sg.dataset.lancarSug); const s = i.categoriaSugerida; const entrada = i.valor > 0; sg.disabled = true;
+    return agir(`extrato-itens/${i.id}/lancar`, { descricao: i.descricao.slice(0, 150), categoriaId: s.categoriaId, contraparte: !entrada && s.contraparte ? s.contraparte : undefined, pacienteId: entrada && s.pacienteId ? s.pacienteId : undefined }, `Lançado em ${s.categoria}.`); }
+  if (t.closest('[data-lote]')) {
+    const alvo = dados.itens.filter(elegivelParaLote); const total = alvo.reduce((a, i) => a + i.valor, 0);
+    if (!(await confirmar(`Lançar ${alvo.length} linha${alvo.length === 1 ? '' : 's'} (saldo ${total >= 0 ? '+' : '−'} ${brl(Math.abs(total))}) já com a categoria sugerida? Cada uma vira um lançamento pago na data do extrato, e dá para desfazer linha a linha.`, { titulo: 'Lançar com a categoria sugerida', ok: 'Lançar' }))) return;
+    try { const r = await api.post('extrato-itens/lancar-sugeridas', { ids: alvo.map((i) => i.id), minimo: 'alta' }); aviso(`${r.lancadas} linha${r.lancadas === 1 ? '' : 's'} lançada${r.lancadas === 1 ? '' : 's'}${r.puladas ? `, ${r.puladas} ficou${r.puladas === 1 ? '' : 'ram'} para você conferir` : ''}.`); } catch (er) { aviso(er.message, 'erro', 6000); }
+    return carregar();
+  }
   const lan = t.closest('[data-lancar]'); if (lan) return formLancar(achar(lan.dataset.lancar));
   const tr = t.closest('[data-transf]'); if (tr) return formTransferencia(achar(tr.dataset.transf));
   const ig = t.closest('[data-ignorar]'); if (ig) return agir(`extrato-itens/${ig.dataset.ignorar}/ignorar`, {}, 'Linha ignorada.');

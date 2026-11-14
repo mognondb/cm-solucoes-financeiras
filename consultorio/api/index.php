@@ -19,6 +19,7 @@ require __DIR__ . '/lib/cobrancas.php';
 require __DIR__ . '/lib/rotas_lancamentos.php';
 require __DIR__ . '/lib/rotas_contas.php';
 require __DIR__ . '/lib/rotas_extrato.php';
+require __DIR__ . '/lib/sugestao.php';
 require __DIR__ . '/lib/rotas_documentos.php';
 require __DIR__ . '/lib/rotas_fornecedores.php';
 require __DIR__ . '/lib/rotas_importar.php';

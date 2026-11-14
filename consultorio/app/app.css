@@ -164,3 +164,7 @@ details.bloco { border: 1px solid var(--linha); border-radius: 12px; padding: 10
 .passos { counter-reset: p; list-style: none; padding: 0; margin: 0; } .passos li { display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; border-top: 1px solid var(--linha); } .passos li:first-child { border-top: 0; }
 .passo-n { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #d9d2c3; display: grid; place-items: center; flex: none; font-size: .8rem; font-weight: 600; color: var(--suave); } .passo-ok .passo-n { background: var(--ok); border-color: var(--ok); color: #fff; } .passo-ok .tit { text-decoration: line-through; color: var(--suave); }
 @media print { .topo, .lateral, .nav-inf, .toasts, .faixa { display: none !important; } .principal { padding: 0; } body { background: #fff; } }
+/* sugestão de categoria no extrato */
+.linha.ex .sug-cat { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 3px; line-height: 1.35; }
+.linha.ex [data-lancar-sug] { max-width: min(100%, 340px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cartao-t > .btn { flex: none; white-space: nowrap; }

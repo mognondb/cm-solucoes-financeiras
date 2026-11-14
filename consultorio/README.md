@@ -187,6 +187,19 @@ Um lançamento (`psi_lancamentos`) é uma conta a receber ou a pagar; `psi_baixa
   Duplicados: por CPF/CNPJ ou, se faltar, pelo nome (duas pessoas com o mesmo nome e CPFs diferentes são pessoas diferentes). Modo "atualizar" só altera os campos preenchidos na planilha. Limite de 2.000 linhas por vez.
   Categoria padrão desconhecida num fornecedor vira aviso (entra sem categoria). A importação grava na trilha de auditoria.
 
+### Sugestão de categoria no extrato (G2)
+
+- Cada linha **pendente** do extrato vem com `categoriaSugerida` (categoria, origem, confiança e o **motivo em português**), calculada em `api/lib/sugestao.php` lendo a descrição do banco. Fontes, da mais confiável para a menos:
+  1. **fornecedor cadastrado** cujo nome aparece na descrição (categoria padrão dele; sem categoria padrão, a que você mais usou nas despesas dele) → 90/80;
+  2. **paciente** identificado pelo nome, nas entradas (categoria que ele já usa, a do atendimento dele ou convênio/particular) → 85/75;
+  3. **histórico da conta**: palavras da descrição que você já classificou antes (linhas de extrato já lançadas valem o dobro de lançamentos) → até 89, nunca acima do fornecedor com categoria padrão
+     (uma exceção pontual não desfaz o que a pessoa configurou). Um exemplo só dá confiança **média**; a partir de dois, **alta**;
+  4. **dicionário** de palavras comuns de extrato (energia, água, internet, impostos, tarifas, softwares, supervisão, curso, convênio...) resolvido contra os **nomes das categorias da conta** → 66 (média).
+  Confiança: alta ≥ 85, média ≥ 65, baixa abaixo. Nunca sugere categoria inativa nem de outro tipo (receita só com receita), e ruído como PIX/TED/nome do banco é ignorado.
+- Na tela: selo com a sugestão e o motivo, botão **"Lançar como {categoria}"** (um clique; só quando não há par em aberto para conciliar, para não duplicar a despesa), formulário "Lançar" já preenchido (categoria,
+  fornecedor, aviso) e o cartão **"Lançar N"** em lote, só para confiança **alta** e com confirmação. O lote (`POST extrato-itens/lancar-sugeridas`) **recalcula a sugestão no servidor** (o navegador só manda os ids),
+  pula linhas sem categoria, de confiança menor ou com par exato em aberto, e grava na trilha de auditoria. A sugestão nunca grava nada sozinha.
+
 ## Testar localmente
 
 Requer PHP 8 com `pdo_mysql` e MySQL/MariaDB.
