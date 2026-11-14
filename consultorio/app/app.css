@@ -142,6 +142,14 @@ details.bloco { border: 1px solid var(--linha); border-radius: 12px; padding: 10
 .ag-chips em { display: block; font-style: normal; font-size: .7rem; background: var(--salvia); border-radius: 5px; padding: 1px 5px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ag-chips em.mais { background: none; color: var(--suave); } .ag-conta { display: none; }
 @media (max-width: 700px) { .ag-chips { display: none; } .ag-conta { display: block; font-style: normal; margin-top: auto; font-size: .85rem; font-weight: 600; color: var(--oliva-esc); } .ag-cel { min-height: 58px; padding: 4px; } .ag-cab, .ag-miolo { grid-template-columns: 40px repeat(var(--n), minmax(0, 1fr)); } .ag-horas span { right: 4px; } .ag-rolagem { max-height: 62vh; } }
 
+/* ---------- a receber / início ---------- */
+.rc-data { width: 46px; flex: none; text-align: center; line-height: 1.15; } .rc-data b { display: block; font-weight: 600; } .rc-data small { color: var(--suave); font-size: .68rem; text-transform: uppercase; letter-spacing: .03em; }
+.rc-devedor { margin-bottom: 12px; } .rc-devedor .pac-topo .avatar { width: 42px; height: 42px; font-size: 1rem; } .rc-devedor .pac-acoes { margin-top: 10px; }
+.kpi small { display: block; font-size: .75rem; margin-top: 2px; }
+.hj-hora { width: 48px; flex: none; font-weight: 600; font-variant-numeric: tabular-nums; }
+.linha .acoes-rapidas { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.linha.hj { flex-wrap: wrap; } .linha.hj .acoes-rapidas { flex-basis: 100%; justify-content: flex-start; padding-left: 60px; margin-top: -2px; }
+
 /* ---------- onboarding ---------- */
 .passos { counter-reset: p; list-style: none; padding: 0; margin: 0; } .passos li { display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; border-top: 1px solid var(--linha); } .passos li:first-child { border-top: 0; }
 .passo-n { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #d9d2c3; display: grid; place-items: center; flex: none; font-size: .8rem; font-weight: 600; color: var(--suave); } .passo-ok .passo-n { background: var(--ok); border-color: var(--ok); color: #fff; } .passo-ok .tit { text-decoration: line-through; color: var(--suave); }

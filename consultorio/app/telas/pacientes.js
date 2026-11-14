@@ -2,6 +2,7 @@
    Só dados administrativos e financeiros: nada clínico (os campos de texto avisam). */
 import { api, qs } from '../api.js';
 import { App, carregarBase, servicoPorId, profissionalPorId, somenteLeitura } from '../estado.js';
+import { cobrarWhatsApp, detalheLancamento, abrirContato, abrirLancamento, CANAL_NOME } from '../financeiro.js';
 import { html, raw, montar, $, $$, abrirModal, confirmar, aviso, campo, campoDinheiro, dadosForm, lerReais, brl, selo, vazio, fmtCPF, fmtTel, dataBR, dataCurta, dataDe, hhmm, diasEntre, linkWhats, preencher, primeiroNome, DIAS, DIAS_CURTOS } from '../ui.js';
 
 const STATUS = { ativo: 'Ativo', pausado: 'Em pausa', alta: 'Alta', arquivado: 'Arquivado' };
@@ -119,9 +120,10 @@ async function ficha(el, id) {
       <div class="kpi"><span>Sessões realizadas</span><strong>${f.sessoesRealizadas}</strong></div></div>
     <div class="cols">
       <div>
-        <div class="cartao"><div class="cartao-t"><h3>Em aberto</h3>${r.abertos.length && contato ? html`<button class="btn btn-sec btn-peq" data-cobrar>Cobrar no WhatsApp</button>` : ''}</div>
-          ${r.abertos.length ? html`<ul class="lista">${r.abertos.map((l) => html`<li class="linha"><div class="corpo"><span class="tit">${l.descricao}</span><span class="sub">Vence em ${dataBR(l.vencimento)}${l.pago ? ` · já pagou ${brl(l.pago)}` : ''}</span></div>
+        <div class="cartao"><div class="cartao-t"><h3>Em aberto</h3><span class="pac-acoes" style="margin:0">${r.abertos.length && contato ? html`<button class="btn btn-sec btn-peq" data-cobrar>Cobrar no WhatsApp</button>` : ''}${r.abertos.length && podeEditar ? html`<button class="btn btn-ghost btn-peq" data-contato>Registrar contato</button>` : ''}${podeEditar ? html`<button class="btn btn-ghost btn-peq" data-nova-cobranca>+ Cobrança</button>` : ''}</span></div>
+          ${r.abertos.length ? html`<ul class="lista">${r.abertos.map((l) => html`<li class="linha linha-link" data-lanc="${l.id}" tabindex="0" role="button"><div class="corpo"><span class="tit">${l.descricao}</span><span class="sub">Vence em ${dataBR(l.vencimento)}${l.pago ? ` · já pagou ${brl(l.pago)}` : ''}</span></div>
             <span class="dir"><strong class="num">${brl(restante(l))}</strong>${atrasado(l) ? selo(`${diasAtraso(l)} dia${diasAtraso(l) === 1 ? '' : 's'} de atraso`, 'ruim') : ''}</span></li>`)}</ul>` : html`<p class="suave">Nada em aberto. Quando uma sessão for realizada, a cobrança aparece aqui.</p>`}</div>
+        ${(r.cobrancas || []).length ? html`<div class="cartao"><div class="cartao-t"><h3>Contatos de cobrança</h3></div><ul class="lista">${r.cobrancas.map((c) => html`<li class="linha"><div class="corpo"><span class="tit">${CANAL_NOME[c.canal] || c.canal} · ${dataBR(String(c.criado_em).slice(0, 10))}</span><span class="sub">${c.obs || ''}${c.promessa_em ? ` · prometeu pagar até ${dataBR(c.promessa_em)}` : ''}</span></div></li>`)}</ul></div>` : ''}
         <div class="cartao"><div class="cartao-t"><h3>Próximas sessões</h3></div>
           ${(r.series || []).length ? html`<p class="peq" style="margin:0 0 8px">${(r.series).map((s) => html`<span class="selo selo-info" style="margin-right:6px">↻ ${s.frequencia === 'quinzenal' ? 'A cada 15 dias, ' : 'Toda '}${DIAS[s.diaSemana]} às ${s.hora}</span>`)}</p>` : ''}
           ${r.proximas.length ? html`<ul class="lista">${r.proximas.map((a) => html`<li class="linha"><div class="corpo"><span class="tit">${quando(a.inicio)}</span><span class="sub">${a.modalidade === 'online' ? 'Online' : 'Presencial'}${a.valor ? ` · ${brl(a.valor)}` : ''}</span></div>${selo(...SESSAO[a.status] || [a.status])}</li>`)}</ul>` : html`<p class="suave">Nenhuma sessão marcada.</p>`}</div>
@@ -145,6 +147,7 @@ async function ficha(el, id) {
             <button class="btn btn-ghost btn-peq" data-apagar style="color:var(--perigo)">Apagar cadastro</button></div></div>` : ''}
       </div></div>`);
 
+  el.onkeydown = (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('li[data-lanc]')) { e.preventDefault(); detalheLancamento(Number(e.target.dataset.lanc), () => ficha(el, id)); } };
   el.onclick = async (e) => {
     if (e.target.closest('[data-editar]')) return formulario(p, () => ficha(el, id));
     const st = e.target.closest('[data-st]');
@@ -154,22 +157,11 @@ async function ficha(el, id) {
       try { await api.del('pacientes/' + id); aviso('Cadastro apagado.'); location.hash = '#/pacientes'; } catch (er) { aviso(er.message, 'erro'); }
       return;
     }
-    if (e.target.closest('[data-cobrar]')) cobrarPorWhats(p, r.abertos);
+    if (e.target.closest('[data-cobrar]')) return cobrarWhatsApp(p, r.abertos.map((l) => ({ ...l, restante: l.valor - l.pago })), () => ficha(el, id));
+    if (e.target.closest('[data-contato]')) return abrirContato(id, p.nome, () => ficha(el, id));
+    if (e.target.closest('[data-nova-cobranca]')) return abrirLancamento({ tipo: 'receber', pacienteId: id }, () => ficha(el, id));
+    const lc = e.target.closest('[data-lanc]'); if (lc) return detalheLancamento(Number(lc.dataset.lanc), () => ficha(el, id));
   };
-}
-
-/** Abre o WhatsApp com a mensagem de cobrança já preenchida (editável nas configurações). */
-function cobrarPorWhats(p, abertos) {
-  const venc = abertos.filter((l) => l.vencimento < App.hoje); const base = venc.length ? venc : abertos;
-  const total = base.reduce((a, l) => a + (l.valor - l.pago), 0);
-  const maisAntiga = base.map((l) => l.vencimento).sort()[0];
-  const paraResp = p.respTelefone && (p.respNome || p.tipo === 'infantil');
-  const tel = paraResp ? p.respTelefone : p.telefone; const nome = paraResp && p.respNome ? p.respNome : (p.apelido || p.nome);
-  const prof = profissionalPorId(p.profissionalId);
-  const msg = preencher(App.eu.config.msg_cobranca, { nome: primeiroNome(nome), descricao: base.length === 1 ? base[0].descricao : `${base.length} atendimentos`, valor: brl(total), vencimento: dataBR(maisAntiga), profissional: prof ? prof.nome : (App.eu.conta.nome || '') });
-  const url = linkWhats(tel, msg);
-  if (!url) { aviso('Este paciente não tem telefone cadastrado.', 'erro'); return; }
-  window.open(url, '_blank', 'noopener');
 }
 
 /* ================================================================= formulário */

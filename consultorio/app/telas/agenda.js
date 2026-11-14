@@ -2,6 +2,7 @@
    confirmar presença, marcar realizada ou falta e chamar o paciente pelo WhatsApp. */
 import { api, qs } from '../api.js';
 import { App, carregarBase, servicoPorId, profissionalPorId, somenteLeitura } from '../estado.js';
+import { linkConfirmacao, mudarSituacaoSessao } from '../financeiro.js';
 import { html, raw, montar, $, $$, abrirModal, confirmar, aviso, campo, campoDinheiro, dadosForm, lerReais, brl, selo, DIAS, DIAS_CURTOS, MESES, dataBR, dataLonga, dataDe, isoDe, somarDias, somarMeses, inicioMes, fimMes, diaSemana, hhmm, linkWhats, preencher, primeiroNome } from '../ui.js';
 
 const PX_HORA = 56;
@@ -156,18 +157,10 @@ function textoCobranca(a) {
   if (!a.cobrar) return a.pac.modalidade === 'mensal' ? 'Coberta pela mensalidade.' : 'Sem cobrança.';
   return a.valor ? `${brl(a.valor)} · gera cobrança quando for realizada.` : 'Valor não definido.';
 }
-function mensagemConfirmacao(a) {
-  const resp = a.pac.respTelefone && (a.pac.respNome || a.pac.tipo === 'infantil'); const tel = resp ? a.pac.respTelefone : a.pac.telefone;
-  const nome = resp && a.pac.respNome ? a.pac.respNome : (a.pac.apelido || a.pac.nome); const prof = profissionalPorId(a.profissionalId);
-  const d = dataDe(a.inicio.slice(0, 10));
-  const msg = preencher(App.eu.config.msg_confirmacao, { nome: primeiroNome(nome), dia: `${DIAS[d.getDay()]}, ${d.getDate()} de ${MESES[d.getMonth()]}`, hora: hhmm(a.inicio), profissional: prof ? prof.nome : (App.eu.conta.nome || '') });
-  return linkWhats(tel, msg);
-}
-
 function detalhe(a) {
   if (!a) return;
   const pode = !somenteLeitura(); const bloq = a.tipo === 'bloqueio';
-  const wa = !bloq ? mensagemConfirmacao(a) : '';
+  const wa = !bloq ? linkConfirmacao(a) : '';
   const m = abrirModal({ titulo: bloq ? 'Horário bloqueado' : nomeCurto(a), corpo: html`
     <p style="margin:0 0 6px"><strong>${dataLonga(a.inicio.slice(0, 10))}</strong>, ${hhmm(a.inicio)} às ${hhmm(a.fim)} ${a.modalidade === 'online' && !bloq ? '· online' : ''}</p>
     ${bloq ? html`<p class="suave">${a.titulo || ''}</p>` : html`<p style="margin:0 0 6px">${selo(...SESSAO[a.status])} ${a.serieId ? html`<span class="suave peq">↻ ${FREQ[a.frequencia] || 'Repete'}</span>` : ''}</p>`}
@@ -197,7 +190,7 @@ async function mudarStatus(a, status) {
   if (a.status === status) return;
   let escopo = 'este';
   if (status === 'cancelada' && a.serieId) { escopo = await perguntarEscopo('Cancelar sessão fixa', 'Esta sessão faz parte de um horário fixo. Cancelar só esta ou também as próximas?'); if (!escopo) return; }
-  try { await api.post(`agenda/${a.id}/status`, { status, escopo }); aviso(`Sessão marcada como ${SESSAO[status][0].toLowerCase()}.`); await carregar(); } catch (er) { aviso(er.message, 'erro'); }
+  if (await mudarSituacaoSessao(a.id, status, escopo)) await carregar();
 }
 async function apagar(a) {
   let escopo = 'este';

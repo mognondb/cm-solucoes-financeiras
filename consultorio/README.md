@@ -17,7 +17,7 @@ Pense em um "Conta Azul" feito para essa rotina, com a agenda no centro: o que a
 | F0 | Base: API, segurança, acesso restrito, cadastro/login/teste grátis, configurações, painel admin | feito |
 | F1 | Pacientes e tipos de atendimento | feito |
 | F1 | Agenda (dia/semana/mês, sessões fixas, conflitos, bloqueios, status, confirmação por WhatsApp) | feito |
-| F1 | Contas a receber, baixas, inadimplência, cobrança | a fazer |
+| F1 | Contas a receber, pagamentos parciais e estorno, inadimplência, cobrança por WhatsApp, painel do dia | feito |
 | F2 | Contas a pagar, contas bancárias, cartão e fatura, despesas fixas, fluxo de caixa | a fazer |
 | F3 | Importar extrato (OFX/CSV/Excel) e conciliar | a fazer |
 | F4 | Recibos em PDF, relatórios, apoio ao carnê-leão, exportar dados, excluir conta (LGPD) | a fazer |
@@ -118,14 +118,21 @@ Fases seguintes acrescentam: `psi_transferencias`, `psi_recorrentes` (F2); `psi_
   Sessões realizadas ou com falta nunca são deslocadas nem apagadas (cancele em vez de apagar).
 - Marcar realizada/falta só vale para hoje ou dias anteriores. Valor e "cobrar" nascem do paciente (mensalista: valor 0 e não cobra; convênio: valor do convênio).
 
-### Regras de cobrança previstas (F1)
+### Cobranças (F1)
 
-- **Por sessão:** a sessão marcada como *realizada* gera um lançamento a receber (vencimento = data + prazo do paciente).
-- **Falta:** só gera cobrança conforme a política do consultório (`cobrar_falta`, `falta_percentual`).
-- **Mensalidade:** um lançamento por mês, com `chave_unica` (paciente + competência), então rodar a geração duas vezes não duplica.
-- **Convênio:** cobrança por sessão, com a operadora como contraparte e prazo próprio.
-- **Inadimplência:** lançamento `aberto` com vencimento anterior a hoje; a lista por paciente mostra atraso e último contato, e o botão de
-  cobrança abre o WhatsApp com a mensagem padrão preenchida (a mensagem é editável em Configurações).
+Um lançamento (`psi_lancamentos`) é uma conta a receber ou a pagar; `psi_baixas` guarda cada pagamento (parcial ou total). O saldo é sempre `valor − Σ baixas`, nunca um campo.
+
+- **Por sessão:** a sessão marcada como *realizada* gera um lançamento (vencimento = data + prazo do paciente). `chave_unica = "sessao:ID"`: marcar de novo atualiza, não duplica.
+  Voltar a sessão para "agendada/cancelada" cancela a cobrança (se ainda não houve pagamento); depois de pago, a cobrança é **mantida** e o aviso diz isso.
+- **Falta:** só gera cobrança se `cobrar_falta` estiver ligado, no percentual `falta_percentual`; falta justificada nunca cobra. Sessão sem valor definido avisa e não gera nada.
+- **Mensalidade:** um lançamento por mês (atual e próximo) para mensalistas ativos, `chave_unica = "mensal:PACIENTE:AAAA-MM"`. Cancelada, não volta. Quem começou depois do
+  vencimento daquele mês não nasce devendo: a primeira mensalidade é a do mês seguinte. Dia 31 vira o último dia de meses curtos.
+- **Convênio:** cobrança por sessão, com a operadora como contraparte e o prazo do convênio (padrão 30 dias).
+- **Manual:** à vista, já recebido (nasce quitado, com a baixa) ou parcelado em até 60 meses (divisão exata em centavos; a diferença vai para a última parcela).
+- **Pagamento:** não pode passar do saldo nem ser futuro; a linha do lançamento é travada (`FOR UPDATE`) para dois cliques não pagarem duas vezes. Estornar reabre a cobrança.
+- **Inadimplência:** lançamento aberto com vencimento anterior a hoje, agrupado por paciente, com faixas de atraso (≤7, ≤30, ≤60, >60 dias), último contato e promessa de pagamento.
+  "Cobrar no WhatsApp" abre a mensagem pronta (editável em Configurações) e já registra o contato.
+- **Início:** painel da rotina (`GET inicio`): sessões de hoje e dos últimos 30 dias ainda por registrar (com botões Realizada/Faltou), indicadores e quem deve.
 
 ## Testar localmente
 

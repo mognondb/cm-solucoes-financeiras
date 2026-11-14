@@ -201,7 +201,7 @@ function psi_registrar_rotas_agenda(PsiRoteador $r): void {
           ->execute([$prof, $titulo, $inicio, $fim, $modal, $valor, $cobrar, $obs, psi_agora(), $id, $c]);
       } catch (PDOException $e) { if ($e->getCode() === '23000') psi_erro('Já existe uma sessão desta série nesse horário.', 409); throw $e; }
       psi_auditar('alterar', 'sessao', $id);
-      return ['ok' => true];
+      return ['ok' => true, 'cobranca' => in_array($a['status'], ['realizada', 'falta'], true) ? psi_sincronizar_cobranca($id) : ['acao' => null]];
     }
     /* esta e as seguintes: o "horário fixo" muda e as sessões futuras ainda não realizadas acompanham */
     $serieId = (int)$a['serie_id']; $delta = (int)round((strtotime(substr($inicio, 0, 10)) - strtotime(substr($a['inicio'], 0, 10))) / 86400); $hora = substr($inicio, 11, 8);
@@ -246,7 +246,7 @@ function psi_registrar_rotas_agenda(PsiRoteador $r): void {
       $db->commit();
     } catch (Throwable $e) { $db->rollBack(); throw $e; }
     psi_auditar('situacao', 'sessao', $id, ['status' => $st]);
-    return ['ok' => true, 'status' => $st, 'removidas' => $removidas];
+    return ['ok' => true, 'status' => $st, 'removidas' => $removidas, 'cobranca' => psi_sincronizar_cobranca($id)];
   });
 
   /* ---- apagar: bloqueios e sessões que ainda não aconteceram nem geraram cobrança ---- */
