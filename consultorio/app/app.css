@@ -236,6 +236,8 @@ details.bloco { border: 1px solid var(--linha); border-radius: 12px; padding: 10
 .mv-mov .corpo { flex: 1; min-width: 0; } .mv-mov .tit { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .mv-mov .sub { display: block; color: var(--suave); font-size: .78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mv-mov .dir { flex: none; display: flex; align-items: center; gap: 8px; } .mv-mov .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .mv-ico { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: .85rem; background: var(--creme); color: var(--suave); } .mv-ico.bom { background: var(--ok-bg); } .mv-ico.ruim { background: var(--perigo-bg); } .mv-ico.aten { background: var(--atencao-bg); color: var(--atencao); font-weight: 700; }
+.mv-fora { opacity: .72; } .mv-parcial { margin-left: 2px; color: var(--atencao); cursor: help; font-weight: 700; } .mv-inicial { margin-bottom: 4px; } .mv-inicial .mv-ico { background: var(--info-bg); color: var(--info); }
+.mv-aviso a.link { text-decoration: underline; }
 .mv-pend { margin-top: 8px; padding: 8px 10px 4px; border-radius: 12px; background: var(--atencao-bg); } .mv-pend-t { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: baseline; padding: 0 0 4px; } .mv-pend .mv-mov { border-top-color: rgba(168, 116, 42, .22); }
 @media (max-width: 719px) {
   .mv-cols { display: none; }

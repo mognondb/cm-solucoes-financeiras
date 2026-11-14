@@ -264,8 +264,12 @@ o dinheiro continua sendo lançamento comum, então o **caixa não muda**: a rec
 Aba parecida com o extrato, mais compacta: **um dia por linha** (entradas, saídas, saldo ao fim do dia e o que não foi conciliado), cada dia se abre para os movimentos. `GET movimentacoes?mes=AAAA-MM&conta=todas|ID`
 (`api/lib/rotas_movimentacoes.php`, tela `app/telas/movimentacoes.js`; aceita `#/movimentacoes?conta=ID&mes=AAAA-MM`).
 
-- **Movimento** = pagamento/recebimento (baixa) ou transferência registrados no sistema, só os que contam no saldo (data ≥ data do saldo inicial da conta). Por isso o saldo da aba é o mesmo de "Contas e cartões".
-- **Saldo ao fim do dia** é calculado de trás para frente a partir do saldo de hoje (saldo atual − o que aconteceu depois daquele dia); `saldoAbertura` é o saldo no começo do mês.
+- **Movimento** = pagamento/recebimento (baixa) ou transferência registrados no sistema. **Todos aparecem**, inclusive os de antes da data do saldo inicial da conta: o saldo só conta o que veio a partir dessa data (regra de "Contas e cartões"),
+  então os anteriores saem com `foraDoSaldo: true` (selo "Fora do saldo", esmaecidos) e não mexem no saldo. Isso importa porque a conta nasce com a data do saldo = dia do cadastro: quem importa um extrato ou lança pagamentos de dias passados
+  teria tudo escondido. `foraDoSaldo` na resposta resume quantos e de qual conta/data, e a tela avisa como contá-los (ajustar a data do saldo inicial e o saldo daquele dia em Contas e cartões).
+- **Saldo ao fim do dia** é calculado de trás para frente, conta a conta, a partir do saldo de hoje. Antes da data do saldo inicial a conta ainda não tem saldo: fica de fora da soma, `saldoFim` é `null` se nenhuma conta do escopo tinha (a tela mostra "—")
+  e `saldoParcial` marca o dia em que falta uma conta relevante (com saldo inicial ou movimento até ali; uma carteira vazia não conta). No dia em que uma conta passa a ter saldo entra a linha **Saldo inicial** (`saldoInicial`), que não é entrada nem saída.
+  `saldoAbertura` é o saldo no início do mês das contas que já existiam no dia 1. Entradas e saídas do mês contam todos os movimentos (atividade real), inclusive os "fora do saldo".
 - **Escopo**: uma conta (qualquer tipo, inclusive cartão, cujo saldo negativo é a dívida) ou **todas** = contas de caixa ativas (banco, carteira, plataforma). **Cartão de crédito não entra no total**, como no fluxo de caixa: a dívida vem em `dividaCartoes`
   e a compra só sai do caixa quando a fatura é paga. **Transferência entre duas contas do escopo** aparece no dia (`interna`) mas não conta como entrada nem saída; pagar fatura (conta → cartão) é saída.
 - **Não conciliado** = linhas do extrato importado ainda `pendente` (nem ligadas a um pagamento, nem ignoradas), na data da linha: por dia (`naoConciliado`: qtd, entradas, saídas, total, e as linhas em `pendentes`), no mês, e no total com a lista por mês (`pendentes.porMes`)

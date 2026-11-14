@@ -35,15 +35,16 @@ function linhaMovimento(m, todas) {
   const ico = m.interna ? '⇄' : m.tipo === 'receber' ? '↘' : m.tipo === 'pagar' ? '↗' : m.valor > 0 ? '↘' : '↗';
   const detalhes = [m.quem, m.categoria, todas || m.interna ? m.conta : null].filter(Boolean).join(' · ');
   const clicavel = m.lancamentoId ? ` data-lanc="${Number(m.lancamentoId)}" tabindex="0" role="button"` : '';
-  return html`<li class="mv-mov ${m.lancamentoId ? 'linha-link' : ''}"${raw(clicavel)}><span class="mv-ico ${m.interna ? '' : m.valor > 0 ? 'bom' : 'ruim'}" aria-hidden="true">${ico}</span>
+  return html`<li class="mv-mov ${m.lancamentoId ? 'linha-link' : ''}${m.foraDoSaldo ? ' mv-fora' : ''}"${raw(clicavel)}><span class="mv-ico ${m.interna ? '' : m.valor > 0 ? 'bom' : 'ruim'}" aria-hidden="true">${ico}</span>
     <span class="corpo"><span class="tit">${m.descricao}</span>${detalhes ? html`<span class="sub">${detalhes}</span>` : ''}</span>
-    <span class="dir"><strong class="num ${m.interna ? '' : m.valor > 0 ? 'bom' : 'ruim'}">${m.interna ? brl(m.valor) : sinal(m.valor)}</strong>${m.conciliado ? selo('Conciliado', 'ok') : ''}</span></li>`;
+    <span class="dir"><strong class="num ${m.interna ? '' : m.valor > 0 ? 'bom' : 'ruim'}">${m.interna ? brl(m.valor) : sinal(m.valor)}</strong>${m.conciliado ? selo('Conciliado', 'ok') : ''}${m.foraDoSaldo ? html`<span class="selo selo-neutro" title="Anterior à data do saldo inicial desta conta: aparece aqui, mas não entra no saldo">Fora do saldo</span>` : ''}</span></li>`;
 }
 
 function detalheDia(d, todas) {
   const nc = d.naoConciliado;
   return html`<div class="mv-det" id="mv-det-${d.data}" ${est.abertos.has(d.data) ? '' : raw('hidden')}>
-    ${d.movimentos.length ? html`<ul class="mv-movs">${d.movimentos.map((m) => linhaMovimento(m, todas))}</ul>` : html`<p class="suave peq" style="margin:4px 0 8px">Nenhum pagamento ou recebimento registrado neste dia.</p>`}
+    ${d.saldoInicial.length ? html`<ul class="mv-movs mv-inicial">${d.saldoInicial.map((i) => html`<li class="mv-mov"><span class="mv-ico" aria-hidden="true">◎</span><span class="corpo"><span class="tit">Saldo inicial${todas ? ` · ${i.conta}` : ''}</span><span class="sub">De onde o saldo desta conta parte (não é entrada nem saída)</span></span><span class="dir"><strong class="num">${brl(i.valor)}</strong></span></li>`)}</ul>` : ''}
+    ${d.movimentos.length ? html`<ul class="mv-movs">${d.movimentos.map((m) => linhaMovimento(m, todas))}</ul>` : d.saldoInicial.length ? '' : html`<p class="suave peq" style="margin:4px 0 8px">Nenhum pagamento ou recebimento registrado neste dia.</p>`}
     ${d.pendentes.length ? html`<div class="mv-pend"><div class="mv-pend-t"><strong>Ainda não conciliado no extrato</strong><span class="suave peq">${mais(nc.qtd, 'linha', 'linhas')} · entradas ${brl(nc.entradas)} · saídas ${brl(nc.saidas)}</span></div>
       <ul class="mv-movs">${d.pendentes.map((p) => html`<li class="mv-mov"><span class="mv-ico aten" aria-hidden="true">?</span><span class="corpo"><span class="tit">${p.descricao}</span>${todas ? html`<span class="sub">${p.conta}</span>` : ''}</span>
         <span class="dir"><strong class="num ${p.valor > 0 ? 'bom' : 'ruim'}">${sinal(p.valor)}</strong><a class="btn btn-ghost btn-peq" href="#/extrato?conta=${p.contaId}">Conciliar</a></span></li>`)}</ul></div>` : ''}</div>`;
@@ -53,10 +54,10 @@ function linhaDia(d, todas) {
   const aberto = est.abertos.has(d.data); const nc = d.naoConciliado; const n = d.movimentos.length;
   return html`<li class="mv-dia" data-dia="${d.data}"><button type="button" class="mv-cab" data-dia-btn="${d.data}" aria-expanded="${aberto ? 'true' : 'false'}" aria-controls="mv-det-${d.data}">
       <span class="mv-seta" aria-hidden="true">›</span>
-      <span class="mv-data"><strong>${diaSemana(d.data)}, ${dataCurta(d.data)}</strong><small class="suave">${n ? mais(n, 'movimento', 'movimentos') : 'sem movimentos'}</small></span>
+      <span class="mv-data"><strong>${diaSemana(d.data)}, ${dataCurta(d.data)}</strong><small class="suave">${n ? mais(n, 'movimento', 'movimentos') : d.saldoInicial.length ? 'saldo inicial da conta' : 'sem movimentos'}</small></span>
       <span class="mv-nums"><span class="mv-num mv-e ${d.entradas ? 'bom' : 'suave'}" data-r="Entradas">${d.entradas ? '+' + brl(d.entradas) : '—'}</span><span class="mv-num mv-s ${d.saidas ? 'ruim' : 'suave'}" data-r="Saídas">${d.saidas ? '−' + brl(d.saidas) : '—'}</span>
         <span class="mv-num mv-nc ${nc.qtd ? '' : 'suave'}" data-r="Não conciliado">${nc.qtd ? html`<span class="selo selo-aten" title="Entradas ${brl(nc.entradas)} · saídas ${brl(nc.saidas)}">${nc.qtd} · ${brl(nc.total)}</span>` : html`<span class="suave">—</span>`}</span></span>
-      <span class="mv-num mv-saldo ${d.saldoFim < 0 ? 'ruim' : ''}" data-r="Saldo no fim do dia">${brl(d.saldoFim)}</span></button>${detalheDia(d, todas)}</li>`;
+      <span class="mv-num mv-saldo ${d.saldoFim !== null && d.saldoFim < 0 ? 'ruim' : ''}" data-r="Saldo no fim do dia">${d.saldoFim === null ? html`<span class="suave" title="Antes da data do saldo inicial a conta ainda não tinha saldo">—</span>` : brl(d.saldoFim)}${d.saldoParcial ? html`<span class="mv-parcial" title="Não inclui uma conta que ainda não tinha saldo inicial neste dia">*</span>` : ''}</span></button>${detalheDia(d, todas)}</li>`;
 }
 
 function desenhar() {
@@ -77,18 +78,20 @@ function desenhar() {
       <div class="mv-expandir"><button type="button" class="btn btn-ghost btn-peq" data-abrir-todos>Abrir todos</button><button type="button" class="btn btn-ghost btn-peq" data-fechar-todos>Fechar todos</button></div></div>
     <div class="kpis">
       <div class="kpi ${d.saldo < 0 && !cartao ? 'alerta' : ''}"><span>${cartao ? 'Saldo do cartão' : todas ? 'Saldo total hoje' : 'Saldo da conta hoje'}</span><strong>${brl(d.saldo)}</strong>
-        <small class="suave">${cartao ? 'Negativo é o que você deve no cartão' : todas ? `Soma de ${mais(noEscopo.length, 'conta', 'contas')}${d.cartoesForaDoTotal ? ` · cartões à parte: ${brl(d.dividaCartoes)} a pagar` : ''}` : (conta && conta.banco) || 'Saldo calculado pelas movimentações'}</small></div>
+        <small class="suave">${cartao ? 'Negativo é o que você deve no cartão' : todas ? `Soma de ${mais(noEscopo.length, 'conta', 'contas')}${d.cartoesForaDoTotal ? ` · cartões à parte: ${brl(d.dividaCartoes)} a pagar` : ''}` : `${conta.banco ? conta.banco + ' · ' : ''}saldo inicial de ${brl(conta.saldoInicial)} em ${dataBR(conta.dataSaldo)}`}</small></div>
       <div class="kpi ok"><span>Entradas do mês</span><strong>${brl(t.entradas)}</strong><small class="suave">Saldo no início do mês: ${brl(d.saldoAbertura)}</small></div>
       <div class="kpi"><span>Saídas do mês</span><strong>${brl(t.saidas)}</strong><small class="suave">${t.liquido === 0 ? 'Entrou e saiu o mesmo valor' : t.liquido > 0 ? `Sobraram ${brl(t.liquido)}` : `Faltaram ${brl(-t.liquido)}`}</small></div>
       <div class="kpi ${nc.qtd ? 'alerta' : 'ok'}"><span>Não conciliado no mês</span><strong>${brl(nc.total)}</strong><small class="suave">${nc.qtd ? `${mais(nc.qtd, 'linha', 'linhas')} em ${mais(nc.dias, 'dia', 'dias')} · entradas ${brl(nc.entradas)} · saídas ${brl(nc.saidas)}` : 'Nada pendente neste mês'}</small></div></div>
     ${p.foraDoMes.qtd ? html`<div class="faixa faixa-aten mv-aviso" role="status"><div><strong>${mais(p.foraDoMes.qtd, 'linha pendente', 'linhas pendentes')} em outros meses</strong> (${brl(p.foraDoMes.total)}). Ir para:
         ${outrosMeses.map((x) => html` <button type="button" class="chip" data-ir-mes="${x.mes}">${mesAno(x.mes + '-01').replace(/ de /, '/')} · ${x.qtd}</button>`)}</div></div>` : ''}
+    ${d.foraDoSaldo.qtd ? html`<div class="faixa faixa-info mv-aviso" role="status"><div><strong>${mais(d.foraDoSaldo.qtd, 'movimento deste mês é anterior', 'movimentos deste mês são anteriores')} à data do saldo inicial</strong> de ${d.foraDoSaldo.contas.map((c) => `${c.nome} (${dataBR(c.dataSaldo)})`).join(', ')}.
+        Eles aparecem aqui, mas não entram no saldo. Para contá-los, em <a class="link" href="#/contas">Contas e cartões</a> coloque a data do saldo inicial no começo do período e o saldo que a conta tinha naquele dia.</div></div>` : ''}
     ${d.truncado ? html`<div class="faixa faixa-aten mv-aviso" role="status">Este mês tem muitos registros: mostrando os primeiros ${3000}. Use uma conta específica para ver o restante.</div>` : ''}
     <div class="cartao mv"><div class="mv-cols" aria-hidden="true"><span></span><span>Dia</span><span class="mv-e">Entradas</span><span class="mv-s">Saídas</span><span class="mv-saldo">Saldo no fim do dia</span><span class="mv-nc">Não conciliado</span></div>
       ${visiveis.length ? html`<ul class="mv-lista" id="mv-lista">${visiveis.map((x) => linhaDia(x, todas))}</ul>`
         : est.soPendencia ? html`<div class="vazio"><h3>Nenhum dia com pendência neste mês</h3><p>Tudo o que veio do extrato já foi conciliado ou ignorado.</p></div>`
         : html`<div class="vazio"><h3>Nada movimentado em ${mesAno(d.mes + '-01')}</h3><p>${todas ? 'Nenhuma das contas teve pagamento, recebimento ou transferência' : 'Esta conta não teve pagamento, recebimento ou transferência'} neste mês. Use as setas para ver outro mês.</p></div>`}</div>
-    <p class="suave peq" style="margin:12px 4px">${todas ? 'Transferência entre as suas próprias contas aparece no dia, mas não conta como entrada nem saída. ' : ''}"Não conciliado" são as linhas do extrato importado que ainda não foram ligadas a um pagamento nem ignoradas, na data da linha. O saldo ao fim do dia é calculado a partir do saldo de hoje.</p>` : ''}`);
+    <p class="suave peq" style="margin:12px 4px">${todas ? 'Transferência entre as suas próprias contas aparece no dia, mas não conta como entrada nem saída. ' : ''}"Não conciliado" são as linhas do extrato importado que ainda não foram ligadas a um pagamento nem ignoradas, na data da linha. O saldo ao fim do dia é calculado a partir do saldo de hoje; antes da data do saldo inicial a conta ainda não tem saldo (—), e os movimentos desse período aparecem marcados "Fora do saldo".</p>` : ''}`);
 }
 
 /* ---------------------------------------------------------------- interação */
