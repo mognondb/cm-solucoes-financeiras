@@ -16,7 +16,7 @@ const NAV_INF = ['inicio', 'agenda', 'pacientes', 'receber'];
 const ROTULO = Object.fromEntries(NAV.flatMap((g) => g.itens));
 /* Telas já construídas (cada uma é um módulo em telas/). As demais mostram "Em construção" sem fazer pedido ao servidor;
    ao construir uma tela, acrescente-a aqui. Se uma tela listada falhar ao carregar, o erro aparece de verdade (não vira "em construção"). */
-const PRONTAS = new Set(['inicio', 'config', 'pacientes', 'agenda', 'receber']);
+const PRONTAS = new Set(['inicio', 'config', 'pacientes', 'agenda', 'receber', 'pagar', 'contas', 'caixa']);
 const PUBLICAS = new Set(['entrar', 'cadastro', 'esqueci', 'redefinir', 'verificar']);
 let limpar = null;
 let casca = false;

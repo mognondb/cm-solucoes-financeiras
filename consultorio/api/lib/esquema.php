@@ -7,7 +7,7 @@
 declare(strict_types=1);
 
 const PSI_TABELAS_DA_CONTA = [ // tudo o que tem conta_id: usado ao excluir uma conta
-  'psi_auditoria', 'psi_cobrancas', 'psi_baixas', 'psi_lancamentos', 'psi_agendamentos', 'psi_series', 'psi_pacientes', 'psi_servicos',
+  'psi_auditoria', 'psi_cobrancas', 'psi_transferencias', 'psi_recorrentes', 'psi_baixas', 'psi_lancamentos', 'psi_agendamentos', 'psi_series', 'psi_pacientes', 'psi_servicos',
   'psi_contas_fin', 'psi_categorias', 'psi_profissionais', 'psi_sessoes', 'psi_usuarios',
 ];
 
@@ -121,6 +121,18 @@ function psi_migracoes(): array {
         $s = $db->query("SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'psi_agendamentos' AND INDEX_NAME = 'uq_serie_inicio'");
         if ((int)$s->fetchColumn() === 0) $db->exec('ALTER TABLE psi_agendamentos ADD UNIQUE KEY uq_serie_inicio (serie_id, inicio)');
       },
+    ],
+    /* v3 (financeiro): transferências entre contas (inclui pagamento de fatura do cartão) e despesas fixas que geram contas a pagar todo mês. */
+    3 => [
+      "CREATE TABLE IF NOT EXISTS psi_transferencias (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, conta_id BIGINT UNSIGNED NOT NULL, origem_id BIGINT UNSIGNED NOT NULL, destino_id BIGINT UNSIGNED NOT NULL,
+        valor INT NOT NULL, data DATE NOT NULL, obs VARCHAR(200) NULL, criado_em DATETIME NOT NULL, KEY k_conta (conta_id, data), KEY k_origem (origem_id), KEY k_destino (destino_id)
+      ) $t",
+      "CREATE TABLE IF NOT EXISTS psi_recorrentes (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, conta_id BIGINT UNSIGNED NOT NULL, descricao VARCHAR(150) NOT NULL, valor INT NOT NULL, categoria_id BIGINT UNSIGNED NULL,
+        contraparte VARCHAR(120) NULL, frequencia ENUM('mensal','anual') NOT NULL DEFAULT 'mensal', dia TINYINT NOT NULL, mes TINYINT NULL, inicio DATE NOT NULL, fim DATE NULL,
+        ativa TINYINT(1) NOT NULL DEFAULT 1, obs VARCHAR(200) NULL, criado_em DATETIME NOT NULL, KEY k_conta (conta_id, ativa)
+      ) $t",
     ],
   ];
 }

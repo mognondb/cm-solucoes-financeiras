@@ -14,19 +14,19 @@ function psi_data_lanc($v, bool $obrig, string $campo): ?string {
   return $d;
 }
 
-/** Tudo o que está em aberto a receber, já com o restante de cada um. Base das somas e da inadimplência. */
-function psi_abertos_a_receber(): array {
+/** Tudo o que está em aberto (a receber ou a pagar), já com o restante de cada um. Base das somas e da inadimplência. */
+function psi_abertos_a_receber(string $tipo = 'receber'): array {
   $c = psi_conta_id();
   $s = psi_db()->prepare("SELECT l.id, l.paciente_id, l.vencimento, l.valor - COALESCE(b.pago, 0) AS restante
     FROM psi_lancamentos l LEFT JOIN (SELECT lancamento_id, SUM(valor) AS pago FROM psi_baixas WHERE conta_id = ? GROUP BY lancamento_id) b ON b.lancamento_id = l.id
-    WHERE l.conta_id = ? AND l.tipo = 'receber' AND l.situacao = 'aberto'"); $s->execute([$c, $c]);
+    WHERE l.conta_id = ? AND l.tipo = ? AND l.situacao = 'aberto'"); $s->execute([$c, $c, $tipo]);
   return array_values(array_filter($s->fetchAll(), fn($r) => (int)$r['restante'] > 0));
 }
 
-function psi_resumo_receber(): array {
+function psi_resumo_receber(string $tipo = 'receber'): array {
   $hoje = psi_hoje(); $ini = psi_inicio_mes($hoje); $fim = psi_data_no_mes((int)substr($hoje, 0, 4), (int)substr($hoje, 5, 2), 31); $sete = psi_somar_dias($hoje, 7);
   $r = ['atrasado' => 0, 'atrasadoQtd' => 0, 'pacientesEmAtraso' => 0, 'venceHoje' => 0, 'vence7dias' => 0, 'previstoMes' => 0, 'aberto' => 0, 'faixas' => ['ate7' => 0, 'ate30' => 0, 'ate60' => 0, 'mais60' => 0]]; $pacs = [];
-  foreach (psi_abertos_a_receber() as $a) {
+  foreach (psi_abertos_a_receber($tipo) as $a) {
     $v = (int)$a['restante']; $r['aberto'] += $v;
     if ($a['vencimento'] < $hoje) {
       $r['atrasado'] += $v; $r['atrasadoQtd']++; $pacs[(string)$a['paciente_id']] = 1;
@@ -38,8 +38,8 @@ function psi_resumo_receber(): array {
   }
   $r['pacientesEmAtraso'] = count($pacs);
   $b = psi_db()->prepare("SELECT COALESCE(SUM(CASE WHEN b.data >= ? AND b.data <= ? THEN b.valor END), 0), COALESCE(SUM(CASE WHEN b.data >= ? AND b.data < ? THEN b.valor END), 0)
-    FROM psi_baixas b JOIN psi_lancamentos l ON l.id = b.lancamento_id WHERE b.conta_id = ? AND l.tipo = 'receber'");
-  $ant = psi_inicio_mes(psi_somar_meses($ini, -1)); $b->execute([$ini, $fim, $ant, $ini, psi_conta_id()]); [$mes, $mesAnt] = $b->fetch(PDO::FETCH_NUM);
+    FROM psi_baixas b JOIN psi_lancamentos l ON l.id = b.lancamento_id WHERE b.conta_id = ? AND l.tipo = ?");
+  $ant = psi_inicio_mes(psi_somar_meses($ini, -1)); $b->execute([$ini, $fim, $ant, $ini, psi_conta_id(), $tipo]); [$mes, $mesAnt] = $b->fetch(PDO::FETCH_NUM);
   $r['recebidoMes'] = (int)$mes; $r['recebidoMesAnterior'] = (int)$mesAnt;
   return $r;
 }
@@ -66,16 +66,10 @@ function psi_inadimplencia(): array {
 }
 
 function psi_registrar_rotas_lancamentos(PsiRoteador $r): void {
-  /* contas financeiras (para escolher onde o dinheiro entrou ou saiu); o cadastro completo delas vem com o módulo de contas */
-  $r->add('GET', 'contas-fin', function () {
-    $s = psi_db()->prepare('SELECT id, tipo, nome, banco, ativo FROM psi_contas_fin WHERE conta_id = ? ORDER BY ordem, id'); $s->execute([psi_conta_id()]);
-    return ['itens' => array_map(fn($x) => ['id' => (int)$x['id'], 'tipo' => $x['tipo'], 'nome' => $x['nome'], 'banco' => $x['banco'], 'ativo' => (bool)$x['ativo']], $s->fetchAll())];
-  });
-
   /* ---- listar ---- */
   $r->add('GET', 'lancamentos', function () {
     $c = psi_conta_id(); $hoje = psi_hoje();
-    $tipo = psi_opcao($_GET['tipo'] ?? null, ['receber', 'pagar'], 'receber'); if ($tipo === 'receber') psi_gerar_mensalidades();
+    $tipo = psi_opcao($_GET['tipo'] ?? null, ['receber', 'pagar'], 'receber'); if ($tipo === 'receber') psi_gerar_mensalidades(); else psi_gerar_recorrentes();
     $sit = psi_opcao($_GET['situacao'] ?? null, ['aberto', 'quitado', 'cancelado', 'atrasado', 'todos'], 'aberto');
     $onde = ['l.tipo = ?']; $par = [$tipo];
     if ($sit === 'atrasado') { $onde[] = "l.situacao = 'aberto' AND l.vencimento < ?"; $par[] = $hoje; } elseif ($sit !== 'todos') { $onde[] = 'l.situacao = ?'; $par[] = $sit; }
@@ -209,6 +203,7 @@ function psi_registrar_rotas_lancamentos(PsiRoteador $r): void {
 
   /* ---- visão de quem deve ---- */
   $r->add('GET', 'receber/resumo', function () { psi_gerar_mensalidades(); return psi_resumo_receber(); });
+  $r->add('GET', 'pagar/resumo', function () { psi_gerar_recorrentes(); return psi_resumo_receber('pagar'); });
   $r->add('GET', 'receber/inadimplencia', function () { psi_gerar_mensalidades(); $l = psi_inadimplencia(); return ['itens' => $l, 'total' => array_sum(array_column($l, 'vencido'))]; });
 
   /* ---- registro de cobranças feitas (contatos e promessas de pagamento) ---- */

@@ -18,7 +18,7 @@ Pense em um "Conta Azul" feito para essa rotina, com a agenda no centro: o que a
 | F1 | Pacientes e tipos de atendimento | feito |
 | F1 | Agenda (dia/semana/mês, sessões fixas, conflitos, bloqueios, status, confirmação por WhatsApp) | feito |
 | F1 | Contas a receber, pagamentos parciais e estorno, inadimplência, cobrança por WhatsApp, painel do dia | feito |
-| F2 | Contas a pagar, contas bancárias, cartão e fatura, despesas fixas, fluxo de caixa | a fazer |
+| F2 | Contas a pagar, contas bancárias, cartão e fatura, despesas fixas, fluxo de caixa | feito |
 | F3 | Importar extrato (OFX/CSV/Excel) e conciliar | a fazer |
 | F4 | Recibos em PDF, relatórios, apoio ao carnê-leão, exportar dados, excluir conta (LGPD) | a fazer |
 
@@ -105,7 +105,7 @@ validar a entrega de e-mail (SPF/DKIM do domínio) e então usar "Abrir ao públ
 | `psi_categorias` | 13 de receita e 22 de despesa já sugeridas (fixa/variável; "pode entrar no livro-caixa"), editáveis |
 | `psi_auditoria` | Quem fez o quê |
 
-Fases seguintes acrescentam: `psi_transferencias`, `psi_recorrentes` (F2); `psi_extratos`, `psi_extrato_itens` (F3); `psi_recibos` (F4).
+Migrações: v1 base · v2 agenda (índice único das séries) · v3 `psi_transferencias` e `psi_recorrentes`. Próximas: `psi_extratos`/`psi_extrato_itens` (F3) e `psi_recibos` (F4).
 
 ### Agenda (F1)
 
@@ -133,6 +133,15 @@ Um lançamento (`psi_lancamentos`) é uma conta a receber ou a pagar; `psi_baixa
 - **Inadimplência:** lançamento aberto com vencimento anterior a hoje, agrupado por paciente, com faixas de atraso (≤7, ≤30, ≤60, >60 dias), último contato e promessa de pagamento.
   "Cobrar no WhatsApp" abre a mensagem pronta (editável em Configurações) e já registra o contato.
 - **Início:** painel da rotina (`GET inicio`): sessões de hoje e dos últimos 30 dias ainda por registrar (com botões Realizada/Faltou), indicadores e quem deve.
+
+### Contas, cartão e fluxo de caixa (F2)
+
+- **Saldo é calculado**, nunca guardado: saldo inicial + recebimentos − pagamentos ± transferências **desde a data do saldo inicial** (movimentos anteriores são ignorados).
+- **Cartão de crédito** é uma conta cujo saldo é a dívida (negativo). Compra no cartão = pagamento (baixa) naquela conta, no dia da compra (aparece no resultado e em "Pagas");
+  a saída de caixa só acontece quando a fatura é paga (transferência da conta para o cartão). A fatura é aproximada: aberta = compras do ciclo atual (pelo dia de fechamento); fechada = o resto da dívida.
+- **Despesas fixas** (`psi_recorrentes`, mensais ou anuais) geram a conta a pagar do mês atual e do próximo (`chave_unica = "rec:ID:AAAA-MM"`); cancelada, não volta; a que começou depois do vencimento do mês não nasce atrasada.
+- **Fluxo de caixa** (`GET caixa?mes=AAAA-MM`): realizado do mês (só contas que não são cartão), previsto (em aberto, no vencimento), projeção de 60 dias (atrasadas a pagar entram hoje; atrasadas a receber ficam fora)
+  e menor saldo previsto. Faturas de cartão entram como saída no vencimento.
 
 ## Testar localmente
 

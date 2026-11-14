@@ -79,13 +79,13 @@ export function abrirContato(pacienteId, nome, depois, lancamentoId = null) {
 
 /* ================================================================= pagamento */
 export async function abrirPagamento(l, depois) {
-  await carregarBase(['contas']); const contas = App.cache.contas.filter((c) => c.ativo && c.tipo !== 'cartao');
+  await carregarBase(['contas']); const pagar = l.tipo === 'pagar'; const contas = App.cache.contas.filter((c) => c.ativo && (pagar || c.tipo !== 'cartao'));
   const forma = (l.paciente && l.paciente.forma) || '';
-  const m = abrirModal({ titulo: 'Registrar pagamento', corpo: html`<div><p class="erro-form" role="alert" hidden></p>
+  const m = abrirModal({ titulo: pagar ? 'Pagar conta' : 'Registrar pagamento', corpo: html`<div><p class="erro-form" role="alert" hidden></p>
     <p style="margin:0 0 12px"><strong>${l.descricao}</strong>${l.paciente ? html`<br><span class="suave">${l.paciente.nome}</span>` : l.contraparte ? html`<br><span class="suave">${l.contraparte}</span>` : ''}<br><span class="suave peq">Saldo em aberto: ${brl(l.restante)}${l.pago ? ` (já pago ${brl(l.pago)})` : ''}</span></p>
-    <div class="grade-2">${campoDinheiro({ id: 'valor', rotulo: 'Valor recebido', valor: l.restante, obrig: true, ajuda: 'Pode ser menos que o saldo: fica o restante em aberto.' })}${campo({ id: 'data', rotulo: 'Data do pagamento', tipo: 'date', valor: App.hoje, obrig: true, extra: `max="${App.hoje}"` })}</div>
-    <div class="grade-2">${campo({ id: 'forma', rotulo: 'Forma de pagamento', valor: forma, opcoes: FORMAS })}${campo({ id: 'contaFinId', rotulo: 'Entrou em', valor: contas[0] ? contas[0].id : '', opcoes: contas.map((c) => [c.id, c.nome]) })}</div>
-    ${campo({ id: 'obs', rotulo: 'Observação', extra: 'maxlength="200"' })}</div>`, acoes: [{ id: 'cancelar', rotulo: 'Cancelar' }, { id: 'salvar', rotulo: 'Registrar pagamento', classe: 'btn-pri' }] });
+    <div class="grade-2">${campoDinheiro({ id: 'valor', rotulo: pagar ? 'Valor pago' : 'Valor recebido', valor: l.restante, obrig: true, ajuda: 'Pode ser menos que o saldo: fica o restante em aberto.' })}${campo({ id: 'data', rotulo: 'Data do pagamento', tipo: 'date', valor: App.hoje, obrig: true, extra: `max="${App.hoje}"` })}</div>
+    <div class="grade-2">${campo({ id: 'forma', rotulo: 'Forma de pagamento', valor: forma, opcoes: FORMAS })}${campo({ id: 'contaFinId', rotulo: pagar ? 'Saiu de' : 'Entrou em', valor: contas[0] ? contas[0].id : '', opcoes: contas.map((c) => [c.id, c.nome + (c.tipo === 'cartao' ? ' (cartão)' : '')]) })}</div>
+    ${campo({ id: 'obs', rotulo: 'Observação', extra: 'maxlength="200"' })}</div>`, acoes: [{ id: 'cancelar', rotulo: 'Cancelar' }, { id: 'salvar', rotulo: pagar ? 'Registrar saída' : 'Registrar pagamento', classe: 'btn-pri' }] });
   const form = $('form', m.el);
   m.el.addEventListener('click', async (e) => {
     const b = e.target.closest('[data-acao]'); if (!b) return; if (b.dataset.acao === 'cancelar') return m.fechar();
@@ -94,7 +94,7 @@ export async function abrirPagamento(l, depois) {
     if (!v || v <= 0) return falha('Informe o valor recebido.');
     try {
       const r = await api.post(`lancamentos/${l.id}/baixas`, { valor: v, data: d.data, forma: d.forma || null, contaFinId: d.contaFinId ? Number(d.contaFinId) : null, obs: d.obs });
-      m.fechar(); aviso(r.situacao === 'quitado' ? 'Pagamento registrado. Cobrança quitada.' : `Pagamento registrado. Ainda faltam ${brl(r.restante)}.`); if (depois) depois();
+      m.fechar(); aviso(r.situacao === 'quitado' ? (pagar ? 'Pagamento registrado. Conta quitada.' : 'Pagamento registrado. Cobrança quitada.') : `Pagamento registrado. Ainda faltam ${brl(r.restante)}.`); if (depois) depois();
     } catch (er) { falha(er.message); }
   });
 }
@@ -149,7 +149,7 @@ export async function abrirLancamento({ editar, tipo = 'receber', pacienteId } =
   const l = editar || null; const t = l ? l.tipo : tipo; const receber = t === 'receber';
   await carregarBase(['categorias', 'contas']); let pacientes = [];
   if (receber) { try { pacientes = (await api.get('pacientes?status=todos')).itens.filter((p) => p.status !== 'arquivado'); } catch (e) { aviso(e.message, 'erro'); return; } }
-  const cats = categoriasDe(receber ? 'receita' : 'despesa'); const contas = App.cache.contas.filter((c) => c.ativo && c.tipo !== 'cartao');
+  const cats = categoriasDe(receber ? 'receita' : 'despesa'); const contas = App.cache.contas.filter((c) => c.ativo && (!receber || c.tipo !== 'cartao'));
   const m = abrirModal({ titulo: l ? 'Editar lançamento' : receber ? 'Nova cobrança' : 'Nova conta a pagar', largo: true, corpo: html`<div><p class="erro-form" role="alert" hidden></p>
     ${campo({ id: 'descricao', rotulo: 'Descrição', valor: l ? l.descricao : '', obrig: true, placeholder: receber ? 'Ex.: Avaliação psicológica, palestra, aluguel de sala' : 'Ex.: aluguel, internet, supervisão', extra: 'maxlength="150"' })}
     <div class="grade-3">${campoDinheiro({ id: 'valor', rotulo: l ? 'Valor' : 'Valor total', valor: l ? l.valor : 0, obrig: true })}${campo({ id: 'vencimento', rotulo: 'Vencimento', tipo: 'date', valor: l ? l.vencimento : App.hoje, obrig: true })}
