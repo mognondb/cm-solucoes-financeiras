@@ -68,7 +68,10 @@ CREATE TABLE IF NOT EXISTS diagnosticos (
   segmento VARCHAR(40) NULL,
   versao TINYINT NULL,
   respostas_json MEDIUMTEXT NULL,
-  resultado_json MEDIUMTEXT NULL
+  resultado_json MEDIUMTEXT NULL,
+  pdf_token_hash CHAR(64) NULL,
+  pdf_enviado_em VARCHAR(32) NULL,
+  pdf_tentativas TINYINT NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS infoprodutos (

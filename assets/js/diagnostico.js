@@ -211,7 +211,7 @@
     var c = estado.contato || {};
     return topo(6)
       + '<section class="dg-contato"><p class="dg-eyebrow">Seu relatório está pronto</p><h2 id="dg-foco" tabindex="-1">Para quem enviamos o resultado?</h2>'
-      + '<p class="dg-ajuda">Informe seus dados para ver o relatório. A CM recebe o seu resultado e pode conversar com você sobre ele, sem compromisso.</p>'
+      + '<p class="dg-ajuda">Informe seus dados para ver o relatório. Você também recebe uma cópia em PDF no e-mail informado. A CM recebe o seu resultado e pode conversar com você sobre ele, sem compromisso.</p>'
       + '<form id="dg-form" novalidate>'
       + '<div class="dg-campo"><label for="dg-nome">Nome *</label><input id="dg-nome" name="nome" type="text" autocomplete="name" required maxlength="120" value="' + esc(c.nome) + '"></div>'
       + '<div class="dg-campo"><label for="dg-email">E-mail *</label><input id="dg-email" name="email" type="email" autocomplete="email" required maxlength="160" value="' + esc(c.email) + '"></div>'
@@ -232,11 +232,13 @@
       aviso = '<div class="dg-aviso-envio" role="alert"><p>Não conseguimos registrar o seu contato agora, mas o relatório está aqui.</p><button type="button" class="dg-link" data-acao="reenviar">Tentar enviar de novo</button></div>';
     }
     var rapido = estado.resultado && estado.resultado.modo !== 'preciso';
-    var acoes = '<div class="dg-rel-acoes"><button type="button" class="btn btn-outline" data-acao="imprimir">Salvar em PDF ou imprimir</button>'
+    var acoes = '<div class="dg-rel-acoes"><button type="button" class="btn btn-outline" data-acao="baixar-pdf">Baixar em PDF</button>'
       + (estado.sim ? (rapido ? '<button type="button" class="btn btn-outline" data-acao="exemplo-preciso">Ver o mesmo exemplo no modo preciso</button>' : '') + '<button type="button" class="btn btn-primary" data-acao="comecar">Fazer o meu diagnóstico</button>'
-        : (rapido ? '<button type="button" class="btn btn-primary" data-acao="aprofundar">Deixar mais preciso</button>' : '') + '<button type="button" class="dg-link" data-acao="refazer">Refazer o diagnóstico</button>') + '</div>'
+        : (rapido ? '<button type="button" class="btn btn-primary" data-acao="aprofundar">Deixar mais preciso</button>' : '') + '<button type="button" class="dg-link" data-acao="refazer">Refazer o diagnóstico</button>')
+      + '<button type="button" class="dg-link" data-acao="imprimir">Imprimir</button></div>'
       + (!estado.sim && rapido ? '<p class="dg-aprofundar">Este relatório usa faixas aproximadas. No modo preciso você informa os números reais (ou importa o extrato do banco) e responde só o que falta: os indicadores ficam bem mais exatos.</p>' : '');
     return '<div class="dg-relatorio">' + aviso + '<h1 id="dg-foco" tabindex="-1" class="dg-sr">Relatório do CM Diagnóstico</h1>'
+      + '<div class="dg-pdf-barra" id="dg-pdf-barra" role="status" aria-live="polite" data-status="' + esc(pdfEstado().status) + '">' + pdfBarraHtml() + '</div>'
       + D.relatorioHtml(estado.resultado, { simulacao: estado.sim, cta: !estado.sim }) + acoes + '</div>';
   }
 
@@ -480,7 +482,66 @@
       respostas: D.respostasAplicaveis(estado.r), resultado: res,
     };
     return fetch('/api/diagnostico', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) })
-      .then(function (resp) { return resp.json().catch(function () { return {}; }).then(function (b) { if (!resp.ok) throw new Error(b.message || 'Não foi possível enviar agora.'); return true; }); });
+      .then(function (resp) { return resp.json().catch(function () { return {}; }).then(function (b) { if (!resp.ok) throw new Error(b.message || 'Não foi possível enviar agora.'); return b; }); });
+  }
+
+  /* ------------------------------------------------------------------ PDF do relatório: baixar e receber por e-mail
+     O PDF é gerado aqui no navegador (assets/js/diagnostico-pdf.js). Logo depois do relatório aparecer ele é preparado e enviado
+     para o e-mail da pessoa (o servidor só anexa e descarta); o botão "Baixar em PDF" fica sempre disponível. */
+  function pdfEstado() {
+    if (!estado.pdf || estado.pdf.de !== estado.resultado) estado.pdf = { de: estado.resultado, promessa: null, status: '', baixando: false, msg: '', tentar: false };
+    return estado.pdf;
+  }
+  function pdfObter() {
+    var P = pdfEstado();
+    if (!D.pdf) return Promise.reject(new Error('sem gerador'));
+    if (!P.promessa) {
+      var c = estado.contato || {};
+      P.promessa = D.pdf.gerar(estado.resultado, { nome: c.nome, empresa: c.empresa, simulacao: !!estado.sim }).catch(function (e) { if (estado.pdf === P) P.promessa = null; throw e; });
+    }
+    return P.promessa;
+  }
+  function pdfBarraHtml() {
+    var P = pdfEstado(), mail = estado.contato && estado.contato.email ? '<strong>' + esc(estado.contato.email) + '</strong>' : 'o seu e-mail', ocupado = false, txt, extra = '';
+    if (P.status === 'gerando') { txt = 'Preparando o seu relatório em PDF…'; ocupado = true; }
+    else if (P.status === 'enviando') { txt = 'Enviando o PDF para ' + mail + '…'; ocupado = true; }
+    else if (P.status === 'enviado') txt = 'Enviamos o PDF para ' + mail + '. Se não aparecer em alguns minutos, olhe também a caixa de spam.';
+    else if (P.status === 'erro-envio') {
+      txt = esc(P.msg || 'Não conseguimos enviar o PDF por e-mail agora.') + ' Você pode baixá-lo aqui.';
+      if (P.tentar) extra = ' <button type="button" class="dg-link" data-acao="reenviar-pdf">Tentar enviar de novo</button>';
+    } else if (P.status === 'erro-pdf') { txt = 'Não foi possível preparar o PDF neste aparelho. Use “Imprimir” e escolha “Salvar como PDF”.'; extra = ' <button type="button" class="dg-link" data-acao="baixar-pdf">Tentar de novo</button>'; }
+    else txt = estado.sim ? 'Quer guardar este exemplo? Baixe em PDF.' : 'Baixe o relatório em PDF para guardar ou compartilhar.';
+    return '<p class="dg-pdf-msg"' + (ocupado ? ' data-ocupado' : '') + '>' + txt + extra + '</p>'
+      + '<button type="button" class="btn btn-primary" data-acao="baixar-pdf"' + (P.baixando ? ' disabled' : '') + '>' + (P.baixando ? 'Preparando o PDF…' : 'Baixar em PDF') + '</button>';
+  }
+  function pdfAtualizar() {
+    var el = document.getElementById('dg-pdf-barra');
+    if (!el) return; // a pessoa já saiu da tela do relatório
+    el.setAttribute('data-status', pdfEstado().status || '');
+    el.innerHTML = pdfBarraHtml();
+  }
+  function baixarPdf() {
+    var P = pdfEstado(); if (P.baixando) return;
+    P.baixando = true; if (P.status === 'erro-pdf') P.status = ''; pdfAtualizar();
+    pdfObter().then(function (arq) { D.pdf.baixar(arq); P.baixando = false; pdfAtualizar(); })
+      .catch(function () { P.baixando = false; P.status = 'erro-pdf'; pdfAtualizar(); });
+  }
+  function enviarPdfPorEmail() {
+    var P = pdfEstado(), env = estado.pdfEnvio;
+    if (estado.sim || !env || !env.token) return; // sem cadastro no servidor (ou exemplo): só o download
+    P.status = 'gerando'; P.msg = ''; P.tentar = false; pdfAtualizar();
+    pdfObter().then(function (arq) {
+      P.status = 'enviando'; pdfAtualizar();
+      var limite = new Promise(function (_, no) { setTimeout(function () { no(new Error('tempo')); }, 90000); });
+      var envio = fetch('/api/diagnostico/pdf', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: env.id, token: env.token, pdf: arq.base64() }) })
+        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (b) { if (!r.ok) { var e = new Error(b.message || ''); e.http = r.status; throw e; } return b; }); });
+      return Promise.race([envio, limite]).then(function () { P.status = 'enviado'; pdfAtualizar(); }, function (e) {
+        P.status = 'erro-envio';
+        P.msg = e && e.http && e.http < 500 && e.message ? e.message.replace(/\s*Baixe o PDF pela tela do relatório\.?$/, '') : '';
+        P.tentar = !(e && e.http && e.http < 500); // erro do pedido (expirou, limite, não autorizado) não adianta repetir
+        pdfAtualizar();
+      });
+    }, function () { P.status = 'erro-pdf'; pdfAtualizar(); });
   }
 
   function submeter(form) {
@@ -496,8 +557,9 @@
     estado.contato = d;
     var btn = document.getElementById('dg-enviar'); btn.disabled = true; btn.textContent = 'Enviando...';
     estado.resultado = D.analisar(estado.r);
-    enviar(d).then(function () {
-      estado.enviado = true; estado.falhaEnvio = false; limparSalvo(); ir('relatorio');
+    enviar(d).then(function (b) {
+      estado.enviado = true; estado.falhaEnvio = false; estado.pdfEnvio = b && b.pdfToken ? { id: b.id, token: b.pdfToken } : null; limparSalvo(); ir('relatorio');
+      setTimeout(enviarPdfPorEmail, 300); // deixa o relatório aparecer primeiro
     }).catch(function (err) {
       btn.disabled = false; btn.textContent = 'Ver meu relatório';
       estado.falhaEnvio = true;
@@ -594,8 +656,13 @@
     else if (a === 'sair-sim') { estado = { r: {}, vista: 'intro', q: null, sim: false, resultado: null, enviado: false, falhaEnvio: false }; ir('intro'); }
     else if (a === 'ver-sem-enviar') { estado.enviado = false; mostrarRelatorio(); }
     else if (a === 'reenviar') {
-      enviar(estado.contato || {}).then(function () { estado.enviado = true; limparSalvo(); desenhar(); }).catch(function () { /* mantém o aviso */ });
+      enviar(estado.contato || {}).then(function (b) {
+        estado.enviado = true; estado.pdfEnvio = b && b.pdfToken ? { id: b.id, token: b.pdfToken } : null; limparSalvo(); desenhar();
+        setTimeout(enviarPdfPorEmail, 300);
+      }).catch(function () { /* mantém o aviso */ });
     }
+    else if (a === 'baixar-pdf') baixarPdf();
+    else if (a === 'reenviar-pdf') enviarPdfPorEmail();
     else if (a === 'imprimir') window.print();
     else if (a === 'refazer') { estado = { r: {}, vista: 'intro', q: null, sim: false, resultado: null, enviado: false, falhaEnvio: false }; ir('intro'); }
   }

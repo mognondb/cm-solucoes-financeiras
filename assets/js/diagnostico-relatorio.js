@@ -67,7 +67,8 @@
     var a = Math.abs(n), t = a >= 1000 ? (Math.round(a / 100) / 10).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mil' : String(Math.round(a));
     return (n < 0 ? '−' : '') + t;
   }
-  function compacto() { return typeof window !== 'undefined' && window.innerWidth < 640; } // celular: gráfico mais estreito, texto maior na tela
+  var forcarLargo = false; // o PDF é sempre desenhado em largura de computador, mesmo gerado num celular
+  function compacto() { return !forcarLargo && typeof window !== 'undefined' && window.innerWidth < 640; } // celular: gráfico mais estreito, texto maior na tela
   var MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
   function rotuloMes(m) { var s = String(m || ''); return (MESES[parseInt(s.slice(5, 7), 10) - 1] || s) + '/' + s.slice(2, 4); }
   function dm(iso) { var s = String(iso || ''); return s.slice(8, 10) + '/' + s.slice(5, 7); }
@@ -179,7 +180,7 @@
     return h + '</section>';
   }
 
-  D.relatorioHtml = function (res, op) {
+  function relatorioHtmlInterno(res, op) {
     op = op || {};
     res = res || {};
     var an = res.analises || {};
@@ -256,5 +257,9 @@
         + '<a class="btn btn-outline" href="/#servicos">Conhecer os serviços</a></div></section>';
     }
     return h + '</div>';
+  }
+  D.relatorioHtml = function (res, op) {
+    forcarLargo = !!(op && op.largo);
+    try { return relatorioHtmlInterno(res, op); } finally { forcarLargo = false; }
   };
 })(typeof window !== 'undefined' ? window : globalThis);

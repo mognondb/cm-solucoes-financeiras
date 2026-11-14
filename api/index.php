@@ -264,7 +264,9 @@ function migrarColunasDiagnosticos(PDO $db): void {
   }
 }
 function migrarColunasDiagnosticosAplicar(PDO $db): void {
-  $cols = ['segmento' => 'VARCHAR(40) NULL', 'versao' => 'TINYINT NULL', 'respostas_json' => 'MEDIUMTEXT NULL', 'resultado_json' => 'MEDIUMTEXT NULL'];
+  // pdf_*: envio do relatório em PDF por e-mail (token de uso único, hash dele, quando foi enviado e quantas tentativas)
+  $cols = ['segmento' => 'VARCHAR(40) NULL', 'versao' => 'TINYINT NULL', 'respostas_json' => 'MEDIUMTEXT NULL', 'resultado_json' => 'MEDIUMTEXT NULL',
+    'pdf_token_hash' => 'CHAR(64) NULL', 'pdf_enviado_em' => 'VARCHAR(32) NULL', 'pdf_tentativas' => 'TINYINT NOT NULL DEFAULT 0'];
   $stmt = $db->query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'diagnosticos'");
   $tem = array_map('strtolower', $stmt->fetchAll(PDO::FETCH_COLUMN));
   if (!$tem) return; // tabela ainda não existe (instalação nova passa antes pelo setup)
@@ -407,7 +409,16 @@ if ($path === '/api/diagnostico') {
         $segmento, 2, $respJson, $resJson,
       ]);
       avisarNovoDiagnostico($db, $dados, $resultado, $segmento);
-      jsonResponse(['ok' => true]);
+      // token de uso único para enviar o PDF do relatório por e-mail: só o hash fica no banco. Se a coluna não existir
+      // (migração recusada), o diagnóstico segue normal, só sem o envio do PDF.
+      $pdfToken = null;
+      try {
+        $pdfToken = bin2hex(random_bytes(16));
+        $db->prepare('UPDATE diagnosticos SET pdf_token_hash = ? WHERE id = ?')->execute([hash('sha256', $pdfToken), $id]);
+      } catch (Throwable $e) {
+        $pdfToken = null;
+      }
+      jsonResponse(['ok' => true, 'id' => $id, 'pdfToken' => $pdfToken]);
     }
 
     $stmt = $db->prepare('INSERT INTO diagnosticos (id, nome, email, telefone, empresa, ramo, colaboradores, controle_atual, dificuldade, objetivo, urgencia, mensagem, lido, criado_em) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,0,?)');
@@ -444,6 +455,174 @@ if ($path === '/api/diagnostico') {
   }
 
   jsonResponse(['message' => 'Método não suportado'], 405);
+}
+
+// ---------- relatório do CM Diagnóstico em PDF, enviado por e-mail à pessoa que o fez ----------
+// O PDF é gerado no navegador (as regras e os textos do relatório vivem no JavaScript) e chega aqui junto com o id do
+// diagnóstico e o token devolvido no cadastro. Nada é gravado em disco: o PDF só é anexado ao e-mail e descartado.
+const PDF_MAX_BYTES = 6 * 1024 * 1024;       // tamanho máximo do PDF
+const PDF_JANELA_SEGUNDOS = 2 * 3600;        // o token vale 2 horas a partir do cadastro
+const PDF_MAX_TENTATIVAS = 3;                // por diagnóstico
+const PDF_MAX_POR_EMAIL_DIA = 3;             // para o mesmo endereço, em 24 horas
+const PDF_MAX_POR_HORA = 40;                 // no site todo: protege a reputação do e-mail da CM
+
+if ($path === '/api/diagnostico/pdf') {
+  if ($method !== 'POST') jsonResponse(['message' => 'Método não suportado'], 405);
+  $dados = bodyJson();
+  $id = (string)($dados['id'] ?? ''); $token = (string)($dados['token'] ?? ''); $b64 = $dados['pdf'] ?? '';
+  if (!preg_match('/^diag-\d{10,15}-[a-f0-9]{6}$/', $id) || !preg_match('/^[a-f0-9]{32}$/', $token) || !is_string($b64) || $b64 === '') {
+    jsonResponse(['message' => 'Pedido inválido'], 400);
+  }
+  try {
+    $stmt = $db->prepare('SELECT id, nome, email, criado_em, resultado_json, pdf_token_hash, pdf_enviado_em, pdf_tentativas FROM diagnosticos WHERE id = ?');
+    $stmt->execute([$id]);
+    $row = $stmt->fetch();
+  } catch (Throwable $e) {
+    jsonResponse(['message' => 'Envio por e-mail indisponível no momento'], 503);
+  }
+  // mesma resposta para "não existe" e "token errado": quem não tem o token não descobre quais ids existem
+  if (!$row || empty($row['pdf_token_hash']) || !hash_equals((string)$row['pdf_token_hash'], hash('sha256', $token))) {
+    jsonResponse(['message' => 'Não autorizado'], 403);
+  }
+  if (!empty($row['pdf_enviado_em'])) jsonResponse(['ok' => true, 'jaEnviado' => true]);
+  $criado = strtotime((string)$row['criado_em']);
+  if (!$criado || time() - $criado > PDF_JANELA_SEGUNDOS) jsonResponse(['message' => 'Este envio expirou. Baixe o PDF pela tela do relatório.'], 410);
+  if ((int)$row['pdf_tentativas'] >= PDF_MAX_TENTATIVAS) jsonResponse(['message' => 'Limite de tentativas atingido. Baixe o PDF pela tela do relatório.'], 429);
+
+  try {
+    $q = $db->prepare('SELECT COUNT(*) FROM diagnosticos WHERE pdf_enviado_em >= ?');
+    $q->execute([gmdate('Y-m-d\TH:i:s', time() - 3600)]);
+    $naHora = (int)$q->fetchColumn();
+    $q = $db->prepare('SELECT COUNT(*) FROM diagnosticos WHERE email = ? AND pdf_enviado_em >= ?');
+    $q->execute([$row['email'], gmdate('Y-m-d\TH:i:s', time() - 86400)]);
+    $noDia = (int)$q->fetchColumn();
+  } catch (Throwable $e) {
+    jsonResponse(['message' => 'Envio por e-mail indisponível no momento'], 503);
+  }
+  if ($naHora >= PDF_MAX_POR_HORA || $noDia >= PDF_MAX_POR_EMAIL_DIA) {
+    jsonResponse(['message' => 'Muitos envios em pouco tempo. Baixe o PDF pela tela do relatório.'], 429);
+  }
+
+  if (strlen($b64) > (int)(PDF_MAX_BYTES * 4 / 3) + 16) jsonResponse(['message' => 'PDF grande demais'], 413);
+  $pdf = base64_decode($b64, true);
+  $erroPdf = $pdf === false ? 'PDF inválido' : validarPdfDiagnostico($pdf);
+  if ($erroPdf !== null) jsonResponse(['message' => $erroPdf], 400);
+
+  // reserva a tentativa antes de enviar (duas requisições ao mesmo tempo não passam do limite)
+  $res = $db->prepare('UPDATE diagnosticos SET pdf_tentativas = pdf_tentativas + 1 WHERE id = ? AND pdf_enviado_em IS NULL AND pdf_tentativas < ?');
+  $res->execute([$id, PDF_MAX_TENTATIVAS]);
+  if ($res->rowCount() === 0) jsonResponse(['message' => 'Não foi possível concluir o envio'], 409);
+
+  if (!enviarRelatorioPdfPorEmail($row, $pdf)) {
+    jsonResponse(['message' => 'Não foi possível enviar o e-mail agora. Você pode baixar o PDF pela tela do relatório.'], 502);
+  }
+  $db->prepare('UPDATE diagnosticos SET pdf_enviado_em = ? WHERE id = ?')->execute([gmdate('Y-m-d\TH:i:s') . 'Z', $id]);
+  jsonResponse(['ok' => true]);
+}
+
+/** O PDF vem do navegador, então só entra no e-mail o que parece exatamente com o que o gerador do site produz
+ *  (jsPDF, páginas com imagem): sem ações, scripts, links, arquivos embutidos nem fluxos compactados de objetos,
+ *  onde um conteúdo ativo poderia se esconder. Devolve a mensagem de erro ou null se estiver tudo certo. */
+function validarPdfDiagnostico(string $pdf): ?string {
+  $n = strlen($pdf);
+  if ($n < 2000 || $n > PDF_MAX_BYTES) return 'PDF inválido';
+  if (strncmp($pdf, '%PDF-1.', 7) !== 0) return 'PDF inválido';
+  if (strpos(substr($pdf, -2048), '%%EOF') === false) return 'PDF inválido';
+  if (strpos($pdf, '/Producer (jsPDF') === false || strpos($pdf, 'CM Diagnostico') === false) return 'PDF inválido';
+  // a busca pelos termos proibidos só olha o que está FORA dos blocos de dados (imagens, páginas): ali os bytes aparecem por acaso
+  $estrutura = pdfSemFluxos($pdf);
+  if ($estrutura === null) return 'PDF inválido';
+  // o jsPDF escreve "/OpenAction [3 0 R /FitH null]" no catálogo: é só o zoom inicial (um destino entre colchetes), não uma ação.
+  // Qualquer outra forma de /OpenAction (dicionário ou referência a um objeto) pode disparar algo e continua barrada.
+  $pdf = preg_replace('#/OpenAction\s*\[[^\]]{0,80}\]#', '', $estrutura);
+  if ($pdf === null) return 'PDF inválido';
+  foreach (['/JavaScript', '/JS', '/Launch', '/OpenAction', '/AA', '/EmbeddedFile', '/RichMedia', '/XFA', '/URI', '/SubmitForm', '/GoToR', '/GoToE', '/ImportData', '/ObjStm', '/Encrypt', '/Annots', '/AcroForm'] as $perigoso) {
+    if (strpos($pdf, $perigoso) !== false) return 'PDF inválido';
+  }
+  $paginas = preg_match_all('#/Type\s*/Page\b#', $pdf);
+  if ($paginas < 1 || $paginas > 40) return 'PDF inválido';
+  return null;
+}
+
+/** O PDF sem o conteúdo dos blocos "stream ... endstream" (só a estrutura de objetos). Null se algum bloco ficar aberto. */
+function pdfSemFluxos(string $pdf): ?string {
+  $saida = ''; $pos = 0; $n = strlen($pdf);
+  while ($pos < $n) {
+    $i = strpos($pdf, 'stream', $pos);
+    if ($i === false) return $saida . substr($pdf, $pos);
+    $saida .= substr($pdf, $pos, $i + 6 - $pos);
+    if ($i >= 3 && substr($pdf, $i - 3, 3) === 'end') { $pos = $i + 6; continue; } // "endstream"
+    $fim = strpos($pdf, 'endstream', $i + 6);
+    if ($fim === false) return null;
+    $pos = $fim;
+  }
+  return $saida;
+}
+
+function nivelAnaliseTexto(array $res, string $k): string {
+  $a = $res['analises'][$k] ?? [];
+  $mapa = ['critico' => 'Ponto crítico', 'atencao' => 'Atenção', 'desenvolvimento' => 'Em desenvolvimento', 'solido' => 'Sólido'];
+  return ($mapa[$a['nivel'] ?? ''] ?? 'Sem dados') . (isset($a['pct']) && is_numeric($a['pct']) ? ' (' . (int)$a['pct'] . '/100)' : '');
+}
+
+/** Monta e envia o e-mail (texto + HTML + PDF em anexo). Só o endereço validado vai nos cabeçalhos; o nome entra apenas no corpo,
+ *  sem caracteres de controle e escapado no HTML. */
+function enviarRelatorioPdfPorEmail(array $row, string $pdf): bool {
+  try {
+    $para = filter_var(trim((string)$row['email']), FILTER_VALIDATE_EMAIL);
+    if (!$para) return false;
+    $limpa = fn($v, $max) => mb_substr(preg_replace('/[\x00-\x1F\x7F]+/u', ' ', trim((string)$v)), 0, $max);
+    $partes = preg_split('/\s+/u', $limpa($row['nome'], 120), -1, PREG_SPLIT_NO_EMPTY);
+    $primeiro = $partes ? $partes[0] : '';
+    $res = json_decode((string)($row['resultado_json'] ?? ''), true) ?: [];
+    $niveis = [
+      'Saúde financeira' => nivelAnaliseTexto($res, 'saude'),
+      'Maturidade de gestão' => nivelAnaliseTexto($res, 'maturidade'),
+      'Eficiência operacional' => nivelAnaliseTexto($res, 'eficiencia'),
+    ];
+    $whats = 'https://wa.me/554888766576';
+    $ola = $primeiro !== '' ? "Olá, {$primeiro}!" : 'Olá!';
+
+    $texto = "$ola\r\n\r\n"
+      . "Obrigado por fazer o CM Diagnóstico. O relatório completo do seu negócio está em anexo, em PDF: ele reúne as três análises, os indicadores e as recomendações, em ordem de prioridade.\r\n\r\n"
+      . "Resumo:\r\n";
+    foreach ($niveis as $rot => $niv) $texto .= "- $rot: $niv\r\n";
+    $texto .= "\r\nQuer ajuda para colocar as recomendações em prática? Chame a CM no WhatsApp, sem compromisso:\r\n$whats\r\n\r\n"
+      . "CM Soluções Financeiras · https://cmfinanceiro.com\r\n\r\n"
+      . "Você recebeu este e-mail porque pediu o relatório do CM Diagnóstico em cmfinanceiro.com. É um envio automático.\r\n";
+
+    $h = fn($v) => htmlspecialchars((string)$v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $linhas = '';
+    foreach ($niveis as $rot => $niv) $linhas .= '<tr><td style="padding:8px 0;border-bottom:1px solid #ebe6dc;color:#6b6b63">' . $h($rot) . '</td><td style="padding:8px 0;border-bottom:1px solid #ebe6dc;text-align:right;font-weight:600;color:#3f4c39">' . $h($niv) . '</td></tr>';
+    $html = '<!doctype html><html lang="pt-BR"><body style="margin:0;background:#f8f6f1;font-family:Arial,Helvetica,sans-serif;color:#2e2e2e">'
+      . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8f6f1"><tr><td align="center" style="padding:24px 12px">'
+      . '<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border:1px solid #ebe6dc;border-radius:14px">'
+      . '<tr><td style="padding:22px 28px;border-bottom:1px solid #ebe6dc;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;color:#8f6d38">CM Soluções Financeiras</td></tr>'
+      . '<tr><td style="padding:28px 28px 8px;font-size:22px;line-height:1.3;color:#3f4c39;font-family:Georgia,serif">' . $h($ola) . '</td></tr>'
+      . '<tr><td style="padding:8px 28px;font-size:15px;line-height:1.6">Obrigado por fazer o <strong>CM Diagnóstico</strong>. O relatório completo do seu negócio está <strong>em anexo, em PDF</strong>: ele reúne as três análises, os indicadores e as recomendações, em ordem de prioridade.</td></tr>'
+      . '<tr><td style="padding:8px 28px 4px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px">' . $linhas . '</table></td></tr>'
+      . '<tr><td style="padding:18px 28px 8px;font-size:15px;line-height:1.6">Quer ajuda para colocar as recomendações em prática? Chame a CM no WhatsApp, sem compromisso.</td></tr>'
+      . '<tr><td style="padding:6px 28px 26px"><a href="' . $h($whats) . '" style="display:inline-block;background:#b18a52;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 24px;border-radius:999px">Conversar pelo WhatsApp</a></td></tr>'
+      . '<tr><td style="padding:16px 28px;border-top:1px solid #ebe6dc;font-size:12px;line-height:1.5;color:#6b6b63">Você recebeu este e-mail porque pediu o relatório do CM Diagnóstico em cmfinanceiro.com. É um envio automático.</td></tr>'
+      . '</table></td></tr></table></body></html>';
+
+    $b1 = 'cm_mix_' . bin2hex(random_bytes(8)); $b2 = 'cm_alt_' . bin2hex(random_bytes(8));
+    $enc = fn($v) => '=?UTF-8?B?' . base64_encode($v) . '?=';
+    $arquivo = 'CM-Diagnostico-' . gmdate('Y-m-d') . '.pdf';
+    $cab = "From: {$enc('CM Soluções Financeiras')} <nao-responda@cmfinanceiro.com>\r\n"
+      . "MIME-Version: 1.0\r\n"
+      . "Content-Type: multipart/mixed; boundary=\"$b1\"";
+    $corpo = "--$b1\r\nContent-Type: multipart/alternative; boundary=\"$b2\"\r\n\r\n"
+      . "--$b2\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n" . chunk_split(base64_encode($texto)) . "\r\n"
+      . "--$b2\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n" . chunk_split(base64_encode($html)) . "\r\n"
+      . "--$b2--\r\n"
+      . "--$b1\r\nContent-Type: application/pdf; name=\"$arquivo\"\r\nContent-Transfer-Encoding: base64\r\nContent-Disposition: attachment; filename=\"$arquivo\"\r\n\r\n"
+      . chunk_split(base64_encode($pdf)) . "\r\n"
+      . "--$b1--\r\n";
+    return (bool)@mail($para, $enc('Seu relatório do CM Diagnóstico'), $corpo, $cab);
+  } catch (Throwable $e) {
+    return false;
+  }
 }
 
 if ($path === '/api/diagnosticos') {
@@ -502,6 +681,7 @@ function diagnosticoToJson(array $r): array {
     'controleAtual' => $r['controle_atual'], 'dificuldade' => $r['dificuldade'], 'objetivo' => $r['objetivo'],
     'urgencia' => $r['urgencia'], 'mensagem' => $r['mensagem'], 'lido' => (bool)$r['lido'], 'criadoEm' => $r['criado_em'],
     'versao' => isset($r['versao']) ? (int)$r['versao'] : null, 'segmento' => $r['segmento'] ?? null,
+    'pdfEnviadoEm' => $r['pdf_enviado_em'] ?? null,
     'respostas' => !empty($r['respostas_json']) ? json_decode($r['respostas_json'], true) : null,
     'resultado' => !empty($r['resultado_json']) ? json_decode($r['resultado_json'], true) : null,
   ];

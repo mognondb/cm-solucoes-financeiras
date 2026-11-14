@@ -958,7 +958,8 @@
   // Detalhe de um diagnóstico novo: contato, relatório completo (o mesmo que a pessoa viu) e as respostas pergunta a pergunta.
   function detalheDiagnosticoNovo(d) {
     const D = window.CMDiag;
-    const contato = [['Nome', d.nome], ['Empresa', d.empresa], ['E-mail', d.email], ['WhatsApp', d.telefone]]
+    const pdfEnviado = d.pdfEnviadoEm ? `enviado em ${new Date(d.pdfEnviadoEm).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}` : 'não enviado (a pessoa pode ter baixado pela tela do relatório)';
+    const contato = [['Nome', d.nome], ['Empresa', d.empresa], ['E-mail', d.email], ['WhatsApp', d.telefone], ['Relatório em PDF por e-mail', pdfEnviado]]
       .filter(([, v]) => v).map(([k, v]) => `<li><strong>${escapeHtml(k)}:</strong> ${escapeHtml(v)}</li>`).join('');
     const r = d.respostas || {};
     const linhas = D.sequencia(r).filter((q) => D.respondida(q, r) && r[q.id] !== undefined)

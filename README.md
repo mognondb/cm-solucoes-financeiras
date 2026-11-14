@@ -230,6 +230,34 @@ saídas mês a mês, os canais de venda e o saldo semana a semana.
   melhor esforço; se falhar, o registro continua no painel).
 - **Spam**: campo-armadilha invisível, validação de e-mail e consentimento no servidor e limite de tamanho do envio.
 
+#### Relatório em PDF: baixar e receber por e-mail
+
+Na tela do relatório há uma barra no topo e um botão no rodapé: **Baixar em PDF**. Logo depois do relatório aparecer, o PDF é
+preparado e **enviado automaticamente para o e-mail informado**; a barra mostra o andamento (preparando, enviando, enviado, ou
+erro com "tentar enviar de novo"). No exemplo (simulação) só há o download, nunca o envio.
+
+- **Onde o PDF é gerado**: no navegador (`assets/js/diagnostico-pdf.js`, com jsPDF e html2canvas em `assets/vendor/`, licenças em
+  `assets/vendor/LICENSES.md`, carregadas só na hora de gerar). As regras e os textos do relatório vivem no JavaScript, então o
+  servidor não consegue regerá-lo; assim o PDF sai igual ao que a pessoa vê. É sempre desenhado em largura de computador, mesmo no
+  celular, em páginas A4 com cabeçalho, rodapé e numeração, cortadas sem partir cartões nem separar título do conteúdo. O PDF é
+  uma imagem das páginas (o texto não é selecionável) e não leva links.
+- **Envio (`POST /api/diagnostico/pdf`)**: o cadastro do diagnóstico devolve `id` e `pdfToken` (só o hash fica no banco, colunas
+  `pdf_token_hash`, `pdf_enviado_em`, `pdf_tentativas` criadas sozinhas pela migração). O navegador manda o PDF em base64 com esse
+  token; o servidor valida, monta o e-mail (texto + HTML + PDF anexo, remetente `nao-responda@cmfinanceiro.com`) e descarta o PDF:
+  **nada é gravado em disco nem no banco**.
+- **Proteções** (o PDF vem do navegador, então o endpoint é tratado como público): token de uso único, válido por 2 horas, no máximo
+  3 tentativas por diagnóstico; no máximo 3 envios por endereço em 24 horas e 40 por hora no site todo; PDF até 6 MB; só aceita o que
+  parece exatamente com a saída do gerador do site (jsPDF, páginas com imagem), sem scripts, links, ações, formulários nem arquivos
+  embutidos (`validarPdfDiagnostico` em `api/index.php`); só o endereço validado vai nos cabeçalhos do e-mail e o nome entra apenas
+  no corpo, escapado. Ao passar de um limite, a pessoa vê a mensagem e continua podendo baixar o PDF.
+- **Painel**: o detalhe do diagnóstico mostra se e quando o PDF foi enviado ao cliente.
+- **Entrega do e-mail**: usa a função `mail()` do PHP (como os demais avisos). Para não cair em spam, o domínio precisa ter SPF e
+  DKIM configurados no painel da hospedagem. "Enviado" significa que o servidor aceitou a mensagem, não que ela foi entregue;
+  por isso a tela sugere olhar a caixa de spam. Se quiser que respostas ao e-mail cheguem à CM, acrescente um `Reply-To` em
+  `enviarRelatorioPdfPorEmail`.
+- **Testar localmente**: `php -S` com um `api/config.php` de teste e, no `php.ini`/linha de comando, `sendmail_path` apontando
+  para um script que grave a mensagem em arquivo (a saída de `mail()` fica em um `.eml` com o PDF anexo).
+
 ## Configurações pendentes (precisam dos seus dados reais)
 
 ### 1. Formulário de contato (relatório)

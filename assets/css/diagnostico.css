@@ -209,7 +209,7 @@
 
 /* ---------------------------------------------------------------- impressão (salvar em PDF) */
 @media print {
-  .pg-dg .site-header, .pg-dg .site-footer, .pg-dg .whatsapp-float, .dg-rel-acoes, .dg-cta, .dg-aviso-envio, .dg-topo { display: none !important; }
+  .pg-dg .site-header, .pg-dg .site-footer, .pg-dg .whatsapp-float, .dg-rel-acoes, .dg-cta, .dg-aviso-envio, .dg-topo, .dg-pdf-barra { display: none !important; }
   .pg-dg, .pg-dg body { background: #fff !important; }
   #dg-app { max-width: none; padding: 0; }
   .dg-card, .dg-dim, .dg-rec, .dg-interp { break-inside: avoid; box-shadow: none; }
@@ -328,3 +328,15 @@
 .dg-legenda { list-style: none; margin: 0 0 6px; padding: 12px 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 22px; border-radius: 12px; background: var(--h-soft, #f4f1ea); font-size: .82rem; color: var(--color-text-light, #6b6b63); }
 .dg-legenda strong { color: var(--color-olive-dark, #3f4c39); }
 @media (max-width: 760px) { .dg-legenda { grid-template-columns: 1fr; } }
+
+/* ==================================================================== relatório em PDF (baixar e receber por e-mail) */
+.dg-pdf-barra { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 20px; margin: 0 0 22px; padding: 14px 18px; border: 1px solid var(--h-sage-line, #dfe5d4); border-radius: 14px; background: var(--h-sage, #eef1e8); }
+.dg-pdf-barra[data-status="erro-envio"], .dg-pdf-barra[data-status="erro-pdf"] { background: #fbf1ec; border-color: #f0d8cc; }
+.dg-pdf-msg { flex: 1 1 280px; margin: 0; font-size: .92rem; line-height: 1.5; color: var(--color-olive-dark, #3f4c39); }
+.dg-pdf-msg strong { overflow-wrap: anywhere; }
+.dg-pdf-msg[data-ocupado]::before { content: ''; display: inline-block; width: 12px; height: 12px; margin-right: 9px; vertical-align: -1px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: dg-giro .8s linear infinite; }
+.dg-pdf-barra .btn { white-space: nowrap; padding: 10px 20px; font-size: .9rem; }
+.dg-pdf-barra .btn[disabled] { opacity: .65; cursor: progress; }
+@keyframes dg-giro { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .dg-pdf-msg[data-ocupado]::before { animation: none; border-right-color: currentColor; } }
+@media (max-width: 560px) { .dg-pdf-barra .btn { width: 100%; } }
