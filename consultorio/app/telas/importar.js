@@ -13,7 +13,7 @@ const TIPOS = {
   categorias: { rotulo: 'Categorias', singular: 'categoria', plural: 'categorias', modelo: 'modelo-categorias.csv', destino: '#/config/categorias', verDestino: 'Ver categorias',
     intro: 'Categorias de receita e de despesa usadas nos relatórios. Informe o tipo (receita ou despesa) e o nome; para despesas, se é fixa ou variável e se costuma entrar no livro-caixa.' },
 };
-const novoEstado = (tipo) => ({ tipo, passo: 'arquivo', campos: null, limite: 2000, leitura: null, aba: 0, cab: 0, mapa: {}, padroes: {}, duplicados: 'ignorar', direto: false, previa: null, enviadas: null, filtro: 'todas', ocupado: false, final: null, erro: '' });
+const novoEstado = (tipo) => ({ tipo, passo: 'arquivo', campos: null, limite: 2000, leitura: null, aba: 0, cab: 0, mapa: {}, padroes: {}, duplicados: 'ignorar', semCpf: false, direto: false, previa: null, enviadas: null, filtro: 'todas', ocupado: false, final: null, erro: '' });
 let est = novoEstado('pacientes');
 let raiz = null;
 
@@ -53,7 +53,7 @@ async function escolherArquivo(file) {
   if (!file) return;
   est.erro = ''; erroForm(''); const st = $('#status-imp', raiz); if (st) st.hidden = false;
   try { est.leitura = await lerArquivo(file); } catch (e) { if (st) st.hidden = true; est.erro = e.message || 'Não foi possível ler o arquivo.'; erroForm(est.erro); return; }
-  est.aba = 0; est.padroes = {}; est.duplicados = 'ignorar';
+  est.aba = 0; est.padroes = {}; est.duplicados = 'ignorar'; est.semCpf = false;
   // planilha do modelo: as colunas já se sabem, vai direto para a conferência (sem ligar coluna por coluna)
   const modelo = est.leitura.abas.findIndex((a) => ehModelo(a.linhas, est.campos));
   if (modelo >= 0) { est.aba = modelo; preparar(); est.direto = true; est.passo = 'arquivo'; return conferir(); }
@@ -114,7 +114,7 @@ async function conferir() {
   if (linhas.length > est.limite) { est.erro = `A planilha tem ${linhas.length.toLocaleString('pt-BR')} linhas e o limite é ${est.limite.toLocaleString('pt-BR')} por importação. Divida o arquivo em partes.`; erroForm(est.erro); return; }
   est.ocupado = true; const b = raiz.querySelector('[data-conferir]'); if (b) { b.disabled = true; b.textContent = 'Conferindo…'; }
   try {
-    est.previa = await api.post('importar/' + est.tipo, { linhas, aplicar: false, duplicados: est.duplicados }); est.enviadas = linhas;
+    est.previa = await api.post('importar/' + est.tipo, { linhas, aplicar: false, duplicados: est.duplicados, semCpfInvalido: est.semCpf }); est.enviadas = linhas;
     est.filtro = est.previa.resumo.erros ? 'problemas' : 'todas'; est.passo = 'previa';
   } catch (e) { est.erro = e.message; }
   est.ocupado = false; desenhar();
@@ -134,10 +134,11 @@ function passoPrevia() {
     <div class="kpis"><div class="kpi ok"><span>Novos</span><strong>${r.novos}</strong></div><div class="kpi"><span>Atualizar</span><strong>${r.atualizados}</strong></div><div class="kpi"><span>Ignorados</span><strong>${r.ignorados}</strong><small class="suave">Já cadastrados, repetidos ou vazios</small></div><div class="kpi ${r.erros ? 'alerta' : ''}"><span>Com problema</span><strong>${r.erros}</strong>${r.erros ? html`<small class="suave">Não serão importados</small>` : ''}</div></div>
     <div class="chips" role="group" aria-label="Filtrar linhas" style="margin-bottom:12px">${filtros.map(([k, t, n]) => html`<button type="button" class="chip" aria-pressed="${k === est.filtro}" data-filtro="${k}">${t} (${n})</button>`)}</div>
     <div class="rolagem"><table class="tabela"><thead><tr><th>Linha</th><th>${T.rotulo.slice(0, -1) === 'Categoria' ? 'Categoria' : 'Nome'}</th><th>Situação</th><th>Observação</th></tr></thead><tbody>
-      ${mostrar.map((i) => html`<tr><td class="suave">${i.linha}</td><td>${i.rotulo || html`<span class="suave">—</span>`}</td><td>${selo(SITUACAO[i.situacao][0], SITUACAO[i.situacao][1])}</td><td class="peq">${i.mensagem || ''}${i.avisos.map((a) => html`<br><span style="color:var(--atencao)">${a}</span>`)}</td></tr>`)}
+      ${mostrar.map((i) => html`<tr><td class="suave">${i.linha}</td><td>${i.rotulo || html`<span class="suave">—</span>`}</td><td>${selo(SITUACAO[i.situacao][0], SITUACAO[i.situacao][1])}</td><td class="peq">${i.mensagem || ''}${i.campo && est.mapa[i.campo] !== null && est.mapa[i.campo] !== undefined ? html` <span class="suave">(coluna ${letraColuna(est.mapa[i.campo])} da planilha)</span>` : ''}${i.avisos.map((a) => html`<br><span style="color:var(--atencao)">${a}</span>`)}</td></tr>`)}
     </tbody></table></div>
     ${visiveis.length > mostrar.length ? html`<p class="suave peq" style="margin:8px 0 0">Mostrando ${mostrar.length} de ${visiveis.length} linhas deste filtro.</p>` : ''}
     ${blocoDuplicados()}
+    ${itens.some((i) => i.situacao === 'erro' && i.campo) || est.semCpf ? html`<label class="marca" style="margin:6px 0 4px"><input type="checkbox" id="imp-semcpf" ${est.semCpf ? raw('checked') : ''}><span><strong>Importar mesmo assim, sem gravar os CPFs inválidos.</strong> Os cadastros entram sem esse CPF (aparece um aviso em cada linha) e você corrige depois.</span></label>` : ''}
     ${r.erros ? html`<p class="suave peq" style="margin:10px 0 0">As linhas com problema não serão importadas. Corrija a planilha e importe de novo: o que já entrou será ignorado.</p>` : ''}
     <p class="erro-form" id="erro-imp" role="alert" ${est.erro ? '' : raw('hidden')}>${est.erro}</p>
     <div class="pac-acoes" style="margin-top:14px"><button class="btn btn-sec" data-voltar-mapear>${est.direto ? 'Ligar as colunas à mão' : 'Voltar e ajustar'}</button>
@@ -152,7 +153,7 @@ function linhasDeExemplo() {
 async function importar() {
   est.erro = ''; est.ocupado = true; const b = raiz.querySelector('[data-importar]'); if (b) { b.disabled = true; b.textContent = 'Importando…'; }
   try {
-    est.final = await api.post('importar/' + est.tipo, { linhas: est.enviadas, aplicar: true, duplicados: est.duplicados });
+    est.final = await api.post('importar/' + est.tipo, { linhas: est.enviadas, aplicar: true, duplicados: est.duplicados, semCpfInvalido: est.semCpf });
     try { await carregarBase(['categorias', 'fornecedores']); } catch { /* as listas recarregam ao abrir as telas */ }
     est.passo = 'feito';
   } catch (e) { est.erro = e.message; }
@@ -188,5 +189,6 @@ function mudou(e) {
   if (t.matches('select[data-padrao]')) { est.padroes[t.dataset.padrao] = t.value; return atualizarMapa(); }
   if (t.matches('select[data-aba]')) { est.aba = Number(t.value); preparar(); return desenhar(); }
   if (t.matches('select[data-cab]')) { est.cab = Number(t.value); est.mapa = ligarColunas(est.leitura.abas[est.aba].linhas[est.cab] || [], est.campos); return desenhar(); }
+  if (t.id === 'imp-semcpf') { est.semCpf = t.checked; return conferir(); }
   if (t.matches('input[name="dup"]')) { est.duplicados = t.value; if (est.passo === 'previa') return conferir(); }
 }

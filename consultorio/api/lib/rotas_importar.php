@@ -187,8 +187,8 @@ function psi_registrar_rotas_importar(PsiRoteador $r): void {
     $d = psi_corpo(6 * 1048576); $linhas = $d['linhas'] ?? null;
     if (!is_array($linhas) || !$linhas) psi_erro('Nenhuma linha para importar.', 422);
     if (count($linhas) > PSI_IMPORTAR_MAX_LINHAS) psi_erro('O arquivo tem linhas demais: o limite é de ' . PSI_IMPORTAR_MAX_LINHAS . ' por importação. Divida em partes.', 422);
-    $aplicar = ($d['aplicar'] ?? false) === true; $atualizar = ($d['duplicados'] ?? 'ignorar') === 'atualizar';
-    $plano = $tipo === 'pacientes' ? psi_imp_planejar_pacientes($linhas, $atualizar) : ($tipo === 'fornecedores' ? psi_imp_planejar_fornecedores($linhas, $atualizar) : psi_imp_planejar_categorias($linhas, $atualizar));
+    $aplicar = ($d['aplicar'] ?? false) === true; $atualizar = ($d['duplicados'] ?? 'ignorar') === 'atualizar'; $semCpf = ($d['semCpfInvalido'] ?? false) === true;
+    $plano = $tipo === 'pacientes' ? psi_imp_planejar_pacientes($linhas, $atualizar, $semCpf) : ($tipo === 'fornecedores' ? psi_imp_planejar_fornecedores($linhas, $atualizar, $semCpf) : psi_imp_planejar_categorias($linhas, $atualizar));
     $resumo = ['total' => count($plano), 'novos' => 0, 'atualizados' => 0, 'ignorados' => 0, 'erros' => 0];
     foreach ($plano as $it) { $resumo[['novo' => 'novos', 'atualizar' => 'atualizados', 'ignorado' => 'ignorados', 'erro' => 'erros'][$it['situacao']]]++; }
     if ($aplicar && ($resumo['novos'] + $resumo['atualizados']) > 0) {
@@ -197,7 +197,7 @@ function psi_registrar_rotas_importar(PsiRoteador $r): void {
       catch (Throwable $e) { if ($db->inTransaction()) $db->rollBack(); if ($e instanceof PDOException && $e->getCode() === '23000') psi_erro('Alguns registros já existem. Confira o arquivo e tente de novo.', 409); throw $e; }
       psi_auditar('importar', $tipo, null, ['novos' => $resumo['novos'], 'atualizados' => $resumo['atualizados'], 'ignorados' => $resumo['ignorados'], 'erros' => $resumo['erros']]);
     }
-    return ['aplicado' => $aplicar, 'resumo' => $resumo, 'itens' => array_map(fn($it) => ['linha' => $it['linha'], 'situacao' => $it['situacao'], 'rotulo' => $it['rotulo'], 'mensagem' => $it['mensagem'], 'avisos' => $it['avisos']], $plano)];
+    return ['aplicado' => $aplicar, 'resumo' => $resumo, 'itens' => array_map(fn($it) => ['linha' => $it['linha'], 'situacao' => $it['situacao'], 'rotulo' => $it['rotulo'], 'mensagem' => $it['mensagem'], 'avisos' => $it['avisos'], 'campo' => $it['campo'] ?? null], $plano)];
   });
 }
 
@@ -213,7 +213,7 @@ function psi_imp_mesmo_nome(string $a, string $b): bool {
 }
 function psi_imp_numero_linha($r, int $i): int { return is_array($r) && isset($r['_linha']) && is_numeric($r['_linha']) ? (int)$r['_linha'] : $i + 1; }
 
-function psi_imp_planejar_pacientes(array $linhas, bool $atualizar): array {
+function psi_imp_planejar_pacientes(array $linhas, bool $atualizar, bool $semCpfInvalido = false): array {
   $c = psi_conta_id(); $db = psi_db();
   $s = $db->prepare('SELECT * FROM psi_pacientes WHERE conta_id = ?'); $s->execute([$c]);
   $porCpf = []; $porNome = []; $existentes = [];
@@ -226,12 +226,17 @@ function psi_imp_planejar_pacientes(array $linhas, bool $atualizar): array {
     if ($erros) { $plano[] = psi_imp_item($n, $rotulo, 'erro', implode(' ', $erros)); continue; }
     if (!$dados) { $plano[] = psi_imp_item($n, null, 'ignorado', 'Linha vazia.'); continue; }
     if (!isset($dados['nome'])) { $plano[] = psi_imp_item($n, null, 'erro', 'Informe o nome do paciente.'); continue; }
-    $cpf = $dados['cpf'] ?? null; $nome = $dados['nome']; $chave = psi_imp_chave($nome);
-    // CPF mal formado é problema desta linha (e ela não entra na comparação com as outras: não pode "repetir" ninguém)
+    $nome = $dados['nome']; $chave = psi_imp_chave($nome); $avisos = [];
+    // CPF e CPF do responsável. Valor de enchimento (000.000.000-00, 111.111.111-11...) vale como em branco, com aviso. CPF mal formado é erro da linha
+    // (que não entra na comparação com as outras) ou, se a pessoa escolheu "importar mesmo assim", deixa de ser gravado, também com aviso.
     foreach (['cpf' => 'CPF', 'respCpf' => 'CPF do responsável'] as $k => $rot) {
-      if (!isset($dados[$k])) continue; [, $er] = psi_tentar(fn() => psi_cpf($dados[$k]));
-      if ($er !== null) { $plano[] = psi_imp_item($n, $rotulo, 'erro', $rot . ' inválido (na planilha: "' . (psi_imp_str($r[$k] ?? null) ?? '') . '"). Corrija ou deixe em branco.'); continue 2; }
+      if (!isset($dados[$k])) continue; $orig = psi_imp_str($r[$k] ?? null) ?? '';
+      $enchimento = (bool)preg_match('/^(\d)\1*$/', $dados[$k]); [, $er] = psi_tentar(fn() => psi_cpf($dados[$k]));
+      if ($er === null && !$enchimento) continue;
+      if ($enchimento || $semCpfInvalido) { unset($dados[$k]); $avisos[] = $rot . ' "' . $orig . '" ' . ($enchimento ? 'é um valor de enchimento' : 'é inválido') . ': o cadastro entrou sem ele.'; continue; }
+      $plano[] = psi_imp_item($n, $rotulo, 'erro', $rot . ' inválido (na planilha: "' . $orig . '"). Corrija, deixe em branco ou escolha importar sem os CPFs inválidos.', ['campo' => $k]); continue 2;
     }
+    $cpf = $dados['cpf'] ?? null;
     $aceitar = function () use (&$vistoNome, &$vistoCpf, $chave, $cpf, $n, $nome) { $vistoNome[$chave][] = [$n, $cpf, $nome]; if ($cpf !== null) $vistoCpf[$cpf] = [$n, $nome]; };
     // repetido na própria planilha: o mesmo CPF com o mesmo nome, ou o mesmo nome (sem CPFs diferentes). Mesmo CPF com NOME DIFERENTE é erro de digitação em uma das duas.
     $repetido = null;
@@ -259,19 +264,19 @@ function psi_imp_planejar_pacientes(array $linhas, bool $atualizar): array {
       $cols = []; foreach (array_keys($dados) as $k) { if ($k === 'nome') continue; $col = PSI_IMP_COLUNAS_PAC[$k] ?? null; if ($col) $cols[$col] = $val[$col]; }
       if (isset($dados['modalidade'])) foreach (['valor_mensal', 'dia_vencimento', 'convenio_nome', 'convenio_prazo_dias'] as $col) $cols[$col] = $val[$col];
       if (!$cols) { $plano[] = psi_imp_item($n, $rotulo, 'ignorado', 'Já cadastrado e sem dados novos para atualizar.'); continue; }
-      $plano[] = psi_imp_item($n, $rotulo, 'atualizar', 'Atualiza o cadastro existente (' . count($cols) . ' campo' . (count($cols) === 1 ? '' : 's') . ').', ['id' => $achou, 'colunas' => $cols]);
+      $plano[] = psi_imp_item($n, $rotulo, 'atualizar', 'Atualiza o cadastro existente (' . count($cols) . ' campo' . (count($cols) === 1 ? '' : 's') . ').', ['id' => $achou, 'colunas' => $cols, 'avisos' => $avisos]);
       continue;
     }
     [$val, $er] = psi_tentar(fn() => psi_ler_paciente($dados));
     if ($er !== null) { $plano[] = psi_imp_item($n, $rotulo, 'erro', $er); continue; }
     $aceitar();
     if ($val['desde'] === null) $val['desde'] = psi_hoje();
-    $plano[] = psi_imp_item($n, $rotulo, 'novo', null, ['valores' => $val]);
+    $plano[] = psi_imp_item($n, $rotulo, 'novo', null, ['valores' => $val, 'avisos' => $avisos]);
   }
   return $plano;
 }
 
-function psi_imp_planejar_fornecedores(array $linhas, bool $atualizar): array {
+function psi_imp_planejar_fornecedores(array $linhas, bool $atualizar, bool $semCpfInvalido = false): array {
   $c = psi_conta_id(); $db = psi_db();
   $s = $db->prepare("SELECT id, nome FROM psi_categorias WHERE conta_id = ? AND tipo = 'despesa'"); $s->execute([$c]);
   $cats = []; foreach ($s->fetchAll() as $x) $cats[psi_imp_chave($x['nome'])] = (int)$x['id'];
@@ -287,7 +292,13 @@ function psi_imp_planejar_fornecedores(array $linhas, bool $atualizar): array {
     if (!$dados) { $plano[] = psi_imp_item($n, null, 'ignorado', 'Linha vazia.'); continue; }
     if (!isset($dados['nome'])) { $plano[] = psi_imp_item($n, null, 'erro', 'Informe o nome do fornecedor.'); continue; }
     $doc = $dados['documento'] ?? null; $nome = $dados['nome']; $chave = psi_imp_chave($nome);
-    if ($doc !== null) { [, $er] = psi_tentar(fn() => psi_cpf($doc)); if ($er !== null) { $plano[] = psi_imp_item($n, $rotulo, 'erro', 'CPF/CNPJ inválido (na planilha: "' . (psi_imp_str($r['documento'] ?? null) ?? '') . '"). Corrija ou deixe em branco.'); continue; } }
+    if ($doc !== null) {
+      $orig = psi_imp_str($r['documento'] ?? null) ?? ''; $enchimento = (bool)preg_match('/^(\d)\1*$/', $doc); [, $er] = psi_tentar(fn() => psi_cpf($doc));
+      if ($er !== null || $enchimento) {
+        if ($enchimento || $semCpfInvalido) { unset($dados['documento']); $doc = null; $avisos[] = 'CPF/CNPJ "' . $orig . '" ' . ($enchimento ? 'é um valor de enchimento' : 'é inválido') . ': o cadastro entrou sem ele.'; }
+        else { $plano[] = psi_imp_item($n, $rotulo, 'erro', 'CPF/CNPJ inválido (na planilha: "' . $orig . '"). Corrija, deixe em branco ou escolha importar sem os inválidos.', ['campo' => 'documento']); continue; }
+      }
+    }
     $aceitar = function () use (&$vistoNome, &$vistoDoc, $chave, $doc, $n, $nome) { $vistoNome[$chave] = [$n, $nome]; if ($doc !== null) $vistoDoc[$doc] = [$n, $nome]; };
     if ($doc !== null && isset($vistoDoc[$doc])) {
       [$ln, $nomeVisto] = $vistoDoc[$doc];
