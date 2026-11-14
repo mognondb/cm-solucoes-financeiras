@@ -265,13 +265,14 @@
     var el = document.getElementById('dg-valor'); if (!el) return { vazio: true };
     var txt = el.value.trim(); if (!txt) return { vazio: true };
     var n = D.importar.numero(txt);
-    if (n === null || n < 0 || n > q.max) return { invalido: true };
+    if (n === null || n < 0 || n > D.maxDe(q, estado.r)) return { invalido: true };
     return { valor: n };
   }
   function commitValor(q) {
     var c = lerCampo(q), r = estado.r, erro = document.getElementById('dg-erro-valor');
     function falha(m) { if (erro) { erro.textContent = m; erro.hidden = false; } var el = document.getElementById('dg-valor'); if (el) el.focus(); return false; }
-    if (c.invalido) return falha(q.unidade === '%' ? 'Informe um percentual entre 0 e 100.' : q.max <= 744 ? 'Informe um número de 0 a ' + q.max + '.' : 'Informe um número válido (use vírgula para os centavos).');
+    var mx = D.maxDe(q, r);
+    if (c.invalido) return falha(q.unidade === '%' ? 'Informe um percentual entre 0 e 100.' : mx <= 100000 ? 'Informe um número de 0 a ' + mx.toLocaleString('pt-BR') + '.' : 'Informe um número válido (use vírgula para os centavos).');
     if (c.vazio) { if (q.opcional) { r[q.id] = null; guardar(); return true; } return falha('Informe um valor ou escolha uma faixa.'); }
     r[q.id] = c.valor;
     if (r._origem && r._origem[q.id] === 'extrato' && !(r._pre && r._pre[q.id] === c.valor)) delete r._origem[q.id]; // mexeu no valor: deixa de ser "do extrato"

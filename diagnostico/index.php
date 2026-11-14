@@ -18,11 +18,11 @@ cmAbrir([
 <?php
 cmFechar([
   'js' => [
-    '/assets/js/diagnostico-dados.js?v=2',
+    '/assets/js/diagnostico-dados.js?v=3',
     '/assets/js/diagnostico-recs.js?v=2',
-    '/assets/js/diagnostico-motor.js?v=2',
+    '/assets/js/diagnostico-motor.js?v=3',
     '/assets/js/diagnostico-relatorio.js?v=3',
     '/assets/js/diagnostico-importar.js?v=2',
-    '/assets/js/diagnostico.js?v=3',
+    '/assets/js/diagnostico.js?v=4',
   ],
 ]);

@@ -418,10 +418,19 @@
     titulo: 'Que percentual dos horários marcados costuma faltar ou cancelar sem reposição?', ajuda: 'Uma estimativa: de cada 100 horários marcados, quantos viram falta?', opcional: true });
   nova('px_faltas', { id: 'px_estoque_v', etapa: 3, curto: 'Valor do estoque', se: h(['comercio']),
     titulo: 'Qual é, hoje, o valor do estoque a preço de custo?', ajuda: 'Quanto o que está parado na prateleira custou para você comprar.', opcional: true });
-  nova('px_estoque_v', { id: 'px_horas_vend', etapa: 3, curto: 'Horas vendidas por mês', unidade: 'h', max: 744, se: h(['servicos']),
-    titulo: 'Quantas horas por mês são efetivamente vendidas (cobradas dos clientes)?', ajuda: 'Desconte reuniões internas, administrativo e prospecção.', opcional: true });
+  // As horas são do negócio todo (o custo por hora divide as despesas do negócio inteiro por elas): quem tem equipe soma as horas de todos.
+  // Por isso o limite de 744 h (um mês inteiro) só vale para quem trabalha sozinho.
+  nova('px_estoque_v', { id: 'px_horas_vend', etapa: 3, curto: 'Horas cobradas dos clientes por mês', unidade: 'h', se: h(['servicos']),
+    max: function (r) { return sozinho(r) ? 744 : 20000; },
+    titulo: function (c) { return sozinho(c.r) ? 'Quantas horas por mês você dedica a trabalho que é cobrado dos clientes?' : 'Somando você e a equipe, quantas horas por mês são dedicadas a trabalho cobrado dos clientes?'; },
+    ajuda: function (c) {
+      return 'Conte só as horas de projeto, atendimento e entrega. Não conte reuniões internas, tarefas administrativas nem a busca por novos clientes. '
+        + (sozinho(c.r) ? 'Exemplo: 5 horas por dia × 20 dias = 100 horas. ' : 'Exemplo: 3 pessoas × 5 horas por dia × 20 dias = 300 horas. ')
+        + 'Se você não controla as horas, uma estimativa já ajuda; ou pule. Com isso descobrimos quanto custa cada hora do negócio.';
+    }, opcional: true });
   nova('px_horas_vend', { id: 'px_valor_hora', etapa: 3, curto: 'Valor cobrado por hora', se: h(['servicos']),
-    titulo: 'Qual é o valor médio que você cobra por hora de trabalho?', ajuda: 'Se cobra por projeto, divida o valor do projeto pelas horas gastas.', opcional: true });
+    titulo: 'Em média, quanto você cobra por hora de trabalho?',
+    ajuda: 'Se tem uma tabela de preços, use o valor da hora. Se cobra por projeto ou mensalidade, divida o valor pelas horas gastas. Exemplo: projeto de R$ 3.000 feito em 30 horas = R$ 100 por hora.', opcional: true });
   nova('px_valor_hora', { id: 'px_receber_v', etapa: 3, curto: 'Valores a receber em aberto', se: h(['servicos']),
     titulo: 'Quanto os clientes devem a você hoje (valores a receber em aberto)?', ajuda: 'Somando tudo que já foi entregue ou faturado e ainda não foi pago.', opcional: true });
 

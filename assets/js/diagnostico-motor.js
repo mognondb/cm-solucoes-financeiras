@@ -35,6 +35,7 @@
   D.tituloDe = function (q, r) { return resolver(q.titulo, ctxDe(r)); };
   D.ajudaDe = function (q, r) { return resolver(q.ajuda, ctxDe(r)) || ''; };
   D.opcoesDe = function (q, r) { return resolver(q.opcoes, ctxDe(r)) || []; };
+  D.maxDe = function (q, r) { return typeof q.max === 'function' ? q.max(r) : q.max; }; // o limite de um campo de valor pode depender do perfil (ex.: equipe)
 
   D.sequencia = function (r) {
     r = r || {};
