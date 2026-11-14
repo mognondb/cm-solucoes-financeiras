@@ -21,6 +21,9 @@ const PRONTAS = new Set(['inicio', 'config', 'pacientes', 'agenda', 'receber', '
 const PUBLICAS = new Set(['entrar', 'cadastro', 'esqueci', 'redefinir', 'verificar']);
 let limpar = null;
 let casca = false;
+const CHAVE_MENU = 'clincm_menu_recolhido';
+const menuRecolhido = () => { try { return localStorage.getItem(CHAVE_MENU) === '1'; } catch { return false; } };
+const lembrarMenu = (v) => { try { localStorage.setItem(CHAVE_MENU, v ? '1' : '0'); } catch { /* sem armazenamento: vale só nesta visita */ } };
 
 /* "#/pacientes/12?busca=x" → { seg: 'pacientes', resto: ['12'], consulta: URLSearchParams } */
 const rota = () => {
@@ -82,12 +85,14 @@ async function rotear() {
 function montarCasca() {
   casca = true;
   const p = App.eu.usuario;
-  const link = (k, t) => `<a href="#/${k}" data-nav="${k}">${icone(k)}<span>${esc(t)}</span></a>`;
+  const link = (k, t) => `<a href="#/${k}" data-nav="${k}" title="${esc(t)}">${icone(k)}<span>${esc(t)}</span></a>`;
   const lateral = NAV.map((g) => `${g.titulo ? `<h6>${esc(g.titulo)}</h6>` : ''}${g.itens.map(([k, t]) => link(k, t)).join('')}`).join('');
   const inferior = NAV_INF.map((k) => link(k, ROTULO[k])).join('') + `<button type="button" data-mais>${icone('mais')}<span>Mais</span></button>`;
-  raiz.innerHTML = `<div class="app">
-    <aside class="lateral" aria-label="Menu"><div class="marca-app"><small>Portal</small>CLINCM</div>${lateral}
-      <div class="rodape"><strong>${esc(p.nome)}</strong>${esc(App.eu.conta.nome)}<br><button type="button" class="link" data-sair>Sair</button></div></aside>
+  const min = menuRecolhido();
+  raiz.innerHTML = `<div class="app ${min ? 'menu-min' : ''}">
+    <aside class="lateral" aria-label="Menu"><div class="lateral-topo"><div class="marca-app"><small>Portal</small>CLINCM</div>
+      <button type="button" class="lateral-recolher" data-recolher aria-expanded="${!min}" aria-label="${min ? 'Expandir o menu' : 'Recolher o menu'}" title="${min ? 'Expandir o menu' : 'Recolher o menu'}">${icone('voltar', 18)}</button></div>${lateral}
+      <div class="rodape"><span class="rodape-txt"><strong>${esc(p.nome)}</strong>${esc(App.eu.conta.nome)}<br></span><button type="button" class="link" data-sair title="Sair">${icone('sair', 18)}<span class="rot">Sair</span></button></div></aside>
     <div class="coluna"><header class="topo"><div class="marca-app"><small>Portal</small>CLINCM</div></header>
       <div id="faixas"></div><main class="principal" id="conteudo" tabindex="-1"></main></div>
     <nav class="nav-inf" aria-label="Menu principal">${inferior}</nav></div>`;
@@ -96,6 +101,11 @@ function montarCasca() {
 }
 
 function aoClicar(e) {
+  const rec = e.target.closest('[data-recolher]');
+  if (rec) {
+    const app = rec.closest('.app'); const min = !app.classList.contains('menu-min'); app.classList.toggle('menu-min', min); lembrarMenu(min);
+    rec.setAttribute('aria-expanded', String(!min)); rec.setAttribute('aria-label', min ? 'Expandir o menu' : 'Recolher o menu'); rec.title = min ? 'Expandir o menu' : 'Recolher o menu'; return;
+  }
   if (e.target.closest('[data-sair]')) return sair();
   if (e.target.closest('[data-mais]')) return maisFolha();
   const rv = e.target.closest('[data-reenviar-verif]');

@@ -87,6 +87,21 @@ button, input, select, textarea { font: inherit; color: inherit; }
   .lateral .marca-app { font-family: 'Fraunces', serif; font-size: 1.2rem; color: var(--oliva-esc); padding: 4px 10px 16px; } .lateral .marca-app small { display: block; font-family: 'Inter', sans-serif; font-size: .68rem; letter-spacing: .12em; text-transform: uppercase; color: var(--ouro-txt); }
   .lateral h6 { margin: 16px 10px 6px; font-size: .7rem; letter-spacing: .1em; text-transform: uppercase; color: var(--suave); font-weight: 600; }
   .lateral a { display: flex; align-items: center; gap: 11px; padding: 9px 12px; border-radius: 10px; text-decoration: none; color: var(--texto); font-weight: 500; } .lateral a:hover { background: var(--creme); } .lateral a.ativo { background: var(--salvia); color: var(--oliva-esc); } .lateral a.ativo .ico { stroke: var(--ouro-txt); }
+  .lateral { transition: width .18s ease; }
+  .lateral-topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; } .lateral-topo .marca-app { flex: 1; min-width: 0; }
+  .lateral-recolher { flex: none; width: 32px; height: 32px; margin-top: 2px; border: 1px solid var(--linha); border-radius: 8px; background: var(--branco); color: var(--suave); cursor: pointer; display: grid; place-items: center; }
+  .lateral-recolher:hover { background: var(--creme); color: var(--texto); } .lateral-recolher .ico { transition: transform .18s ease; }
+  .lateral .rodape .link { display: inline-flex; align-items: center; gap: 8px; }
+  /* menu recolhido: só os ícones (o nome de cada item continua para leitores de tela e aparece ao passar o mouse) */
+  .app.menu-min .lateral { width: 76px; padding: 20px 10px; }
+  .app.menu-min .lateral-topo { flex-direction: column; align-items: center; gap: 8px; }
+  .app.menu-min .lateral .marca-app { padding: 4px 0 4px; text-align: center; font-size: .8rem; letter-spacing: 0; } .app.menu-min .lateral .marca-app small { display: none; }
+  .app.menu-min .lateral-recolher .ico { transform: rotate(180deg); }
+  .app.menu-min .lateral h6 { height: 1px; margin: 12px 8px; padding: 0; font-size: 0; background: var(--linha); }
+  .app.menu-min .lateral a { justify-content: center; padding: 10px 0; }
+  .app.menu-min .lateral a span, .app.menu-min .lateral .rodape .rodape-txt, .app.menu-min .lateral .rodape .rot { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .app.menu-min .lateral .rodape { text-align: center; } .app.menu-min .lateral .rodape .link { justify-content: center; width: 100%; padding: 8px 0; text-decoration: none; }
+  @media (prefers-reduced-motion: reduce) { .lateral, .lateral-recolher .ico { transition: none; } }
   .lateral .rodape { margin-top: auto; padding-top: 14px; border-top: 1px solid var(--linha); font-size: .82rem; color: var(--suave); } .lateral .rodape strong { display: block; color: var(--texto); }
   .coluna { flex: 1; min-width: 0; display: flex; flex-direction: column; } .principal { padding: 28px 32px 48px; }
 }
